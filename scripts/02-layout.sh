@@ -7,6 +7,9 @@ id dev &>/dev/null || { echo "usuario dev nao existe: rode 01-baseline.sh antes"
 for d in repos/apps repos/orm repos/agents repos/infra data state/reviews bin skills; do
   install -d -m 755 -o dev -g dev "/srv/dev/$d"
 done
+# install -d nao aplica o dono nos diretorios-pai que ele cria
+chown dev:dev /srv/dev /srv/dev/repos /srv/dev/state
+
 install -d -m 700 -o dev -g dev /srv/dev/secrets
 [[ -f /srv/dev/secrets/.env ]] || install -m 600 -o dev -g dev /dev/null /srv/dev/secrets/.env
 
