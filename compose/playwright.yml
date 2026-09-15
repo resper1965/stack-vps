@@ -1,0 +1,12 @@
+# Base para projetos que precisam de browser. Headless: o host nao tem ambiente grafico.
+# Uso: docker compose -f playwright.yml run --rm playwright npx playwright test
+services:
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.56.0-noble
+    working_dir: /work
+    volumes:
+      - ..:/work
+    # o browser precisa de mais que os 64MB padrao de /dev/shm, senao o Chromium morre
+    shm_size: 1gb
+    ipc: host
+    command: sleep infinity
