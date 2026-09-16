@@ -6,20 +6,24 @@ OUT=/srv/dev/state/inventario.md
 HOJE=$(date +%Y-%m-%d)
 
 stack(){ local d=$1; local s=()
-  [[ -f $d/package.json ]] && { grep -q '"next"' "$d/package.json" 2>/dev/null && s+=(Next.js) || s+=(Node); }
-  [[ -f $d/tsconfig.json ]] && s+=(TS)
-  { [[ -f $d/pyproject.toml ]] || [[ -f $d/requirements.txt ]]; } && s+=(Python)
-  [[ -f $d/go.mod ]] && s+=(Go)
-  compgen -G "$d/*.csproj" >/dev/null 2>&1 && s+=(.NET)
-  [[ -f $d/composer.json ]] && s+=(PHP)
-  [[ -f $d/Cargo.toml ]] && s+=(Rust)
-  { [[ -f $d/docker-compose.yml ]] || [[ -f $d/compose.yml ]] || [[ -f $d/Dockerfile ]]; } && s+=(Docker)
+  # profundidade 2: monorepo com api/ e web/ nao tem manifesto na raiz
+  local pkg; pkg=$(find "$d" -maxdepth 2 -name package.json -not -path '*/node_modules/*' | head -1)
+  [[ -n $pkg ]] && { grep -q '"next"' "$pkg" 2>/dev/null && s+=(Next.js) || s+=(Node); }
+  find "$d" -maxdepth 2 -name tsconfig.json | grep -q . && s+=(TS)
+  find "$d" -maxdepth 2 \( -name pyproject.toml -o -name requirements.txt \) | grep -q . && s+=(Python)
+  find "$d" -maxdepth 2 -name go.mod | grep -q . && s+=(Go)
+  find "$d" -maxdepth 2 -name '*.csproj' | grep -q . && s+=(.NET)
+  find "$d" -maxdepth 2 -name composer.json | grep -q . && s+=(PHP)
+  find "$d" -maxdepth 2 -name Cargo.toml | grep -q . && s+=(Rust)
+  find "$d" -maxdepth 2 \( -name 'docker-compose*.yml' -o -name Dockerfile \) | grep -q . && s+=(Docker)
   [[ ${#s[@]} -eq 0 ]] && echo "-" || { IFS=+; echo "${s[*]}"; }
 }
 tem_teste(){ local d=$1
   git -C "$d" ls-files 2>/dev/null | grep -qEi '(^|/)(tests?|__tests__|spec)/|\.(test|spec)\.[jt]sx?$|_test\.go$|test_.*\.py$' && echo sim || echo nao; }
-loc(){ git -C "$1" ls-files 2>/dev/null | grep -Ei '\.(py|js|jsx|ts|tsx|go|cs|php|rs|rb|java|sql|sh)$' | tr '\n' '\0' | xargs -0 -r wc -l 2>/dev/null | tail -1 | awk '{print $1+0}'; }
-
+loc(){ # wc precisa rodar DENTRO do repo: git ls-files devolve caminho relativo
+  ( cd "$1" 2>/dev/null || exit 0
+    git ls-files -z 2>/dev/null | grep -zEi '\.(py|js|jsx|ts|tsx|go|cs|php|rs|rb|java|sql|sh|vue|svelte)$'       | xargs -0 -r wc -l 2>/dev/null | tail -1 | awk '{print $1+0}' )
+}
 {
 echo "# Inventario — $HOJE"
 echo
