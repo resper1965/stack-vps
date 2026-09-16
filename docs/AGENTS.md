@@ -47,12 +47,11 @@ Quatro repositórios têm o `origin/HEAD` apontando para branch de trabalho em v
 (`claude/wordpress-nextjs-migration-plan-zoiRF`, `ccr-25affe9b-xifc4f`, `001-secure-sdlc`,
 `001-ad-gateway-sync`). Isso faz clone novo nascer fora da linha principal — vale corrigir.
 
-## 5. Convenções propostas
+## 5. Regras
 
-Proposta minha, não observação. Só vira regra com o seu OK.
+Aceitas pelo Ricardo em 16/09/2026. Deixaram de ser proposta.
 
-1. **Commit em português, código em inglês.** Hoje está meio a meio, e o repositório sob contrato
-   (`Alupdatalake`) já exige português. Padronizar elimina a decisão a cada commit.
+1. **Commit em português, código em inglês.** Vale de agora em diante; commit antigo nao se reescreve.
 2. **`main` em todos.** Os 16 em `master` migram quando forem tocados, não numa varredura só.
 3. **npm.** É o que 73 repositórios usam; trocar por pnpm sem motivo forte é custo sem ganho.
 4. **`AGENTS.md` como fonte, `CLAUDE.md` como cópia.** Os dois agentes leem o mesmo conteúdo,
