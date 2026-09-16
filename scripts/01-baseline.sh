@@ -12,6 +12,12 @@ id dev &>/dev/null || adduser --disabled-password --gecos "" dev
 usermod -aG sudo dev
 getent group docker >/dev/null && usermod -aG docker dev
 
+# dev entra por chave e nao tem senha: sem esta regra ele nao consegue sudo nenhum.
+# Nao amplia superficie — o grupo docker ja e equivalente a root neste host.
+echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-dev
+chmod 440 /etc/sudoers.d/90-dev
+visudo -c -q
+
 install -d -m 700 -o dev -g dev /home/dev/.ssh
 touch /home/dev/.ssh/authorized_keys
 grep -qxF "$PUBKEY" /home/dev/.ssh/authorized_keys || echo "$PUBKEY" >> /home/dev/.ssh/authorized_keys
@@ -35,12 +41,15 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq fail2ban unattended-upgrades
 
+# A Hostinger apresenta toda conexao de entrada como 169.254.0.1 (link-local do gateway):
+# sem esta excecao, 3 falhas de autenticacao de qualquer origem trancam a VPS inteira.
 cat > /etc/fail2ban/jail.d/sshd.local <<'EOF'
 [sshd]
-enabled = true
-backend = systemd
+enabled  = true
+backend  = systemd
 maxretry = 3
 bantime  = 1h
+ignoreip = 127.0.0.1/8 ::1 169.254.0.0/16
 EOF
 systemctl enable --now fail2ban
 systemctl restart fail2ban
