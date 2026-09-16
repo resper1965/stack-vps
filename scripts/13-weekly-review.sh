@@ -55,8 +55,11 @@ bloq=[]
 for p in projetos:
     faltam=[c for c in ('principal','revisor','proximo_passo') if p.get(c) and re.search(r'A DEFINIR|A CONFIRMAR',p[c])]
     if faltam: bloq.append({'projeto':p['projeto'],'trilha':p.get('trilha'),'campos':faltam})
-deb=[{'projeto':p['projeto'],'pendencias':p['pendencias']} for p in projetos
-     if p.get('pendencias') and 'nenhuma' not in p['pendencias']]
+# 'sem CI' fica so no inventario: por decisao do Ricardo nao vira debito nem recomendacao
+def limpa(v):
+    return '; '.join(x.strip() for x in v.split(';') if 'sem CI' not in x).strip()
+deb=[{'projeto':p['projeto'],'pendencias':limpa(p['pendencias'])} for p in projetos
+     if p.get('pendencias') and 'nenhuma' not in p['pendencias'] and limpa(p['pendencias'])]
 json.dump({'gerado_em':hoje,'projetos':projetos,
            'divergencia':[p['projeto'] for p in div],'bloqueio':bloq,'debito':deb},
           open('/srv/dev/state/dashboard.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
