@@ -3,6 +3,8 @@
 # Le apenas metadado e presenca de arquivo — nao abre conteudo de codigo.
 set -uo pipefail
 OUT=/srv/dev/state/inventario.md
+OUT_BEKAA=/srv/dev/state/inventario-bekaa.md
+BEKAA_RE="bekaa|fixfacilities|OP-Gabi|portalbekaa|b.ctem|TWYN-ISO27001|lit-isms|twyn-isms|^team$|proporsal-ness|rfp-alupar|ORM-BARRADOPAR"
 HOJE=$(date +%Y-%m-%d)
 
 stack(){ local d=$1; local s=()
@@ -24,6 +26,19 @@ loc(){ # wc precisa rodar DENTRO do repo: git ls-files devolve caminho relativo
   ( cd "$1" 2>/dev/null || exit 0
     git ls-files -z 2>/dev/null | grep -zEi '\.(py|js|jsx|ts|tsx|go|cs|php|rs|rb|java|sql|sh|vue|svelte)$'       | xargs -0 -r wc -l 2>/dev/null | tail -1 | awk '{print $1+0}' )
 }
+cabecalho(){
+cat <<CAB
+# $1 — $HOJE
+
+$2
+
+| Projeto | Arvore | Stack | Ultimo commit | LOC | Testes | CI | README | STATE | Classificacao |
+|---|---|---|---|---|---|---|---|---|---|
+CAB
+}
+cabecalho "Inventario (trilha geral)" "Escopo: ativos dos ultimos 90 dias, exceto a trilha bekaa. Ausencia de CI nao entra como recomendacao: e caso a parte, ainda nao classificado." > "$OUT"
+cabecalho "Inventario (trilha bekaa)" "Repositorios da bekaa-trusted-advisors e correlatos, auditados em trilha propria." > "$OUT_BEKAA"
+: <<'ANTIGO'
 {
 echo "# Inventario — $HOJE"
 echo
@@ -32,7 +47,8 @@ echo "Dormentes de resper1965 e o restante de nessenergy ficaram fora por decisa
 echo
 echo "| Projeto | Arvore | Stack | Ultimo commit | LOC | Testes | CI | README | STATE | Classificacao |"
 echo "|---|---|---|---|---|---|---|---|---|---|"
-} > "$OUT"
+} > /dev/null
+ANTIGO
 
 # So o escopo: os dormentes de resper1965 estao clonados em disco mas ficam de fora
 ESCOPO=/srv/dev/state/escopo-auditoria.tsv
@@ -46,19 +62,22 @@ for d in /srv/dev/repos/*/*/; do
   ci=nao; compgen -G "$d/.github/workflows/*.y*ml" >/dev/null 2>&1 && ci=sim
   rd=nao; compgen -G "$d/README*" >/dev/null 2>&1 && rd=sim
   st=nao; [[ -f $d/STATE.md ]] && st=sim
-  echo "| $nome | $arv | $(stack "$d") | $ult | $(loc "$d") | $(tem_teste "$d") | $ci | $rd | $st | $cls |" >> "$OUT"
+  linha="| $nome | $arv | $(stack "$d") | $ult | $(loc "$d") | $(tem_teste "$d") | $ci | $rd | $st | $cls |"
+  if echo "$nome" | grep -qiE "$BEKAA_RE"; then echo "$linha" >> "$OUT_BEKAA"; else echo "$linha" >> "$OUT"; fi
 done
 
+for f in "$OUT" "$OUT_BEKAA"; do
 {
 echo
 echo "## Sem README"
-grep '^|' "$OUT" | awk -F'|' '$9 ~ /nao/ {print "- "$2}' | sed 's/ *$//'
+grep '^| ' "$f" | awk -F'|' '$9 ~ /nao/ {print "- "$2}' | sed 's/ *$//'
 echo
 echo "## Sem teste"
-grep '^|' "$OUT" | awk -F'|' '$7 ~ /nao/ {print "- "$2}' | sed 's/ *$//'
+grep '^| ' "$f" | awk -F'|' '$7 ~ /nao/ {print "- "$2}' | sed 's/ *$//'
 echo
-echo "## Sem CI"
-grep '^|' "$OUT" | awk -F'|' '$8 ~ /nao/ {print "- "$2}' | sed 's/ *$//'
-} >> "$OUT"
-
-echo "escrito: $OUT ($(grep -c '^| ' "$OUT") linhas)"
+echo "## Sem CI — caso a parte"
+echo "Registrado, nao recomendado: decisao do Ricardo de tratar isso separadamente."
+grep '^| ' "$f" | awk -F'|' '$8 ~ /nao/ {print "- "$2}' | sed 's/ *$//'
+} >> "$f"
+done
+echo "geral: $(grep -c '^| ' "$OUT") | bekaa: $(grep -c '^| ' "$OUT_BEKAA")"
