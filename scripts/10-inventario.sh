@@ -30,9 +30,12 @@ echo "| Projeto | Arvore | Stack | Ultimo commit | LOC | Testes | CI | README | 
 echo "|---|---|---|---|---|---|---|---|---|---|"
 } > "$OUT"
 
+# So o escopo: os dormentes de resper1965 estao clonados em disco mas ficam de fora
+ESCOPO=/srv/dev/state/escopo-auditoria.tsv
 for d in /srv/dev/repos/*/*/; do
   [[ -d $d/.git ]] || continue
   nome=$(basename "$d"); arv=$(basename "$(dirname "$d")")
+  cut -f4 "$ESCOPO" | grep -qxF "$nome" || continue
   ult=$(git -C "$d" log -1 --format=%cs 2>/dev/null || echo '-')
   dias=$(( ( $(date +%s) - $(git -C "$d" log -1 --format=%ct 2>/dev/null || echo 0) ) / 86400 ))
   cls=ativo; (( dias > 90 )) && cls=dormente; (( dias > 365 )) && cls='morto?'
