@@ -21,6 +21,8 @@ Vale para todas as sessões em `/srv/dev`, dos dois agentes.
 - Apagar, arquivar ou fundir projeto: registrar a recomendação, **não executar**.
 - Segredo vem de `/srv/dev/secrets/.env` pelo ambiente do shell. Nunca no bloco `env` de `settings.json`,
   que é texto puro em arquivo versionável.
+- Chave de projeto fica em `/srv/dev/secrets/projetos.env`, já carregada no shell: use a variável,
+  nunca copie o valor para `.env` de repositório nem o imprima. `secrets/.env` é só dos scripts de infra.
 - API da Hostinger e gateway Composio: leitura livre. Qualquer chamada que altere estado para e pergunta
   antes, dizendo o endpoint e o efeito.
 

@@ -45,3 +45,13 @@ Nada de segredo aqui — segredo vive em `/srv/dev/secrets/.env` (modo 600) na V
   lida só na chamada. Featherless não entra: o Codex só fala a Responses API, que ela não tem.
 - `scripts/17-testes.sh` (como `dev`): instala `compose/postgres.yml` em `/srv/dev/bin`.
   Postgres descartável, em memória, só em `127.0.0.1`. Regra de uso no `CLAUDE.md` §8.
+
+## Verticais e secrets
+
+- `scripts/18-verticais.sh` (como `dev`): lê `docs/verticais.tsv` e monta
+  `/srv/dev/verticais/<vertical>/<divisão>/<projeto>` como atalho para o clone, mais um
+  `<vertical>.code-workspace` para abrir a vertical inteira no VS Code. Os clones não saem do lugar.
+  Verticais: pessoal, ness, ionic, bekaa, forense. Divisões: app, agents, knowledge, e ainda
+  orm (pessoal, bekaa) ou compliance (ness, ionic, forense).
+- `scripts/19-secrets.sh` (como `dev`): `secrets/projetos.env` é um arquivo só, compartilhado por
+  todos os projetos, carregado em todo shell do `dev`. Tokens de infra seguem em `secrets/.env`.
