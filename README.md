@@ -52,6 +52,13 @@ Nada de segredo aqui — segredo vive em `/srv/dev/secrets/.env` (modo 600) na V
   `/srv/dev/verticais/<vertical>/<divisão>/<projeto>` como atalho para o clone, mais um
   `<vertical>.code-workspace` para abrir a vertical inteira no VS Code. Os clones não saem do lugar.
   Verticais: pessoal, ness, ionic, bekaa, forense. Divisões: app, agents, knowledge, e ainda
-  orm (pessoal, bekaa) ou compliance (ness, ionic, forense).
+  orm (pessoal, bekaa) ou compliance (ness, ionic, forense), e cases (forense).
 - `scripts/19-secrets.sh` (como `dev`): `secrets/projetos.env` é um arquivo só, compartilhado por
   todos os projetos, carregado em todo shell do `dev`. Tokens de infra seguem em `secrets/.env`.
+
+## Duas contas Claude
+
+`scripts/20-contas-claude.sh` (como `dev`): conta bekaa em `~/.claude` (padrão) e conta ionic em
+`~/.claude-ionic`, com os mesmos plugins, skills e settings. `claude` num projeto da vertical ionic
+usa a conta ionic sozinho; `claude-bekaa` e `claude-ionic` forçam. A extensão do VS Code ignora
+`CLAUDE_CONFIG_DIR` e usa sempre a bekaa: para ionic, rode `claude` no terminal do VS Code.

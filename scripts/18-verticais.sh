@@ -16,7 +16,7 @@ declare -A OK=(
   [ness]="app agents knowledge compliance"
   [ionic]="app agents knowledge compliance"
   [bekaa]="app agents knowledge orm"
-  [forense]="app agents knowledge compliance"
+  [forense]="app agents knowledge compliance cases"
 )
 
 # pasta do clone de cada dono/repo, pelo escopo (dir desambigua repo com mesmo nome)

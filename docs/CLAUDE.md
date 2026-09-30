@@ -84,3 +84,10 @@ Documento gerado declara no rodapé qual tenant e qual versão do pacote de cust
 - Porta só em `127.0.0.1`. Porta publicada pelo Docker passa por cima do firewall.
 - Ao terminar: `docker compose -p <projeto> -f /srv/dev/bin/postgres.yml down`.
 - Dado de cliente não entra em banco de teste; usar dado sintético.
+
+## 9. Forense
+
+- Na VPS entram só repositórios: código e método (`modusoperandi`, `carteira`) e o repositório `casos`.
+- Material recebido (originais) e rascunhos de trabalho **não vêm para a VPS**: ficam só na estação
+  forense, onde valem a custódia e o apagamento em D+30. Não baixar, copiar nem pedir esse material aqui.
+- Faltou material para concluir uma análise: registrar no caso o que falta; não buscar por outro meio.
