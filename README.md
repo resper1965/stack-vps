@@ -17,6 +17,7 @@ Etapas seguintes (tunnel, firewall, tooling, agentes) entram conforme validadas.
 `scripts/14-openrig.sh`, como `dev`, depois do `04-agents.sh`. Instala o
 [OpenRig](https://github.com/mvschwarz/openrig) e gera a spec `dupla`: principal em
 Claude Code e revisor em Codex, sob tmux. Não sobe equipe; o script imprime o comando.
+Como funciona, com diagramas: [`docs/openrig.md`](docs/openrig.md).
 
 Desvios do padrão do OpenRig, para não colidir com o `CLAUDE.md` e o `04-agents.sh`:
 
