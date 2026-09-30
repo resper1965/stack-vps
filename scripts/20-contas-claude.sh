@@ -44,5 +44,8 @@ claude-ionic() { CLAUDE_CONFIG_DIR=$HOME/.claude-ionic command claude "$@"; }
 EOF
 fi
 
+CLAUDE_CONFIG_DIR=$I claude plugin list 2>/dev/null | grep -A3 'superpowers@superpowers-marketplace' | grep -q enabled \
+  || { echo "ERRO: superpowers nao aparece na conta ionic; confira os links em $I"; exit 1; }
+
 echo "conta bekaa: $B (padrao) | conta ionic: $I"
 echo "login, uma vez em cada: claude-bekaa  -> /login  |  claude-ionic  -> /login"

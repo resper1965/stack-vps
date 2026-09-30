@@ -46,6 +46,12 @@ elif ! grep -q '"/srv/dev/state"' "$X"; then
   echo "AVISO: $X ja tem [sandbox_workspace_write]; inclua /srv/dev/state em writable_roots a mao"
 fi
 
+# superpowers e obrigatorio nos dois agentes: os installs acima engolem erro, aqui nao
+falta=()
+claude plugin list 2>/dev/null | grep -A3 'superpowers@superpowers-marketplace' | grep -q enabled || falta+=(claude)
+codex plugin list 2>/dev/null | grep -qE '^superpowers@superpowers-marketplace +installed, enabled' || falta+=(codex)
+(( ${#falta[@]} == 0 )) || { echo "ERRO: superpowers nao ficou ativo em: ${falta[*]}"; exit 1; }
+
 echo "claude: $(claude --version) | plugins: $(claude plugin list 2>/dev/null | grep -c '❯')"
 echo "codex:  $(codex --version)"
 echo "login interativo (claude / codex) e o MCP do Composio ficam por sua conta."
