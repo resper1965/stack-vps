@@ -15,8 +15,9 @@ Etapas seguintes (tunnel, firewall, tooling, agentes) entram conforme validadas.
 ## OpenRig (opcional)
 
 `scripts/14-openrig.sh`, como `dev`, depois do `04-agents.sh`. Instala o
-[OpenRig](https://github.com/mvschwarz/openrig) e gera a spec `dupla`: principal em
-Claude Code e revisor em Codex, sob tmux. Não sobe equipe; o script imprime o comando.
+[OpenRig](https://github.com/mvschwarz/openrig) e o comando `rig-dupla`, que sobe principal e
+revisor do projeto com os papéis do `STATE.md`. O revisor grava o parecer em `state/reviews`,
+que a rotina semanal já lê. O `04-agents.sh` libera a escrita dos agentes em `/srv/dev/state`.
 Como funciona, com diagramas: [`docs/openrig.md`](docs/openrig.md).
 
 Desvios do padrão do OpenRig, para não colidir com o `CLAUDE.md` e o `04-agents.sh`:
@@ -24,7 +25,7 @@ Desvios do padrão do OpenRig, para não colidir com o `CLAUDE.md` e o `04-agent
 - estado em `/srv/dev/state/openrig`, e não em `~/.openrig`;
 - kernel desligado (`OPENRIG_NO_KERNEL=1`), porque ele sobe agentes próprios com a config padrão;
 - hooks do Codex desligados: o daemon não reescreve `~/.codex/config.toml`
-  (em troca, o painel não mostra a atividade do revisor);
+  (em troca, o painel do OpenRig não mostra a atividade de seat em Codex);
 - os perfis não recebem `acceptEdits` via settings nem os MCPs Exa/Context7.
 
 O que continua valendo: o seat Claude é lançado com `--permission-mode acceptEdits`

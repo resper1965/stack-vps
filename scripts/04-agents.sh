@@ -35,6 +35,17 @@ for s in "$D"/skills/*/; do ln -sfn "$s" ~/.claude/skills/"$(basename "$s")"; do
 codex plugin marketplace add "$D" >/dev/null 2>&1 || true
 codex plugin add ness-skills@ness-skills >/dev/null 2>&1 || true
 
+# CLAUDE.md §2: escrita em /srv/dev/state (pareceres, inventario). Sessao aberta num repo
+# so escreve no proprio repo; sem isto o revisor nao grava em state/reviews.
+C=~/.claude/settings.json; [[ -f $C ]] || echo '{}' > "$C"
+jq '.permissions.additionalDirectories = ((.permissions.additionalDirectories // []) + ["/srv/dev/state"] | unique)' "$C" > "$C.tmp" && mv "$C.tmp" "$C"
+X=~/.codex/config.toml; mkdir -p ~/.codex; touch "$X"
+if ! grep -q '^\[sandbox_workspace_write\]' "$X"; then
+  printf '\n[sandbox_workspace_write]\nwritable_roots = ["/srv/dev/state"]\n' >> "$X"
+elif ! grep -q '"/srv/dev/state"' "$X"; then
+  echo "AVISO: $X ja tem [sandbox_workspace_write]; inclua /srv/dev/state em writable_roots a mao"
+fi
+
 echo "claude: $(claude --version) | plugins: $(claude plugin list 2>/dev/null | grep -c '❯')"
 echo "codex:  $(codex --version)"
 echo "login interativo (claude / codex) e o MCP do Composio ficam por sua conta."

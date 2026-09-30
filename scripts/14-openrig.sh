@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OpenRig (github.com/mvschwarz/openrig): dupla principal (Claude) + revisor (Codex) em tmux.
+# OpenRig (github.com/mvschwarz/openrig): dupla principal + revisor em tmux, papeis do STATE.md.
 # Roda COMO dev, depois do 04-agents.sh. Idempotente. Uso: ./14-openrig.sh [versao]
 # Nao sobe equipe nenhuma: so instala, configura e gera a spec. Subir e manual (ver fim).
 set -euo pipefail
@@ -31,51 +31,29 @@ export OPENRIG_RUNTIME_CODEX_HOOKS_ENABLED=false
 EOF
 export OPENRIG_HOME=$H OPENRIG_SHARED_DOCS_ROOT=$H/shared-docs OPENRIG_NO_KERNEL=1 OPENRIG_RUNTIME_CODEX_HOOKS_ENABLED=false
 
-# Spec propria, copiada da embutida a cada execucao (acompanha a versao instalada).
+# Agentes proprios, copiados dos embutidos a cada execucao (acompanham a versao instalada).
 # Tira dos perfis os fragmentos que setam acceptEdits e ligam Exa/Context7;
 # mantem so o hook de atividade, que alimenta o painel do rig.
+# O papel de cada um ganha as regras do ambiente (openrig/principal.md e revisor.md).
+R=$(cd "$(dirname "$0")/.." && pwd)
 S=$H/specs
-rm -rf "$S"; mkdir -p "$S/agents/development" "$S/rigs/dupla"
+rm -rf "$S/agents"; mkdir -p "$S/agents/development" "$S/rigs"
 cp -r "$PKG/daemon/specs/agents/shared" "$S/agents/"
 cp -r "$PKG/daemon/specs/agents/development/implementer" "$PKG/daemon/specs/agents/development/qa" "$S/agents/development/"
-for a in implementer qa; do
-  f="$S/agents/development/$a/agent.yaml"
+for par in implementer:principal qa:revisor; do
+  a=${par%%:*}; f="$S/agents/development/$a/agent.yaml"
   sed -i 's/^\( *runtime_resources:\).*/\1 [shared:claude-activity-hooks]/' "$f"
   grep -q 'runtime_resources: \[shared:claude-activity-hooks\]$' "$f" || { echo "formato de $f mudou; revise o sed"; exit 1; }
+  cat "$R/openrig/${par##*:}.md" >> "$S/agents/development/$a/guidance/role.md"
 done
-cp "$PKG/daemon/specs/rigs/launch/first-project/CULTURE.md" "$S/rigs/dupla/"
-cat > "$S/rigs/dupla/rig.yaml" <<'EOF'
-version: "0.2"
-name: dupla
-summary: >
-  Agente principal (Claude Code) e agente revisor (Codex) no mesmo repositorio,
-  conforme a secao 3 do CLAUDE.md. O revisor nunca faz merge.
-culture_file: CULTURE.md
+cp "$PKG/daemon/specs/rigs/launch/first-project/CULTURE.md" "$S/"
 
-pods:
-  - id: dev
-    label: Projeto
-    members:
-      - id: principal
-        agent_ref: "local:../../agents/development/implementer"
-        runtime: claude-code
-        profile: default
-        cwd: "."
-      - id: revisor
-        agent_ref: "local:../../agents/development/qa"
-        runtime: codex
-        profile: default
-        cwd: "."
-    edges:
-      - kind: delegates_to
-        from: principal
-        to: revisor
+# Cada projeto ganha seu rig na hora de subir, com os papeis do STATE.md
+install -m 755 "$R/bin/rig-dupla" /srv/dev/bin/rig-dupla
+ln -sfn /srv/dev/bin/rig-dupla ~/.local/bin/rig-dupla
 
-edges: []
-EOF
-
-echo "openrig: $(rig --version) | home: $H | spec: $S/rigs/dupla/rig.yaml"
-echo "subir num projeto (nunca em main/master):"
+echo "openrig: $(rig --version) | home: $H"
+echo "subir num projeto (STATE.md com principal/revisor definidos, nunca em main/master):"
 echo "  cd /srv/dev/repos/<arvore>/<projeto> && git switch -c chore/<tarefa>"
-echo "  rig up $S/rigs/dupla/rig.yaml --cwd . --plan   # revisar, depois sem --plan"
+echo "  rig-dupla --plan   # revisar, depois sem --plan"
 echo "  rig tui --shared"
