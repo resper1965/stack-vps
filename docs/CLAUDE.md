@@ -72,3 +72,13 @@ Aceitas pelo Ricardo em 16/09/2026. Deixaram de ser proposta.
 Citação de cláusula, artigo ou prazo vinda das skills de GRC é apoio, não fonte normativa:
 conferir contra a norma original e sinalizar no texto o que não foi verificado.
 Documento gerado declara no rodapé qual tenant e qual versão do pacote de customização foram usados.
+
+## 8. Serviços de teste
+
+- Banco para teste sobe descartável, nunca instalado no host:
+  `PG_PORTA=<porta livre> docker compose -p <projeto> -f /srv/dev/bin/postgres.yml up -d --wait`.
+  Conexão `postgres://dev:dev@127.0.0.1:<porta>/app`. Os dados vivem em memória.
+- `-p <projeto>` sempre, para não derrubar o banco de outro projeto.
+- Porta só em `127.0.0.1`. Porta publicada pelo Docker passa por cima do firewall.
+- Ao terminar: `docker compose -p <projeto> -f /srv/dev/bin/postgres.yml down`.
+- Dado de cliente não entra em banco de teste; usar dado sintético.

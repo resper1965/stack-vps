@@ -37,3 +37,11 @@ Requer Node 22 ou 24; o `03-tooling.sh` fixa `node@24`.
 
 Todo script e idempotente: rodar de novo nao quebra o que ja existe.
 Nada de segredo aqui — segredo vive em `/srv/dev/secrets/.env` (modo 600) na VPS.
+
+## Modelos extras e banco de teste
+
+- `scripts/16-modelos.sh` (como `dev`): `codex -p openrouter [-m fornecedor/modelo]` usa o OpenRouter;
+  `codex` sem `-p` segue na assinatura ChatGPT Pro. Chave `OPENROUTER_API_KEY` em `secrets/.env`,
+  lida só na chamada. Featherless não entra: o Codex só fala a Responses API, que ela não tem.
+- `scripts/17-testes.sh` (como `dev`): instala `compose/postgres.yml` em `/srv/dev/bin`.
+  Postgres descartável, em memória, só em `127.0.0.1`. Regra de uso no `CLAUDE.md` §8.
