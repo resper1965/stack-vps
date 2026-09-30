@@ -62,3 +62,11 @@ Nada de segredo aqui — segredo vive em `/srv/dev/secrets/.env` (modo 600) na V
 `~/.claude-ionic`, com os mesmos plugins, skills e settings. `claude` num projeto da vertical ionic
 usa a conta ionic sozinho; `claude-bekaa` e `claude-ionic` forçam. A extensão do VS Code ignora
 `CLAUDE_CONFIG_DIR` e usa sempre a bekaa: para ionic, rode `claude` no terminal do VS Code.
+
+## Skills e modos padrão
+
+`scripts/21-skills.sh` (como `dev`, depois do `04` e do `20`): skills oficiais de Cloudflare, Supabase,
+Vercel e GitHub (`awesome-copilot`: issues, release, actions) para Claude Code, Codex e Antigravity,
+via `npx skills@1.7.0`. ponytail e caveman ficam em `full` por padrão: no Claude por plugin com hook,
+no Codex e no Antigravity por instrução em `~/.codex/AGENTS.md` e `~/.gemini/GEMINI.md`.
+Nível: `~/.config/{ponytail,caveman}/config.json`; na sessão, `/ponytail off`, `/caveman lite`.

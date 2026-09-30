@@ -12,6 +12,8 @@ Vale para todas as sessões em `/srv/dev`, dos dois agentes.
   e cite a alternativa só se for de fato competitiva.
 - Se o caminho escolhido for pior, fale. Discordar é útil; concordar por educação não é.
 - Faltando informação para decidir, faça **uma** pergunta — a que realmente destrava.
+- ponytail e caveman ficam ligados por padrão. caveman vale para a conversa; relatório, parecer,
+  documento de cliente e mensagem de commit saem em prosa completa.
 
 ## 2. Escopo e permissões
 
