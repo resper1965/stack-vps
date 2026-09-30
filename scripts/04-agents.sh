@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code + Codex no usuario dev, com marketplaces, plugins, MCP e skills proprias.
+# Claude Code, Codex e Antigravity CLI no usuario dev, com marketplaces, plugins, MCP e skills proprias.
 # Roda COMO dev (nao como root). Idempotente.
 set -euo pipefail
 [[ $(id -un) == dev ]] || { echo "rode como dev"; exit 1; }
@@ -46,12 +46,19 @@ elif ! grep -q '"/srv/dev/state"' "$X"; then
   echo "AVISO: $X ja tem [sandbox_workspace_write]; inclua /srv/dev/state em writable_roots a mao"
 fi
 
-# superpowers e obrigatorio nos dois agentes: os installs acima engolem erro, aqui nao
+# Antigravity CLI (agy), terceiro harness. Binario unico em ~/.local/bin; o instalador confere o SHA-512.
+# Login headless: copiar ~/.gemini/antigravity-cli/antigravity-oauth-token de uma maquina ja logada.
+command -v agy >/dev/null || curl -fsSL https://antigravity.google/cli/install.sh | bash >/dev/null
+for p in obra/superpowers DietrichGebert/ponytail; do agy plugin install "https://github.com/$p" >/dev/null 2>&1 || true; done
+
+# superpowers e obrigatorio nos tres agentes: os installs acima engolem erro, aqui nao
 falta=()
 claude plugin list 2>/dev/null | grep -A3 'superpowers@superpowers-marketplace' | grep -q enabled || falta+=(claude)
 codex plugin list 2>/dev/null | grep -qE '^superpowers@superpowers-marketplace +installed, enabled' || falta+=(codex)
+agy plugin list 2>/dev/null | grep -q '"name": "superpowers"' || falta+=(agy)
 (( ${#falta[@]} == 0 )) || { echo "ERRO: superpowers nao ficou ativo em: ${falta[*]}"; exit 1; }
 
 echo "claude: $(claude --version) | plugins: $(claude plugin list 2>/dev/null | grep -c '❯')"
 echo "codex:  $(codex --version)"
-echo "login interativo (claude / codex) e o MCP do Composio ficam por sua conta."
+echo "agy:    $(agy --version)"
+echo "login interativo (claude / codex / agy) e o MCP do Composio ficam por sua conta."

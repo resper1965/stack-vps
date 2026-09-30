@@ -65,8 +65,13 @@ usa a conta ionic sozinho; `claude-bekaa` e `claude-ionic` forçam. A extensão 
 
 ## Skills e modos padrão
 
+Três harnesses de agente, todos no usuário `dev`: Claude Code, Codex e Antigravity CLI (`agy`, que o
+`04` instala; login headless copiando `~/.gemini/antigravity-cli/antigravity-oauth-token` de uma máquina
+já logada). superpowers e ponytail vêm do `04` nos três.
+
 `scripts/21-skills.sh` (como `dev`, depois do `04` e do `20`): skills oficiais de Cloudflare, Supabase,
-Vercel e GitHub (`awesome-copilot`: issues, release, actions) para Claude Code, Codex e Antigravity,
-via `npx skills@1.7.0`. ponytail e caveman ficam em `full` por padrão: no Claude por plugin com hook,
-no Codex e no Antigravity por instrução em `~/.codex/AGENTS.md` e `~/.gemini/GEMINI.md`.
+Vercel e GitHub (`awesome-copilot`: issues, release, actions) nos três, via `npx skills@1.7.0`.
+ponytail e caveman ficam em `full` por padrão: no Claude por plugin com hook, no Codex por instrução em
+`~/.codex/AGENTS.md`, no `agy` por regra `always_on` em `~/.gemini/config/rules/`.
 Nível: `~/.config/{ponytail,caveman}/config.json`; na sessão, `/ponytail off`, `/caveman lite`.
+O OpenRig só conhece Claude Code e Codex: o `agy` fica fora do `rig-dupla`.

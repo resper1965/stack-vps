@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 # Skills de plataforma (Cloudflare, Supabase, Vercel, GitHub) para Claude Code, Codex e
-# Antigravity, e ponytail + caveman ligados por padrao nos tres.
+# Antigravity CLI (agy), e ponytail + caveman ligados por padrao nos tres.
 # Decisao do Ricardo em 30/09/2026. Roda COMO dev, depois do 04 e do 20. Idempotente.
 #
 #   Claude    ~/.claude/skills (a conta ionic enxerga pelo link do 20); ponytail e caveman
 #             sao plugins com hooks, ligam sozinhos.
 #   Codex     le ~/.agents/skills; os dois modos entram pelo ~/.codex/AGENTS.md, porque os
 #             hooks de plugin no Codex so rodam depois de aprovados a mao em /hooks.
-#   Antigravity  ~/.gemini/antigravity/skills e ~/.gemini/GEMINI.md.
+#   agy       raiz global ~/.gemini/config: skills em skills/, modos em rules/ (trigger always_on);
+#             ponytail ja vem como plugin do 04.
 set -euo pipefail
 [[ $(id -un) == dev ]] || { echo "rode como dev"; exit 1; }
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH" DO_NOT_TRACK=1
 SK="npx -y skills@1.7.0"
-AGENTES=(-a claude-code -a codex -a antigravity)
-mkdir -p ~/.codex ~/.claude ~/.gemini/antigravity/skills
+AGENTES=(-a claude-code -a codex)
+mkdir -p ~/.codex ~/.claude ~/.gemini/config/skills ~/.gemini/config/rules
 
 add() { $SK add "$@" -g -y >/dev/null 2>&1 || { echo "ERRO: skills add $*"; exit 1; }; }
 add cloudflare/skills          --skill '*' "${AGENTES[@]}"
@@ -22,17 +23,14 @@ add vercel-labs/agent-skills   --skill '*' "${AGENTES[@]}"
 add github/awesome-copilot     --skill github-issues --skill github-release \
                                --skill github-actions-hardening --skill github-actions-efficiency "${AGENTES[@]}"
 # caveman no Claude vem como plugin (abaixo); aqui so para quem nao tem plugin com hook
-add JuliusBrussee/caveman      --skill '*' -a codex -a antigravity
+add JuliusBrussee/caveman      --skill '*' -a codex
 
-# Antigravity le a pasta global propria: o skills cli nao a preenche, entao link a link
-for s in ~/.agents/skills/*/; do ln -sfn "${s%/}" ~/.gemini/antigravity/skills/"$(basename "$s")"; done
+# agy le a propria raiz global; o skills cli nao conhece esse caminho, entao link a link
+for s in ~/.agents/skills/*/; do ln -sfn "${s%/}" ~/.gemini/config/skills/"$(basename "$s")"; done
 
 # Claude: caveman como plugin (ponytail ja vem do 04)
 claude plugin marketplace add JuliusBrussee/caveman >/dev/null 2>&1 || true
 claude plugin install caveman@caveman >/dev/null 2>&1 || true
-
-# Antigravity: ponytail como plugin, se o agy estiver nesta maquina
-command -v agy >/dev/null && { agy plugin install https://github.com/DietrichGebert/ponytail >/dev/null 2>&1 || echo "AVISO: agy plugin install ponytail falhou"; }
 
 # modo padrao dos dois, lido pelos hooks do Claude
 mkdir -p ~/.config/ponytail ~/.config/caveman
@@ -50,7 +48,7 @@ Desligar so nesta sessao: "/ponytail off", "/caveman off".
 # <<< modos padrao
 EOF
 }
-for f in ~/.codex/AGENTS.md ~/.gemini/GEMINI.md; do
+for f in ~/.codex/AGENTS.md; do
   touch "$f"
   python3 - "$f" "$(bloco)" <<'PY'
 import re,sys
@@ -60,6 +58,7 @@ t=re.sub(r'# >>> modos padrao \(21-skills\.sh\).*?# <<< modos padrao\n?','',t,fl
 open(f,'w').write((t+'\n\n' if t else '')+b+'\n')
 PY
 done
+{ printf -- '---\ntrigger: always_on\n---\n'; bloco; } > ~/.gemini/config/rules/modos-padrao.md
 
 # conferencia: nada do que foi pedido pode ter ficado de fora
 falta=()
@@ -70,5 +69,7 @@ for s in cloudflare supabase github-issues; do [[ -e ~/.claude/skills/$s/SKILL.m
 for p in ponytail@ponytail caveman@caveman; do
   claude plugin list 2>/dev/null | grep -A3 "$p" | grep -q enabled || falta+=("plugin:$p")
 done
+for s in cloudflare github-issues caveman; do [[ -e ~/.gemini/config/skills/$s/SKILL.md ]] || falta+=("agy:$s"); done
+agy plugin list 2>/dev/null | grep -q '"name": "ponytail"' || falta+=("agy-plugin:ponytail")
 (( ${#falta[@]} == 0 )) || { echo "ERRO: faltou ${falta[*]}"; exit 1; }
 echo "skills em ~/.agents/skills: $(ls ~/.agents/skills | wc -l) | ponytail e caveman: full por padrao"
