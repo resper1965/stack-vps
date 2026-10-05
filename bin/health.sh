@@ -23,6 +23,15 @@ if [[ -f $stamp ]]; then
   (( age <= 36 )) && ok "ultimo backup ha ${age}h" || bad "ultimo backup ha ${age}h (>36h)"
 else bad "nunca rodou (sem $stamp)"; fi
 
+echo "sistema"
+mem=$(awk '/MemAvailable/{a=$2}/MemTotal/{t=$2}END{print int(a*100/t)}' /proc/meminfo)
+if (( mem >= 10 )); then ok "memoria livre ${mem}%"; else bad "memoria livre ${mem}%"; fi
+if [[ -f /var/run/reboot-required ]]; then bad "reboot pendente ($(head -3 /var/run/reboot-required.pkgs 2>/dev/null | tr '\n' ' '))"
+else ok "sem reboot pendente"; fi
+wl=/srv/dev/state/weekly.log
+if [[ -f $wl ]] && (( ($(date +%s) - $(stat -c %Y "$wl")) / 86400 <= 8 )); then ok "rotina semanal em dia"
+else bad "rotina semanal sem rodar ha mais de 8 dias"; fi
+
 echo "disco"
 use=$(df --output=pcent /srv | tail -1 | tr -dc '0-9')
 (( use < 85 )) && ok "/srv em ${use}%" || bad "/srv em ${use}%"
