@@ -86,6 +86,6 @@ configurados no `admin.env`. Canal sem valor e pulado. Teste manual:
 
 - `data/` esta fora do escopo: nao ler, nao escrever.
 - Escrita livre so em `state/` e em branch nova (`chore/...`). Nada de push em `main`.
-- Segredo vem de `secrets/.env` via ambiente do shell, nunca do bloco `env` de `settings.json`.
+- Segredo vem de `secrets/agente.env` (agente) ou `secrets/admin.env` (dev) via ambiente do shell, nunca do bloco `env` de `settings.json`.
 - API da Hostinger e gateway Composio: leitura livre; qualquer chamada que altere estado para e pergunta antes.
 - Docker publica porta só em `127.0.0.1` ou no IP da tailnet (`-p 127.0.0.1:3000:3000`): porta publicada ignora o UFW.

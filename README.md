@@ -11,7 +11,7 @@ Fonte da verdade do ambiente: recriar a VPS é rodar os scripts desta pasta na o
 | 02 | `./scripts/02-layout.sh` | árvore `/srv/dev` |
 | 03 | `./scripts/03-tooling.sh` | ferramentas, Node via mise |
 | 05 | `./scripts/05-servicos.sh` | tmux, scripts de rotina, cron semanal, timer do backup |
-| 15 | `./scripts/15-restore.sh` | `.env`, credencial do tunnel, `state/`, `data/`, config dos agentes |
+| 15 | `./scripts/15-restore.sh` | segredos, credencial do tunnel, `state/`, `data/`, `forense/`, config dos agentes |
 | 06 | `./scripts/06-tunnel.sh <e-mail>` | Cloudflare Tunnel de reserva (`ssh stack-cf`) |
 | 07 | `./scripts/07-firewall.sh` | UFW: 22 só pela tailnet |
 | 16 | `./scripts/16-agente.sh` | usuário `agente` sem sudo, Docker rootless, `ia`/`iax` |
