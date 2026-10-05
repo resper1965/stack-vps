@@ -9,7 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 # unattended-upgrades costuma segurar o lock logo apos o boot
 APT="apt-get -o DPkg::Lock::Timeout=600"
 $APT update -qq
-$APT install -y -qq git tmux ripgrep fd-find jq htop ncdu restic rclone curl unzip >/dev/null
+$APT install -y -qq git tmux ripgrep fd-find jq htop ncdu restic rclone curl unzip shellcheck >/dev/null
 ln -sf "$(command -v fdfind)" /usr/local/bin/fd
 
 # Docker ja vem na imagem da Hostinger; so garante o dev no grupo
