@@ -39,7 +39,8 @@ install -d -m 755 /usr/local/lib/stack-vps/lib
 install -m 755 "$REPO"/scripts/14-backup.sh "$REPO"/scripts/15-restore.sh /usr/local/lib/stack-vps/
 install -m 644 "$REPO"/scripts/lib/restic-env.sh /usr/local/lib/stack-vps/lib/
 install -m 755 "$REPO"/scripts/alertar.sh "$REPO"/scripts/vigia-health.sh /usr/local/lib/stack-vps/
-install -m 644 "$REPO"/systemd/stack-backup.service "$REPO"/systemd/stack-backup.timer \n  "$REPO"/systemd/stack-health.service "$REPO"/systemd/stack-health.timer /etc/systemd/system/
+install -m 644 "$REPO"/systemd/stack-backup.service "$REPO"/systemd/stack-backup.timer \
+  "$REPO"/systemd/stack-health.service "$REPO"/systemd/stack-health.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now stack-backup.timer stack-health.timer
 echo "backup: $(systemctl list-timers stack-backup.timer --no-legend | awk '{print $1, $2, $3}')"
