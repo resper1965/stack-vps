@@ -17,6 +17,14 @@ remoto() { # remoto/<nome>.git com um commit base e clone local em "$B/<pasta>"
   git -C "$B/$2" commit -q --allow-empty -m base; git -C "$B/$2" push -q origin main 2>/dev/null; }
 cabeca() { git --git-dir="$T/remoto/$1.git" rev-parse main; }
 res() { cat "${TSV%.tsv}.resultado.tsv"; }
+gh_stub() { cat > "$STUBS/gh" <<'EOS'
+#!/usr/bin/env bash
+echo "gh $*" >> "$STUB_LOG"
+src=; nome=$3
+while (($#)); do [[ $1 == --source ]] && src=$2; shift; done
+git init -q --bare "$STUB_REMOTOS/${nome#*/}.git" && git -C "$src" remote add origin "$STUB_REMOTOS/${nome#*/}.git"
+EOS
+  chmod +x "$STUBS/gh"; export STUB_REMOTOS=$T/gh; mkdir -p "$STUB_REMOTOS"; }
 
 # fast-forward: sobe
 novo_tmp; prepara; remoto ff "proj ff"
@@ -66,7 +74,7 @@ bash "$S" "$TSV" --simular >/dev/null 2>&1
 res | grep -q $'^SIMULA\tpush'; afirma $? "simular: SIMULA no resultado"
 
 # criar: pasta sem git vira repo privado
-novo_tmp; prepara
+novo_tmp; prepara; gh_stub
 mkdir -p "$B/novo proj"; echo 'print(1)' > "$B/novo proj/main.py"
 linha "$B/novo proj" bekaa-trusted-advisors novo criar
 bash "$S" "$TSV" >/dev/null 2>&1
@@ -124,4 +132,28 @@ res | grep -q 'extensao: proposta.docx'; afirma $? "docx: bloqueado"
 novo_tmp; prepara; mkdir -p "$B/ev"; echo S=1 > "$B/ev/.env"; echo x > "$B/ev/.env.example"
 linha "$B/ev" resper1965 ev criar; bash "$S" "$TSV" >/dev/null 2>&1
 res | grep -q 'segredo: .env$'; afirma $? ".env: bloqueado (e .env.example nao)"
+# so alteracao nao commitada (I4)
+novo_tmp; prepara; remoto dt dt; echo x > "$B/dt/novo.txt"
+linha "$B/dt" resper1965 dt push; bash "$S" "$TSV" >/dev/null 2>&1
+res | grep -q $'^PENDENTE\tpush\tresper1965/dt\talteracoes nao commitadas'; afirma $? "sujo sem commit: PENDENTE"
+
+# ultima linha sem quebra (I5)
+novo_tmp; prepara; mkdir -p "$B/ul"; echo 1 > "$B/ul/a.js"
+printf 'windows\t%s\tresper1965\tul\tapps\tcriar' "$B/ul" >> "$TSV"
+bash "$S" "$TSV" --simular >/dev/null 2>&1
+res | grep -q 'resper1965/ul'; afirma $? "ultima linha sem quebra: processada"
+
+# argumento errado (I6)
+novo_tmp; prepara; remoto ar ar; antes=$(cabeca ar); git -C "$B/ar" commit -q --allow-empty -m x
+linha "$B/ar" resper1965 ar push; bash "$S" "$TSV" --simula >/dev/null 2>&1; afirma_rc $? 1 "--simula: recusa"
+[[ $(cabeca ar) == "$antes" ]]; afirma $? "--simula: nada enviado"
+
+# criar envia todas as branches e retoma se o remoto ja existe (I7)
+novo_tmp; prepara; gh_stub; mkdir -p "$B/br"; git -C "$B/br" init -q -b main
+echo 1 > "$B/br/a.js"; git -C "$B/br" add .; git -C "$B/br" commit -qm a; git -C "$B/br" branch outra
+linha "$B/br" resper1965 br criar; bash "$S" "$TSV" >/dev/null 2>&1
+git --git-dir="$T/gh/br.git" rev-parse -q --verify outra >/dev/null; afirma $? "criar: todas as branches sobem"
+git -C "$B/br" commit -q --allow-empty -m b
+bash "$S" "$TSV" >/dev/null 2>&1
+[[ $(git --git-dir="$T/gh/br.git" rev-parse main) == $(git -C "$B/br" rev-parse main) ]]; afirma $? "criar de novo: retoma como push"
 fim

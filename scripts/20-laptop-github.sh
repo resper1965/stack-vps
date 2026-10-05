@@ -5,7 +5,10 @@
 # TSV (tab, com cabecalho): origem caminho dono repo arvore acao   — acao: push | criar | fica
 set -uo pipefail
 TSV=${1:?uso: $0 <tsv> [--simular]}
-SIMULAR=0; [[ ${2:-} == --simular ]] && SIMULAR=1
+SIMULAR=0
+case ${2:-} in --simular) SIMULAR=1 ;; "") ;; *) echo "uso: $0 <tsv> [--simular]"; exit 1 ;; esac
+(( $# <= 2 )) || { echo "uso: $0 <tsv> [--simular]"; exit 1; }
+export GIT_TERMINAL_PROMPT=0
 RES=${TSV%.tsv}.resultado.tsv
 NOVOS=${TSV%.tsv}.escopo-novos.tsv
 EXT_BLOQ='\.(pst|e01|dd|zip|7z|rar|xlsx|xls|csv|pdf|docx|doc|pptx|ppt|msg|eml|pem|key|pfx|p12)$'
@@ -66,8 +69,9 @@ lista_add() {
 sujo() { if [[ -n $(git -C "$1" status --porcelain 2>/dev/null) ]]; then echo " (ha alteracoes nao commitadas, ficaram no laptop)"; fi; }
 
 faz_push() {
-  local d=$1 dono=$2 repo=$3 arvore=$4 b ahead behind motivo enviou=0
+  local d=$1 dono=$2 repo=$3 arvore=$4 b ahead behind motivo enviou=0 registrou=0
   local -a range
+  registra_b() { registra "$@"; registrou=1; }
   git -C "$d" rev-parse --git-dir >/dev/null 2>&1 || { registra PENDENTE push "$dono" "$repo" "nao e repositorio git"; return; }
   git -C "$d" fetch -q origin </dev/null 2>/dev/null || { registra PENDENTE push "$dono" "$repo" "fetch falhou"; return; }
   while IFS= read -r -u 4 b; do
@@ -75,7 +79,7 @@ faz_push() {
       behind=$(git -C "$d" rev-list --count "$b..origin/$b")
       ahead=$(git -C "$d" rev-list --count "origin/$b..$b")
       (( ahead == 0 )) && continue
-      if (( behind > 0 )); then registra PENDENTE push "$dono" "$repo" "$b divergiu ($ahead a frente, $behind atras)"; continue; fi
+      if (( behind > 0 )); then registra_b PENDENTE push "$dono" "$repo" "$b divergiu ($ahead a frente, $behind atras)"; continue; fi
       range=("origin/$b..$b")
     else
       range=("$b" --not --remotes=origin)
@@ -83,15 +87,18 @@ faz_push() {
       (( ahead == 0 )) && continue
     fi
     motivo=$(bloqueio_hist "$d" "${range[@]}")
-    if [[ -n $motivo ]]; then registra PENDENTE push "$dono" "$repo" "$b $motivo"; continue; fi
+    if [[ -n $motivo ]]; then registra_b PENDENTE push "$dono" "$repo" "$b $motivo"; continue; fi
     if ! gitleaks detect --source "$d" --no-banner --redact --log-opts="${range[*]}" >/dev/null 2>&1 </dev/null; then
-      registra PENDENTE push "$dono" "$repo" "$b segredo apontado pelo gitleaks"; continue; fi
-    if (( SIMULAR )); then registra SIMULA push "$dono" "$repo" "$b: $ahead commit(s)$(sujo "$d")"; continue; fi
+      registra_b PENDENTE push "$dono" "$repo" "$b segredo apontado pelo gitleaks"; continue; fi
+    if (( SIMULAR )); then registra_b SIMULA push "$dono" "$repo" "$b: $ahead commit(s)$(sujo "$d")"; continue; fi
     if git -C "$d" push -q origin "refs/heads/$b:refs/heads/$b" </dev/null 2>/dev/null; then
-      registra OK push "$dono" "$repo" "$b: $ahead commit(s)$(sujo "$d")"; enviou=1
-    else registra PENDENTE push "$dono" "$repo" "$b push recusado"; fi
+      registra_b OK push "$dono" "$repo" "$b: $ahead commit(s)$(sujo "$d")"; enviou=1
+    else registra_b PENDENTE push "$dono" "$repo" "$b push recusado"; fi
   done 4< <(git -C "$d" for-each-ref --format='%(refname:short)' refs/heads)
   if (( enviou )); then novo_escopo "$dono" "$repo" "$arvore"; fi
+  if (( ! registrou )) && { [[ -n $(git -C "$d" status --porcelain 2>/dev/null) ]] || [[ -n $(git -C "$d" stash list 2>/dev/null) ]]; }; then
+    registra PENDENTE push "$dono" "$repo" "alteracoes nao commitadas (ou stash) ficaram no laptop"
+  fi
   return 0
 }
 
@@ -100,7 +107,7 @@ faz_criar() {
   [[ -d $d ]] || { registra PENDENTE criar "$dono" "$repo" "pasta nao existe"; return; }
   git -C "$d" rev-parse --git-dir >/dev/null 2>&1 && eh_git=1
   if (( eh_git )) && git -C "$d" remote get-url origin >/dev/null 2>&1; then
-    registra PENDENTE criar "$dono" "$repo" "ja tem remoto: use push"; return; fi
+    faz_push "$d" "$dono" "$repo" "$arvore"; return; fi
   if (( eh_git )) && git -C "$d" rev-parse -q --verify HEAD >/dev/null; then tem_head=1; fi
   if (( tem_head )); then motivo=$(bloqueio_hist "$d" --all)
   else motivo=$(lista_add "$d" | bloqueio_arvore "$d"); fi
@@ -111,14 +118,17 @@ faz_criar() {
   command -v gh >/dev/null || { registra PENDENTE criar "$dono" "$repo" "falta gh"; return; }
   (( eh_git )) || git -C "$d" init -q -b main
   if ! git -C "$d" rev-parse -q --verify HEAD >/dev/null; then
-    git -C "$d" add -A && git -C "$d" commit -q -m "chore: importacao inicial do laptop"
+    if ! { git -C "$d" add -A && git -C "$d" commit -q -m "chore: importacao inicial do laptop"; }; then
+      registra PENDENTE criar "$dono" "$repo" "commit inicial falhou (git user.email?)"; return; fi
   fi
-  if gh repo create "$dono/$repo" --private --source "$d" --remote origin --push >/dev/null 2>&1 </dev/null; then
+  if ! gh repo create "$dono/$repo" --private --source "$d" --remote origin >/dev/null 2>&1 </dev/null; then
+    registra PENDENTE criar "$dono" "$repo" "gh repo create falhou"; return; fi
+  if git -C "$d" push -q -u origin --all </dev/null 2>/dev/null; then
     registra OK criar "$dono" "$repo" "repo privado criado$(sujo "$d")"; novo_escopo "$dono" "$repo" "$arvore"
-  else registra PENDENTE criar "$dono" "$repo" "gh repo create falhou"; fi
+  else registra PENDENTE criar "$dono" "$repo" "repo criado, push falhou: rode de novo"; fi
 }
 
-while IFS=$'\t' read -r -u 3 origem caminho dono repo arvore acao; do
+while IFS=$'\t' read -r -u 3 origem caminho dono repo arvore acao || [[ -n ${origem:-} ]]; do
   acao=${acao%$'\r'}
   [[ -z $origem || $origem == origem ]] && continue
   case $acao in
