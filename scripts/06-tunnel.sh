@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Cloudflare Tunnel + DNS + Zero Trust Access. Idempotente.
 # Uso: sudo ./06-tunnel.sh <email-da-politica>
-# Le CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID de /srv/dev/secrets/.env — o token nao sai da VPS.
+# Le CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID de /srv/dev/secrets/admin.env — o token nao sai da VPS.
 set -euo pipefail
 [[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
 EMAIL="${1:?informe o e-mail da politica de Access}"
 ZONA=esper.ws
 HOST=ssh.$ZONA
-ENVF=${STACK_ENV:-/srv/dev/secrets/.env}
+ENVF=${STACK_ENV:-/srv/dev/secrets/admin.env}
 CFD=${STACK_CF_DIR:-/etc/cloudflared}
 
 set -a

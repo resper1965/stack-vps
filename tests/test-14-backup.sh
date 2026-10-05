@@ -7,7 +7,7 @@ echo "14-backup"
 prepara() { # raiz falsa com o que o backup espera
   export STACK_ROOT=$T/raiz; unset STACK_ENV
   mkdir -p "$STACK_ROOT"/srv/dev/{state,data,secrets} "$STACK_ROOT"/home/dev/.claude
-  echo "X=1" > "$STACK_ROOT/srv/dev/secrets/.env"
+  echo "X=1" > "$STACK_ROOT/srv/dev/secrets/admin.env"
   export CLOUDFLARE_ACCOUNT_ID=acc R2_ACCESS_KEY_ID=k R2_SECRET_ACCESS_KEY=s RESTIC_PASSWORD=p
   stub chown
 }

@@ -3,7 +3,7 @@
 set -uo pipefail
 ESCOPO=/srv/dev/state/escopo-auditoria.tsv
 BRANCH="chore/inventario-$(date +%Y-%m-%d)"
-set -a; . /srv/dev/secrets/.env; set +a
+set -a; . /srv/dev/secrets/admin.env; set +a
 ok=0; falha=0; pulado=0
 while IFS=$'\t' read -r dono repo arvore dir; do
   [[ $dono == dono ]] && continue

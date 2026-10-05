@@ -20,10 +20,10 @@ mkdir -p "$D/srv/dev/state"; echo conteudo > "$D/srv/dev/state/inventario.md"
 bash "$S" --destino "$D" --forcar >/dev/null 2>&1; afirma_rc $? 0 "com --forcar: restaura"
 
 novo_tmp; prepara   # VPS recem-formatada: o 02 criou .env vazio e state/reviews vazio
-mkdir -p "$D/srv/dev/secrets" "$D/srv/dev/state/reviews"; : > "$D/srv/dev/secrets/.env"
+mkdir -p "$D/srv/dev/secrets" "$D/srv/dev/state/reviews"; : > "$D/srv/dev/secrets/admin.env"
 bash "$S" --destino "$D" >/dev/null 2>&1; afirma_rc $? 0 "VPS recem-formatada: restaura"
 afirma_log "restic restore latest --target $D" "restaura o ultimo snapshot no destino"
-afirma_log "--include /srv/dev/secrets/.env" "inclui o .env"
+afirma_log "--include /srv/dev/secrets/admin.env" "inclui o .env"
 afirma_log "--include /etc/cloudflared/credentials.json" "inclui a credencial do tunnel"
 nega_log "chown" "destino de teste: nao mexe em dono"
 

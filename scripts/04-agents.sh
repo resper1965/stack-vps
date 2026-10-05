@@ -27,7 +27,7 @@ codex mcp add cloudflare-docs -- npx -y mcp-remote https://docs.mcp.cloudflare.c
 # skills proprias: um clone, dois agentes.
 # Claude le por symlink; Codex nao tem diretorio de skills, so plugin — dai o marketplace local.
 D=/srv/dev/repos/infra/claude-skills
-[[ -d $D/.git ]] || { set -a; . /srv/dev/secrets/.env; set +a
+[[ -d $D/.git ]] || { set -a; . /srv/dev/secrets/agente.env; set +a
   git clone -q "https://x-access-token:${GITHUB_TOKEN}@github.com/resper1965/claude-skills.git" "$D"
   git -C "$D" remote set-url origin https://github.com/resper1965/claude-skills.git; }
 mkdir -p ~/.claude/skills
