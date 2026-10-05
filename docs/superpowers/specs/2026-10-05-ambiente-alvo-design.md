@@ -45,6 +45,7 @@ Entra:
 | `uv` (Python por projeto, via `mise`) | frentes B, C e D |
 | `gh`, `wrangler`, `vercel`, `supabase` | CLIs das plataformas (npm global ou binário oficial) |
 | `gcloud` + `bq` | BigQuery; login de usuário (`gcloud auth login`), **sem arquivo de chave** |
+| OmniRoute (container) | gateway de LLM (Featherless e outros provedores) em `127.0.0.1` e no IP da tailnet; chaves dos provedores só no gateway (`admin.env`); consumidores (`agente`, projetos, `npentest`) recebem uma chave do próprio gateway |
 | `direnv` | segredos por projeto ao entrar na pasta |
 | `lazygit` | revisão e commit pelo terminal |
 | `cloudflared` | instalado pelo `03` (hoje nenhum script instala) |
@@ -86,18 +87,26 @@ de dados no sistema.
 
 ### Usuários
 
-| | `dev` (Ricardo) | `agente` (Claude e Codex) |
-|---|---|---|
-| `sudo` | sim | não |
-| Docker | daemon do sistema | Docker rootless próprio |
-| `/srv/dev/repos`, `/srv/dev/state` | leitura e escrita | leitura e escrita (grupo `devs`, setgid) |
-| `/srv/dev/data`, `/srv/forense` | leitura e escrita | sem acesso (permissão do sistema) |
-| `/srv/dev/secrets/admin.env` | sim | não |
+Revisto em 05/10/2026 depois da revisão independente: com repositórios compartilhados por grupo,
+o `agente` gravava hooks e `.git/config` que depois rodavam como `dev` (e daí root). O modelo final
+separa os papéis em vez de compartilhar a árvore.
 
-- Comandos `ia` (Claude) e `iax` (Codex) para o `dev`: abrem o agente como `agente` no diretório
-  atual (`sudo -u agente -H --preserve-env=... `, regra sudoers restrita a esse alvo).
-- Config, plugins, skills e MCP dos agentes passam a viver em `/home/agente` (o `04` roda como
-  `agente`); o backup passa a cobrir `/home/agente/.claude` e `.codex`.
+| | `agente` (estação de trabalho: Ricardo + IA) | `dev` (administração) |
+|---|---|---|
+| `sudo` | não | sim |
+| Docker | rootless próprio | daemon do sistema |
+| `/srv/dev/repos`, `/srv/dev/state` | **dono** | não roda git ali (o git recusa: repositório de outro dono) |
+| `/srv/dev/data`, `/srv/forense` | sem acesso | leitura e escrita |
+| Segredos | `agente.env`, `projetos/` | `admin.env` |
+| Rotina semanal (inventário, `STATE.md`) | roda aqui (crontab do `agente`) | — |
+| Provisionamento (`scripts/`) | — | clone em `/opt/stack-vps`, dono root, fora do alcance do `agente` |
+
+- O Ricardo trabalha conectado como `agente` (`ssh stack-agente`, VS Code na mesma conexão); usa
+  `stack` (`dev`) só para administração.
+- Comandos `ia` e `iax` continuam valendo para quem estiver como `dev`: abrem o agente como `agente`.
+- Sem grupo compartilhado, sem `safe.directory '*'`, sem `core.sharedRepository`.
+- Carimbos que o health confere (último backup, estado do vigia) ficam em `/var/lib/stack-vps`,
+  onde o `agente` não escreve.
 
 ### Segredos
 
@@ -149,7 +158,7 @@ idempotentes, que entram depois sem nova reinstalação.
 | Onda | Conteúdo | Quando |
 |---|---|---|
 | 1 | Seção 5 inteira (usuários, segredos, tokens, `ia`/`iax`); `cloudflared` no `03`; alertas e health ampliado | antes da reinstalação, junto com as correções da revisão da migração |
-| 2 | Sistema base (seção 1) e kit de serviços | logo depois da janela |
+| 2 | Sistema base (seção 1), OmniRoute e kit de serviços | logo depois da janela |
 | 3 | Frentes B, C e D; painel; preview para cliente; `atualizar`; arquivo de dormentes | conforme a necessidade |
 
 ## Testes
