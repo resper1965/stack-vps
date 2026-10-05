@@ -23,7 +23,7 @@ EOS
 
 novo_tmp; prepara; restic_stub nenhum
 bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "sucesso"
-[[ -f $STACK_ROOT/srv/dev/state/.last-backup ]]; afirma $? "sucesso grava .last-backup"
+[[ -f $STACK_ROOT/var/lib/stack-vps/last-backup ]]; afirma $? "sucesso grava .last-backup"
 afirma_log "repo=s3:https://acc.r2.cloudflarestorage.com/stack-vps-backup" "repositorio no R2 da conta"
 afirma_log "restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune" "retencao do spec"
 afirma_log "/home/dev/.claude/.credentials.json" "credencial do Claude excluida"
@@ -31,7 +31,7 @@ afirma_log "/srv/dev/state" "state no backup"
 
 novo_tmp; prepara; restic_stub backup
 bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "falha no backup: sai com erro"
-[[ ! -e $STACK_ROOT/srv/dev/state/.last-backup ]]; afirma $? "falha no backup: sem .last-backup"
+[[ ! -e $STACK_ROOT/var/lib/stack-vps/last-backup ]]; afirma $? "falha no backup: sem .last-backup"
 nega_log "restic forget" "falha no backup: nao poda"
 
 novo_tmp; prepara; restic_stub nenhum; unset RESTIC_PASSWORD
@@ -40,5 +40,5 @@ nega_log "restic" "sem senha: restic nao roda"
 novo_tmp; prepara; restic_stub nenhum; rm "$STACK_ROOT/etc/cloudflared/credentials.json"
 bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "falta essencial: recusa"
 nega_log "restic backup" "falta essencial: nao faz backup parcial"
-[[ ! -e $STACK_ROOT/srv/dev/state/.last-backup ]]; afirma $? "falta essencial: sem .last-backup"
+[[ ! -e $STACK_ROOT/var/lib/stack-vps/last-backup ]]; afirma $? "falta essencial: sem .last-backup"
 fim

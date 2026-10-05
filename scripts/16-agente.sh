@@ -1,26 +1,40 @@
 #!/usr/bin/env bash
-# Usuario "agente" para Claude/Codex: sem sudo, sem docker do sistema, Docker rootless proprio,
-# grupo "devs" com dev para repos/ e state/. data/ e forense/ ficam so com dev. Idempotente.
-# Uso: sudo ./16-agente.sh   (depois de 02, 03 e 05)
+# Usuario "agente": a estacao de trabalho (Ricardo + Claude/Codex). Sem sudo, sem docker do sistema,
+# Docker rootless proprio, dono de repos/ e state/. O dev fica so com administracao: data/, forense/,
+# admin.env e sudo — e nunca roda git onde o agente escreve (hooks e .git/config do agente rodariam
+# como dev, e dai como root). Idempotente. Uso: sudo ./16-agente.sh   (depois de 02, 03 e 05)
 set -euo pipefail
 [[ $EUID -eq 0 ]] || { echo "rode como root"; exit 1; }
 REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 
-getent group devs >/dev/null || groupadd devs
 getent group agente >/dev/null || groupadd agente
 id agente &>/dev/null || adduser --disabled-password --gecos "" --ingroup agente agente
-usermod -aG devs dev; usermod -aG devs agente
+# o restore pode ter recriado /home/agente com o UID antigo antes de o usuario existir
+chown -R agente:agente /home/agente
 gpasswd -d agente sudo 2>/dev/null || true; gpasswd -d agente docker 2>/dev/null || true
+gpasswd -d agente dev 2>/dev/null || true
 grep -q '^agente:' /etc/subuid || usermod --add-subuids 200000-265535 --add-subgids 200000-265535 agente
 
-# repos e state compartilhados (grupo devs, setgid); data e forense so do dev
-for d in /srv/dev/repos /srv/dev/state; do
-  chgrp -R devs "$d"; chmod -R g+rwX "$d"; find "$d" -type d -exec chmod g+s {} +
-done
+# o Ricardo entra direto como agente (ssh stack-agente, VS Code): mesma chave do dev
+install -d -m 700 -o agente -g agente /home/agente/.ssh
+install -m 600 -o agente -g agente /home/dev/.ssh/authorized_keys /home/agente/.ssh/authorized_keys
+
+# repos e state sao do agente; data e forense so do dev
+chown -R agente:agente /srv/dev/repos /srv/dev/state
 chmod 750 /srv/dev/data; install -d -m 750 -o dev -g dev /srv/forense
-git config --system core.sharedRepository group
-git config --system --get-all safe.directory 2>/dev/null | grep -qx '\*' || git config --system --add safe.directory '*'
-for u in dev agente; do grep -q 'umask 002' "/home/$u/.profile" || echo 'umask 002' >> "/home/$u/.profile"; done
+
+# desfaz o modelo anterior (grupo compartilhado), se existir
+git config --system --unset-all safe.directory '^\*$' 2>/dev/null || true
+git config --system --unset core.sharedRepository 2>/dev/null || true
+for u in dev agente; do sed -i '/^umask 002$/d' "/home/$u/.profile"; done
+if getent group devs >/dev/null; then
+  gpasswd -d dev devs 2>/dev/null || true; gpasswd -d agente devs 2>/dev/null || true; groupdel devs
+fi
+
+# rotina semanal (segunda 07:00 UTC) roda como agente, com o token dele
+CRON='0 7 * * 1 /srv/dev/bin/weekly-review.sh >> /srv/dev/state/weekly.log 2>&1'
+{ crontab -u agente -l 2>/dev/null | grep -v 'weekly-review.sh' || true; echo "$CRON"; } | crontab -u agente -
+{ crontab -u dev -l 2>/dev/null | grep -v 'weekly-review.sh' || true; } | crontab -u dev -
 
 # dev chama o agente sem senha; o agente nao tem sudo nenhum
 echo 'dev ALL=(agente) NOPASSWD: ALL' > /etc/sudoers.d/91-dev-agente

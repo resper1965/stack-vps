@@ -156,4 +156,15 @@ git --git-dir="$T/gh/br.git" rev-parse -q --verify outra >/dev/null; afirma $? "
 git -C "$B/br" commit -q --allow-empty -m b
 bash "$S" "$TSV" >/dev/null 2>&1
 [[ $(git --git-dir="$T/gh/br.git" rev-parse main) == $(git -C "$B/br" rev-parse main) ]]; afirma $? "criar de novo: retoma como push"
+# .envrc barrado (revisao)
+novo_tmp; prepara; mkdir -p "$B/er"; echo 'export TOKEN=x' > "$B/er/.envrc"; echo 1 > "$B/er/a.js"
+linha "$B/er" resper1965 er criar; bash "$S" "$TSV" >/dev/null 2>&1
+res | grep -q 'segredo: .envrc'; afirma $? ".envrc: bloqueado"
+
+# criar numa subpasta de outro repo nao envia o repo pai (revisao)
+novo_tmp; prepara; remoto pai2 pai2; mkdir -p "$B/pai2/sub"; echo 1 > "$B/pai2/sub/a.js"
+git -C "$B/pai2" commit -q --allow-empty -m local; antes=$(cabeca pai2)
+linha "$B/pai2/sub" resper1965 sub criar; bash "$S" "$TSV" >/dev/null 2>&1
+[[ $(cabeca pai2) == "$antes" ]]; afirma $? "subpasta: repo pai intocado"
+res | grep -q 'dentro de outro repositorio'; afirma $? "subpasta: PENDENTE"
 fim

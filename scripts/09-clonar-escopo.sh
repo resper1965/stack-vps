@@ -2,7 +2,7 @@
 # Clona o escopo da auditoria (TSV: dono, repo, arvore, dir). Idempotente. Roda como dev.
 set -uo pipefail
 TSV="${1:?informe o TSV de escopo}"
-set -a; . /srv/dev/secrets/admin.env; set +a
+set -a; . /srv/dev/secrets/agente.env; set +a
 novo=0; atual=0; falha=0
 while IFS=$'\t' read -r dono repo arvore dir; do
   [[ $dono == dono ]] && continue

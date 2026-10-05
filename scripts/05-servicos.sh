@@ -24,15 +24,13 @@ systemctl daemon-reload
 systemctl enable --now tmux-dev
 REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 
-# scripts de rotina do dev
-install -d -m 755 -o dev -g dev /srv/dev/bin
-install -m 755 -o dev -g dev "$REPO"/bin/health.sh   "$REPO"/scripts/{08-clonar-repos,09-clonar-escopo,10-inventario,11-state,12-push-state}.sh /srv/dev/bin/
-install -m 755 -o dev -g dev "$REPO"/scripts/13-weekly-review.sh /srv/dev/bin/weekly-review.sh
-install -m 644 -o dev -g dev "$REPO"/compose/playwright.yml /srv/dev/bin/
-
-# rotina semanal (segunda 07:00 UTC), no crontab do dev
-CRON='0 7 * * 1 /srv/dev/bin/weekly-review.sh >> /srv/dev/state/weekly.log 2>&1'
-{ crontab -u dev -l 2>/dev/null | grep -v 'weekly-review.sh' || true; echo "$CRON"; } | crontab -u dev -
+# scripts de rotina: dono root. Quem roda a rotina e o agente (crontab instalado pelo 16),
+# e ele nao pode alterar o que executa.
+install -d -m 755 -o root -g root /srv/dev/bin
+install -m 755 -o root -g root "$REPO"/bin/health.sh \
+  "$REPO"/scripts/{08-clonar-repos,09-clonar-escopo,10-inventario,11-state,12-push-state}.sh /srv/dev/bin/
+install -m 755 -o root -g root "$REPO"/scripts/13-weekly-review.sh /srv/dev/bin/weekly-review.sh
+install -m 644 -o root -g root "$REPO"/compose/playwright.yml /srv/dev/bin/
 
 # backup e restore fora do /srv/dev/repos: o timer nao pode depender de um clone
 install -d -m 755 /usr/local/lib/stack-vps/lib

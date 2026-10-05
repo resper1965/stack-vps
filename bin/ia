@@ -8,7 +8,8 @@ exec sudo -u agente -H bash -c '
   cd "$1" 2>/dev/null || cd /srv/dev/repos; shift
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
   DOCKER_HOST="unix:///run/user/$(id -u)/docker.sock"; export DOCKER_HOST
-  if [[ -f "$PWD/.envrc" ]]; then eval "$(direnv export bash 2>/dev/null)"; fi
   set -a; . /srv/dev/secrets/agente.env; set +a
+  # o .envrc do projeto vem por cima (token do dono certo); exige "direnv allow" feito pelo agente
+  if [[ -f "$PWD/.envrc" ]]; then eval "$(direnv export bash 2>/dev/null)"; fi
   umask 002
   exec "$0" "$@"' "$cmd" "$PWD" "$@"

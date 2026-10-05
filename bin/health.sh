@@ -17,7 +17,7 @@ if systemctl is-active --quiet docker; then ok "docker ativo, $(timeout 10 docke
 else bad "docker parado"; fi
 
 echo "backup"
-stamp=/srv/dev/state/.last-backup
+stamp=/var/lib/stack-vps/last-backup
 if [[ -f $stamp ]]; then
   age=$(( ($(date +%s) - $(stat -c %Y "$stamp")) / 3600 ))
   (( age <= 36 )) && ok "ultimo backup ha ${age}h" || bad "ultimo backup ha ${age}h (>36h)"

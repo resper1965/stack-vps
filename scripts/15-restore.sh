@@ -33,7 +33,10 @@ inc=(); for p in "${BACKUP_PATHS[@]}"; do inc+=(--include "$p"); done
 restic restore latest --target "$DEST" "${inc[@]}"
 
 if [[ $DEST == / ]]; then
-  for d in /srv/dev/state /srv/dev/data /home/dev/.claude /home/dev/.codex; do
+  if [[ -e /srv/dev/state ]]; then
+    if id agente >/dev/null 2>&1; then chown -R agente:agente /srv/dev/state; else chown -R dev:dev /srv/dev/state; fi
+  fi
+  for d in /srv/dev/data /home/dev/.claude /home/dev/.codex; do
     if [[ -e $d ]]; then chown -R dev:dev "$d"; fi
   done
   for d in /home/agente/.claude /home/agente/.codex; do

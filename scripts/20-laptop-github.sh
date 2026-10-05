@@ -24,7 +24,7 @@ novo_escopo() { (( SIMULAR )) || printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$2" >
 eh_bloqueado() {
   local f=$1 base=${1##*/} min=${1,,}
   if [[ $min =~ $EXT_BLOQ ]]; then echo "extensao: $f"; return 0; fi
-  if [[ $base == .env || ( $base == .env.* && $base != .env.example ) ]]; then echo "segredo: $f"; return 0; fi
+  if [[ $base == .env || $base == .envrc || ( $base == .env.* && $base != .env.example ) ]]; then echo "segredo: $f"; return 0; fi
   if [[ $base =~ ^id_(rsa|ed25519|ecdsa) && $base != *.pub ]]; then echo "segredo: $f"; return 0; fi
   return 1
 }
@@ -105,7 +105,12 @@ faz_push() {
 faz_criar() {
   local d=$1 dono=$2 repo=$3 arvore=$4 motivo eh_git=0 tem_head=0
   [[ -d $d ]] || { registra PENDENTE criar "$dono" "$repo" "pasta nao existe"; return; }
-  git -C "$d" rev-parse --git-dir >/dev/null 2>&1 && eh_git=1
+  if git -C "$d" rev-parse --git-dir >/dev/null 2>&1; then
+    # pasta dentro de outro repositorio: o git enxerga o pai, e o envio levaria o pai inteiro
+    if [[ $(git -C "$d" rev-parse --show-toplevel) != "$(cd "$d" && pwd -P)" ]]; then
+      registra PENDENTE criar "$dono" "$repo" "pasta dentro de outro repositorio: $(git -C "$d" rev-parse --show-toplevel)"; return; fi
+    eh_git=1
+  fi
   if (( eh_git )) && git -C "$d" remote get-url origin >/dev/null 2>&1; then
     faz_push "$d" "$dono" "$repo" "$arvore"; return; fi
   if (( eh_git )) && git -C "$d" rev-parse -q --verify HEAD >/dev/null; then tem_head=1; fi

@@ -5,7 +5,7 @@ set -euo pipefail
 [[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
 # shellcheck source=scripts/lib/restic-env.sh
 . "$(dirname "$(readlink -f "$0")")/lib/restic-env.sh"
-STAMP=${STACK_ROOT:-}/srv/dev/state/.last-backup
+STAMP=${STACK_ROOT:-}/var/lib/stack-vps/last-backup   # fora de state/: o agente nao forja
 
 restic cat config >/dev/null 2>&1 || restic init
 
@@ -18,5 +18,5 @@ restic backup --one-file-system "${excl[@]}" "${paths[@]}"
 restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
 if [[ $(date +%u) == 7 ]]; then restic check --read-data-subset=5%; fi
 
-touch "$STAMP"; chown dev:dev "$STAMP" 2>/dev/null || true
+mkdir -p "$(dirname "$STAMP")"; touch "$STAMP"
 echo "backup ok: $(date -Is)"
