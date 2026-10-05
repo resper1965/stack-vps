@@ -6,7 +6,8 @@ echo "14-backup"
 
 prepara() { # raiz falsa com o que o backup espera
   export STACK_ROOT=$T/raiz; unset STACK_ENV
-  mkdir -p "$STACK_ROOT"/srv/dev/{state,data,secrets} "$STACK_ROOT"/home/dev/.claude
+  mkdir -p "$STACK_ROOT"/srv/dev/{state,data,secrets} "$STACK_ROOT"/home/dev/.claude "$STACK_ROOT"/etc/cloudflared
+  echo '{}' > "$STACK_ROOT/etc/cloudflared/credentials.json"
   echo "X=1" > "$STACK_ROOT/srv/dev/secrets/admin.env"
   export CLOUDFLARE_ACCOUNT_ID=acc R2_ACCESS_KEY_ID=k R2_SECRET_ACCESS_KEY=s RESTIC_PASSWORD=p
   stub chown
@@ -36,4 +37,8 @@ nega_log "restic forget" "falha no backup: nao poda"
 novo_tmp; prepara; restic_stub nenhum; unset RESTIC_PASSWORD
 bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "sem RESTIC_PASSWORD: recusa"
 nega_log "restic" "sem senha: restic nao roda"
+novo_tmp; prepara; restic_stub nenhum; rm "$STACK_ROOT/etc/cloudflared/credentials.json"
+bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "falta essencial: recusa"
+nega_log "restic backup" "falta essencial: nao faz backup parcial"
+[[ ! -e $STACK_ROOT/srv/dev/state/.last-backup ]]; afirma $? "falta essencial: sem .last-backup"
 fim

@@ -9,6 +9,7 @@ STAMP=${STACK_ROOT:-}/srv/dev/state/.last-backup
 
 restic cat config >/dev/null 2>&1 || restic init
 
+for p in "${BACKUP_REQUIRED[@]}"; do [[ -e $p ]] || { echo "falta caminho essencial: $p"; exit 1; }; done
 paths=(); for p in "${BACKUP_PATHS[@]}"; do [[ -e $p ]] && paths+=("$p"); done
 (( ${#paths[@]} )) || { echo "nenhum caminho do backup existe"; exit 1; }
 excl=(); for e in "${BACKUP_EXCLUDES[@]}"; do excl+=(--exclude "$e"); done

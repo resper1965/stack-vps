@@ -20,8 +20,12 @@ export AWS_ACCESS_KEY_ID=$R2_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$R2_SECRET_ACCE
 export AWS_DEFAULT_REGION=auto RESTIC_PASSWORD
 
 # Repositorios ficam de fora: a verdade e o GitHub. Identidade do Tailscale tambem: o no novo
-# entra antes do restore. Plugins do Claude sao reinstalados pelo 04.
-BACKUP_PATHS=("$R/srv/dev/state" "$R/srv/dev/data" "$R/srv/dev/secrets/admin.env"
-              "$R/etc/cloudflared/credentials.json" "$R/home/dev/.claude" "$R/home/dev/.codex")
+# entra antes do restore. Plugins dos agentes sao reinstalados pelo 04.
+# REQUIRED: sem eles nao ha recuperacao; o backup recusa rodar se faltar algum.
+BACKUP_REQUIRED=("$R/srv/dev/state" "$R/srv/dev/secrets/admin.env" "$R/etc/cloudflared/credentials.json")
+BACKUP_OPTIONAL=("$R/srv/dev/data" "$R/srv/forense" "$R/srv/dev/secrets/agente.env" "$R/srv/dev/secrets/projetos"
+                 "$R/home/dev/.claude" "$R/home/dev/.codex" "$R/home/agente/.claude" "$R/home/agente/.codex")
+BACKUP_PATHS=("${BACKUP_REQUIRED[@]}" "${BACKUP_OPTIONAL[@]}")
 BACKUP_EXCLUDES=("$R/home/dev/.claude/.credentials.json" "$R/home/dev/.codex/auth.json"
-                 "$R/home/dev/.claude/plugins" "node_modules")
+                 "$R/home/agente/.claude/.credentials.json" "$R/home/agente/.codex/auth.json"
+                 "$R/home/dev/.claude/plugins" "$R/home/agente/.claude/plugins" "node_modules")

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Restaura do restic os caminhos do backup. Uso: sudo ./15-restore.sh [--destino DIR] [--forcar]
-# Na VPS recem-formatada o .env ainda nao existe: antes, exporte CLOUDFLARE_ACCOUNT_ID,
-# R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY e RESTIC_PASSWORD (as tres ultimas do gerenciador de senhas).
+# Na VPS recem-formatada o admin.env ainda esta vazio: antes, exporte CLOUDFLARE_ACCOUNT_ID,
+# R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY e RESTIC_PASSWORD (as tres ultimas do gerenciador de senhas)
+# e rode preservando-as, porque o sudo as descarta:
+#   sudo --preserve-env=CLOUDFLARE_ACCOUNT_ID,R2_ACCESS_KEY_ID,R2_SECRET_ACCESS_KEY,RESTIC_PASSWORD ./15-restore.sh
 set -euo pipefail
 [[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
 DEST=/; FORCAR=0
@@ -34,7 +36,15 @@ if [[ $DEST == / ]]; then
   for d in /srv/dev/state /srv/dev/data /home/dev/.claude /home/dev/.codex; do
     if [[ -e $d ]]; then chown -R dev:dev "$d"; fi
   done
-  if [[ -f /srv/dev/secrets/.env ]]; then chown dev:dev /srv/dev/secrets/.env; chmod 600 /srv/dev/secrets/.env; fi
+  for d in /home/agente/.claude /home/agente/.codex; do
+    if [[ -e $d ]] && id agente >/dev/null 2>&1; then chown -R agente:agente "$d"; fi
+  done
+  if [[ -e /srv/forense ]]; then chown -R dev:dev /srv/forense; chmod 750 /srv/forense; fi
+  if [[ -f /srv/dev/secrets/admin.env ]]; then chown dev:dev /srv/dev/secrets/admin.env; chmod 600 /srv/dev/secrets/admin.env; fi
+  if [[ -f /srv/dev/secrets/agente.env ]]; then chown dev:agente /srv/dev/secrets/agente.env; chmod 640 /srv/dev/secrets/agente.env; fi
+  if [[ -d /srv/dev/secrets/projetos ]]; then
+    chown -R dev:agente /srv/dev/secrets/projetos; chmod -R u=rwX,g=rX,o= /srv/dev/secrets/projetos
+  fi
   if [[ -f /etc/cloudflared/credentials.json ]]; then
     chown root:root /etc/cloudflared/credentials.json; chmod 600 /etc/cloudflared/credentials.json
   fi

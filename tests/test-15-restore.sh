@@ -26,6 +26,8 @@ afirma_log "restic restore latest --target $D" "restaura o ultimo snapshot no de
 afirma_log "--include /srv/dev/secrets/admin.env" "inclui o .env"
 afirma_log "--include /etc/cloudflared/credentials.json" "inclui a credencial do tunnel"
 nega_log "chown" "destino de teste: nao mexe em dono"
+afirma_log "--include /home/agente/.claude" "inclui a config do agente"
+afirma_log "--include /srv/forense" "inclui as evidencias"
 
 novo_tmp; prepara
 bash "$S" --qualquer >/dev/null 2>&1; afirma_rc $? 1 "argumento desconhecido: recusa"
