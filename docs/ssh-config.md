@@ -25,6 +25,15 @@ Host stack
     ServerAliveInterval 30
     ServerAliveCountMax 3
 
+Host stack-agente
+    HostName 100.76.167.6
+    User agente
+    IdentityFile ~/.ssh/id_ed25519_stackvps
+    IdentitiesOnly yes
+    StrictHostKeyChecking accept-new
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+
 Host stack-cf
     HostName ssh.esper.ws
     User dev

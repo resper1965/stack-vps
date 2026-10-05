@@ -35,8 +35,8 @@ git clone https://github.com/resper1965/stack-vps /tmp/stack-vps && cd /tmp/stac
 #   expiração de chave do nó e fixe o IPv4 em 100.76.167.6 (Edit machine IPv4).
 #   Daqui em diante: ssh stack
 ./scripts/02-layout.sh
-mv /tmp/stack-vps /srv/dev/repos/infra/stack-vps && chown -R dev:dev /srv/dev/repos/infra/stack-vps
-cd /srv/dev/repos/infra/stack-vps
+mv /tmp/stack-vps /opt/stack-vps && chown -R root:root /opt/stack-vps   # clone de provisionamento, fora do alcance do agente
+cd /opt/stack-vps
 ./scripts/03-tooling.sh
 ./scripts/05-servicos.sh
 export CLOUDFLARE_ACCOUNT_ID=<id da conta>
@@ -49,7 +49,7 @@ sudo --preserve-env=CLOUDFLARE_ACCOUNT_ID,R2_ACCESS_KEY_ID,R2_SECRET_ACCESS_KEY,
 ./scripts/07-firewall.sh
 ./scripts/16-agente.sh
 sudo -u agente -H ./scripts/04-agents.sh                # depois: ia e iax, login de cada um
-sudo -u dev ./scripts/09-clonar-escopo.sh /srv/dev/state/escopo-auditoria.tsv
+sudo -u agente -H ./scripts/09-clonar-escopo.sh /srv/dev/state/escopo-auditoria.tsv
 /srv/dev/bin/health.sh
 ```
 
@@ -59,21 +59,28 @@ sudo -u dev ./scripts/09-clonar-escopo.sh /srv/dev/state/escopo-auditoria.tsv
 restic no bucket R2 `stack-vps-backup`, retenção 7 diários / 4 semanais / 6 mensais, verificação
 de 5% dos dados aos domingos. O `health.sh` acusa se o último backup tiver mais de 36h.
 
-## Agentes
+## Agentes e papéis
 
-Claude Code e Codex rodam como o usuario `agente`, nunca como `dev`. Do terminal do `dev`:
-`ia` abre o Claude e `iax` o Codex, no diretorio atual.
+Dois usuários, papéis separados:
 
-| | `dev` | `agente` |
+| | `agente` — estação de trabalho | `dev` — administração |
 |---|---|---|
-| sudo | sim | nao |
-| Docker | do sistema | rootless proprio |
-| `repos/`, `state/` | escrita | escrita (grupo `devs`) |
-| `data/`, `/srv/forense` | sim | nao |
-| segredos | `admin.env` | `agente.env` e `projetos/<p>.env` (via `.envrc` + direnv) |
+| Quem usa | o Ricardo e os agentes (Claude Code, Codex) | o Ricardo, só para administrar |
+| Conexão | `ssh stack-agente` (VS Code aqui) | `ssh stack` |
+| sudo | não | sim |
+| Docker | rootless próprio | do sistema |
+| `repos/`, `state/` | dono | não roda git ali (o git recusa repositório de outro dono) |
+| `data/`, `/srv/forense` | sem acesso | sim |
+| Segredos | `agente.env`, `projetos/<p>.env` (via `.envrc` + `direnv allow`) | `admin.env` |
+| Rotina semanal | crontab do agente | — |
 
-`/srv/dev/secrets/admin.env` (600 dev) guarda o que so humano usa: Cloudflare com escrita,
-Hostinger, R2, restic e canais de alerta.
+Por que separado: se o `dev` rodasse git num repositório onde o agente escreve, um hook ou um
+`.git/config` deixado pelo agente rodaria como `dev` — e o `dev` tem sudo.
+
+Provisionamento (`sudo ./scripts/NN.sh`) roda de um clone do `stack-vps` que o agente não alcança
+(`/opt/stack-vps`, dono root), nunca do clone de trabalho em `repos/infra/`.
+
+Do terminal do `dev`, `ia` e `iax` abrem o Claude e o Codex como `agente` no diretório atual.
 
 ## Alertas
 

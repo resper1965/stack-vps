@@ -16,8 +16,9 @@ Fonte da verdade do ambiente: recriar a VPS é rodar os scripts desta pasta na o
 | 07 | `./scripts/07-firewall.sh` | UFW: 22 só pela tailnet |
 | 16 | `./scripts/16-agente.sh` | usuário `agente` sem sudo, Docker rootless, `ia`/`iax` |
 | 04 | `sudo -u agente -H ./scripts/04-agents.sh` | Claude Code, Codex, plugins, MCP (no `agente`) |
-| 09 | `sudo -u dev ./scripts/09-clonar-escopo.sh /srv/dev/state/escopo-auditoria.tsv` | clones do escopo |
+| 09 | `sudo -u agente -H ./scripts/09-clonar-escopo.sh /srv/dev/state/escopo-auditoria.tsv` | clones do escopo (dono: agente) |
 
+Rode sempre de um clone com dono root (`/opt/stack-vps`), nunca do clone de trabalho em `repos/`.
 Roteiro completo em `docs/srv-dev-README.md`; acesso do laptop em `docs/ssh-config.md`.
 Testes: `bash tests/run.sh` (precisa de `shellcheck`).
 

@@ -18,6 +18,12 @@ grep -q '^agente:' /etc/subuid || usermod --add-subuids 200000-265535 --add-subg
 # o Ricardo entra direto como agente (ssh stack-agente, VS Code): mesma chave do dev
 install -d -m 700 -o agente -g agente /home/agente/.ssh
 install -m 600 -o agente -g agente /home/dev/.ssh/authorized_keys /home/agente/.ssh/authorized_keys
+# PATH e Docker rootless no TOPO do .bashrc: comandos por ssh sem terminal (VS Code, scripts)
+# param no "case $- in *i*" do Ubuntu e nunca chegariam ao mise activate do fim do arquivo
+if ! grep -q '# stack-vps: ambiente do agente' /home/agente/.bashrc; then
+  # shellcheck disable=SC2016
+  sed -i '1i # stack-vps: ambiente do agente\nexport PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"\nexport DOCKER_HOST="unix:///run/user/$(id -u)/docker.sock"\n' /home/agente/.bashrc
+fi
 
 # repos e state sao do agente; data e forense so do dev
 chown -R agente:agente /srv/dev/repos /srv/dev/state
