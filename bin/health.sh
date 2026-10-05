@@ -13,7 +13,7 @@ if systemctl is-active --quiet cloudflared; then ok "cloudflared ativo (reserva)
 else bad "cloudflared parado"; fi
 
 echo "docker"
-if systemctl is-active --quiet docker; then ok "docker ativo, $(docker ps -q 2>/dev/null | wc -l) container(s)"
+if systemctl is-active --quiet docker; then ok "docker ativo, $(timeout 10 docker ps -q 2>/dev/null | wc -l) container(s)"
 else bad "docker parado"; fi
 
 echo "backup"
