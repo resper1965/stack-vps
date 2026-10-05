@@ -16,9 +16,9 @@ sudo apt update && sudo apt install -y cloudflared
 
 ## Blocos
 
-```
+```text
 Host stack
-    HostName stack
+    HostName 100.76.167.6
     User dev
     IdentityFile ~/.ssh/id_ed25519_stackvps
     IdentitiesOnly yes
@@ -35,8 +35,9 @@ Host stack-cf
     ServerAliveCountMax 3
 ```
 
-Se `ssh stack` disser que não resolve o nome, o WSL está em modo NAT e o MagicDNS não chega
-nele. Troque `HostName stack` pelo IP `100.x` que aparece em `tailscale status` no Windows.
+O `HostName` é o IP da VPS na tailnet, não o nome: o Windows deste laptop não usa o DNS do
+Tailscale (MagicDNS), então `stack` não resolve. O IP é fixo no painel do Tailscale (Edit machine
+IPv4) e é reaplicado no nó novo quando a VPS é reinstalada.
 
 ## Login do Access (só para `stack-cf`)
 
@@ -57,5 +58,5 @@ perfil — não duplique a configuração no `%USERPROFILE%\.ssh\config`.
 ## Portas de desenvolvimento
 
 Com a tailnet, um serviço na porta 3000 da VPS abre no navegador do laptop em
-`http://stack:3000`. No Docker, publique só no loopback ou no IP da tailnet
+`http://100.76.167.6:3000`. No Docker, publique só no loopback ou no IP da tailnet
 (`-p 127.0.0.1:3000:3000`): porta publicada pelo Docker ignora o UFW.
