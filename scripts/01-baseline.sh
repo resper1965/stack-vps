@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Baseline do host: usuario dev, chave ed25519, sshd sem root/senha, fail2ban, unattended-upgrades.
-# Idempotente. Uso: sudo ./01-baseline.sh "ssh-ed25519 AAAA... comentario"
+# Idempotente. Uso: sudo TS_AUTHKEY=tskey-auth-... ./01-baseline.sh "ssh-ed25519 AAAA... comentario"
 set -euo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "rode como root"; exit 1; }
@@ -49,7 +49,7 @@ enabled  = true
 backend  = systemd
 maxretry = 3
 bantime  = 1h
-ignoreip = 127.0.0.1/8 ::1 169.254.0.0/16
+ignoreip = 127.0.0.1/8 ::1 169.254.0.0/16 100.64.0.0/10
 EOF
 systemctl enable --now fail2ban
 systemctl restart fail2ban
@@ -59,5 +59,8 @@ APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
 EOF
 systemctl enable --now unattended-upgrades
+
+# Tailscale entra junto com o baseline: e o caminho principal de acesso.
+"$(dirname "$(readlink -f "$0")")"/01b-tailscale.sh
 
 echo "baseline ok. Valide 'ssh dev@<host>' em OUTRA sessao antes de fechar esta."
