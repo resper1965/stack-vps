@@ -18,7 +18,10 @@ else bad "docker parado"; fi
 
 echo "backup"
 stamp=/var/lib/stack-vps/last-backup
-if [[ -f $stamp ]]; then
+if ! systemctl is-enabled --quiet stack-backup.timer 2>/dev/null; then
+  # decisao de 05/10/2026: restic so depois da migracao; ate la vale o backup diario da Hostinger
+  printf '  pend  %s\n' "backup restic desligado — montar depois da migracao (Hostinger cobre ate la)"
+elif [[ -f $stamp ]]; then
   age=$(( ($(date +%s) - $(stat -c %Y "$stamp")) / 3600 ))
   (( age <= 36 )) && ok "ultimo backup ha ${age}h" || bad "ultimo backup ha ${age}h (>36h)"
 else bad "nunca rodou (sem $stamp)"; fi

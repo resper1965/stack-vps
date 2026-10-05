@@ -1847,3 +1847,11 @@ Sete dias depois da janela, com o Step 5 verde em todos os dias (`journalctl -u 
 - [ ] **Step 7: Encerrar a consolidação**
 
 Atualizar `CONSOLIDACAO-2026-09-16.md` marcando como concluídos o push dos repos, o restic e "Claude Code / Codex no VPS"; o arquivo segue fora do Git, como hoje, salvo decisão contrária do Ricardo.
+
+## Alteração de 05/10/2026 — backup adiado
+
+A pedido do Ricardo, o backup restic → R2 (Tasks 15 e 16) fica para **depois** da migração; até lá
+vale o backup diário automático da Hostinger. Na janela (Task 18), `state/`, `data/`, `/srv/forense`,
+`/srv/dev/secrets/` e `/etc/cloudflared/credentials.json` vão para o laptop por uma cópia única
+cifrada antes de formatar e voltam depois do `02`, no lugar do `15-restore.sh`. Bucket
+`stack-vps-backup` já criado (vazio); `RESTIC_PASSWORD` já no `admin.env`; timer desligado.
