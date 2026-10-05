@@ -17,4 +17,5 @@ bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "tailscale ok: aplica"
 afirma_log "ufw default deny incoming" "entrada negada por padrao"
 afirma_log "ufw allow in on tailscale0 to any port 22 proto tcp" "22 so na tailscale0"
 nega_log "ufw allow 22/tcp" "22 publica nao e liberada"
+afirma_log "ufw allow 41641/udp" "porta do Tailscale liberada (caminho direto estavel)"
 fim

@@ -13,5 +13,8 @@ ufw --force reset >/dev/null
 ufw default deny incoming >/dev/null
 ufw default allow outgoing >/dev/null
 ufw allow in on tailscale0 to any port 22 proto tcp comment 'ssh pela tailnet' >/dev/null
+# porta do proprio Tailscale (WireGuard): sem ela o caminho direto depende de furo no NAT que expira
+# na ociosidade, e o SSH da timeout enquanto o caminho se refaz. So responde a quem tem chave da tailnet.
+ufw allow 41641/udp comment 'tailscale direto' >/dev/null
 ufw --force enable >/dev/null
 ufw status verbose | head -12
