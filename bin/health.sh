@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Estado do ambiente: tunnel, docker, ultimo backup, disco. Saida curta, exit 1 se algo falhar.
+# Estado do ambiente: acesso (tailscale e tunnel), docker, ultimo backup, disco. Saida curta, exit 1 se algo falhar.
 set -uo pipefail
 fail=0
 ok(){ printf '  ok    %s\n' "$*"; }
 bad(){ printf '  FALHA %s\n' "$*"; fail=1; }
 
-echo "tunnel"
-if systemctl is-active --quiet cloudflared; then ok "cloudflared ativo ($(systemctl show -p ActiveEnterTimestamp --value cloudflared))"
+echo "acesso"
+if systemctl is-active --quiet tailscaled && ip4=$(tailscale ip -4 2>/dev/null | head -1) && [[ $ip4 == 100.* ]]; then
+  ok "tailscale na tailnet ($ip4)"
+else bad "tailscale fora da tailnet"; fi
+if systemctl is-active --quiet cloudflared; then ok "cloudflared ativo (reserva)"
 else bad "cloudflared parado"; fi
 
 echo "docker"
