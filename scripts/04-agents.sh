@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Claude Code + Codex no usuario dev, com marketplaces, plugins, MCP e skills proprias.
-# Roda COMO dev (nao como root). Idempotente.
+# Claude Code + Codex no usuario agente, com marketplaces, plugins, MCP e skills proprias.
+# Roda COMO agente (nao como root nem dev): os agentes moram em /home/agente. Idempotente.
 set -euo pipefail
-[[ $(id -un) == dev ]] || { echo "rode como dev"; exit 1; }
+[[ $(id -un) == agente ]] || { echo "rode como agente: sudo -u agente -H ./04-agents.sh"; exit 1; }
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 # npm 11 bloqueia postinstall por padrao; o claude-code precisa do dele
