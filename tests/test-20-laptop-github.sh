@@ -86,4 +86,42 @@ novo_tmp; prepara
 mkdir -p "$B/lixo"; linha "$B/lixo" resper1965 lixo fica
 bash "$S" "$TSV" >/dev/null 2>&1
 [[ ! -s ${TSV%.tsv}.resultado.tsv ]]; afirma $? "fica: nada no resultado"
+# acento no nome (C1)
+novo_tmp; prepara; remoto ac ac; antes=$(cabeca ac)
+echo x > "$B/ac/Relatório Técnico.pdf"; git -C "$B/ac" add .; git -C "$B/ac" commit -qm r
+linha "$B/ac" forense-io ac push; bash "$S" "$TSV" >/dev/null 2>&1
+[[ $(cabeca ac) == "$antes" ]]; afirma $? "acento: remoto intocado"
+res | grep -q 'Relatório Técnico.pdf'; afirma $? "acento: motivo com o nome real"
+
+# arquivo commitado e apagado continua no historico (I1)
+novo_tmp; prepara; mkdir -p "$B/hist"; git -C "$B/hist" init -q -b main
+echo x > "$B/hist/laudo.pdf"; git -C "$B/hist" add .; git -C "$B/hist" commit -qm a
+git -C "$B/hist" rm -q laudo.pdf; git -C "$B/hist" commit -qm b
+linha "$B/hist" forense-io hist criar; bash "$S" "$TSV" >/dev/null 2>&1
+res | grep -q $'^PENDENTE\tcriar\tforense-io/hist\textensao: laudo.pdf'; afirma $? "historico: pdf apagado bloqueia"
+nega_log "gh repo create" "historico: gh nao chamado"
+
+# node_modules sem .gitignore (I2)
+novo_tmp; prepara; mkdir -p "$B/nm/node_modules/x"; echo 1 > "$B/nm/node_modules/x/i.js"; echo 1 > "$B/nm/a.js"
+linha "$B/nm" resper1965 nm criar; bash "$S" "$TSV" >/dev/null 2>&1
+res | grep -q 'node_modules sem .gitignore'; afirma $? "node_modules: PENDENTE"
+[[ ! -d $B/nm/.git ]]; afirma $? "node_modules: pasta intocada"
+
+# repo aninhado (I2)
+novo_tmp; prepara; mkdir -p "$B/pai/filho" "$B/pai/sub"; git -C "$B/pai/filho" init -q; echo 1 > "$B/pai/a.js"; echo 1 > "$B/pai/sub/b.js"
+linha "$B/pai" resper1965 pai criar; bash "$S" "$TSV" >/dev/null 2>&1
+res | grep -q 'repositorio aninhado: filho/'; afirma $? "aninhado: PENDENTE so pelo repo, nao pela subpasta comum"
+
+# git sem commit: gitleaks no modo pasta (I3)
+novo_tmp; prepara; mkdir -p "$B/sc"; git -C "$B/sc" init -q -b main; echo 1 > "$B/sc/a.js"
+linha "$B/sc" resper1965 sc criar; bash "$S" "$TSV" --simular >/dev/null 2>&1
+afirma_log "--no-git" "git sem commit: gitleaks --no-git"
+
+# docx e .env (I11)
+novo_tmp; prepara; mkdir -p "$B/dx"; echo x > "$B/dx/proposta.docx"
+linha "$B/dx" resper1965 dx criar; bash "$S" "$TSV" >/dev/null 2>&1
+res | grep -q 'extensao: proposta.docx'; afirma $? "docx: bloqueado"
+novo_tmp; prepara; mkdir -p "$B/ev"; echo S=1 > "$B/ev/.env"; echo x > "$B/ev/.env.example"
+linha "$B/ev" resper1965 ev criar; bash "$S" "$TSV" >/dev/null 2>&1
+res | grep -q 'segredo: .env$'; afirma $? ".env: bloqueado (e .env.example nao)"
 fim
