@@ -75,4 +75,4 @@ systemctl enable --now cloudflared
 sleep 3
 systemctl is-active --quiet cloudflared && echo "cloudflared: ativo" || { journalctl -u cloudflared -n 20 --no-pager; exit 1; }
 
-echo "Valide o caminho de reserva: ssh stack-cf (ver docs/ssh-config-wsl.md)"
+echo "Valide o caminho de reserva: ssh stack-cf (ver docs/ssh-config.md)"

@@ -23,6 +23,8 @@ Vale para todas as sessões em `/srv/dev`, dos dois agentes.
   que é texto puro em arquivo versionável.
 - API da Hostinger e gateway Composio: leitura livre. Qualquer chamada que altere estado para e pergunta
   antes, dizendo o endpoint e o efeito.
+- Docker publica porta só em `127.0.0.1` ou no IP da tailnet (`-p 127.0.0.1:3000:3000`).
+  Porta publicada pelo Docker ignora o UFW e fica aberta na internet.
 
 ## 3. Papéis
 
