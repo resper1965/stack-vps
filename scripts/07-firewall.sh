@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
-# UFW: politica de entrada deny. Uso: sudo ./07-firewall.sh [--fechar-22]
-# Sem --fechar-22 a porta 22 fica liberada; so feche depois de validar o acesso pelo tunnel.
+# UFW: entrada negada; a 22 so pela tailnet. O loopback, por onde chega o Cloudflare Tunnel,
+# ja e liberado pelas regras-base do UFW. Uso: sudo ./07-firewall.sh
+# Recusa rodar sem o Tailscale de pe: fechar a 22 publica sem a tailnet tranca a VPS.
+# Saida de emergencia: console do hPanel -> ufw allow 22/tcp
 set -euo pipefail
-[[ $EUID -eq 0 ]] || { echo "rode como root"; exit 1; }
+[[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
+
+TSIP=$(tailscale ip -4 2>/dev/null | head -1 || true)
+[[ $TSIP == 100.* ]] || { echo "tailscale sem IP 100.x: rode 01b-tailscale.sh antes; UFW nao foi alterado"; exit 1; }
+
 ufw --force reset >/dev/null
 ufw default deny incoming >/dev/null
 ufw default allow outgoing >/dev/null
-[[ "${1:-}" == --fechar-22 ]] || ufw allow 22/tcp comment 'acesso direto - remover quando o tunnel validar' >/dev/null
+ufw allow in on tailscale0 to any port 22 proto tcp comment 'ssh pela tailnet' >/dev/null
 ufw --force enable >/dev/null
-ufw status verbose | head -10
+ufw status verbose | head -12
