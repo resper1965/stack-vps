@@ -4,6 +4,7 @@
 # Le CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID de /srv/dev/secrets/admin.env — o token nao sai da VPS.
 set -euo pipefail
 [[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
+command -v cloudflared >/dev/null || { echo "cloudflared ausente: rode 03-tooling.sh"; exit 1; }
 EMAIL="${1:?informe o e-mail da politica de Access}"
 ZONA=esper.ws
 HOST=ssh.$ZONA
@@ -70,7 +71,7 @@ else api -X PUT "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps/
 echo "access: $HOST liberado apenas para $EMAIL"
 
 # 5. servico
-cloudflared service install >/dev/null 2>&1 || true
+[[ -f /etc/systemd/system/cloudflared.service ]] || cloudflared service install
 systemctl enable --now cloudflared
 sleep 3
 systemctl is-active --quiet cloudflared && echo "cloudflared: ativo" || { journalctl -u cloudflared -n 20 --no-pager; exit 1; }

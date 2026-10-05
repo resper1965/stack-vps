@@ -9,8 +9,17 @@ export DEBIAN_FRONTEND=noninteractive
 # unattended-upgrades costuma segurar o lock logo apos o boot
 APT="apt-get -o DPkg::Lock::Timeout=600"
 $APT update -qq
-$APT install -y -qq git tmux ripgrep fd-find jq htop ncdu restic rclone curl unzip shellcheck >/dev/null
+$APT install -y -qq git tmux ripgrep fd-find jq htop ncdu restic rclone curl unzip shellcheck uidmap slirp4netns direnv >/dev/null
 ln -sf "$(command -v fdfind)" /usr/local/bin/fd
+
+# cloudflared: o tunnel de reserva depende dele e nenhuma imagem o traz
+if ! command -v cloudflared >/dev/null; then
+  install -d -m 755 /usr/share/keyrings
+  curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg -o /usr/share/keyrings/cloudflare-main.gpg
+  echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' \
+    > /etc/apt/sources.list.d/cloudflared.list
+  $APT update -qq && $APT install -y -qq cloudflared >/dev/null
+fi
 
 # Docker ja vem na imagem da Hostinger; so garante o dev no grupo
 command -v docker >/dev/null || { echo "docker ausente nesta imagem"; exit 1; }
