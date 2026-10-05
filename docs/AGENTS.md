@@ -19,8 +19,9 @@ Vale para todas as sessões em `/srv/dev`, dos dois agentes.
 - Escrita apenas em `/srv/dev/state` e em branch nova (`chore/...`). **Nunca** push em `main`/`master`.
 - `/srv/dev/data/**` está fora do escopo: não ler, não escrever.
 - Apagar, arquivar ou fundir projeto: registrar a recomendação, **não executar**.
-- Os agentes rodam como o usuário `agente` (comandos `ia` e `iax`): sem `sudo`, sem acesso a `data/`
-  e `/srv/forense`, com Docker rootless próprio.
+- Os agentes rodam como o usuário `agente` (conexão `stack-agente` ou comandos `ia`/`iax`): sem `sudo`,
+  sem acesso a `data/` e `/srv/forense`, com Docker rootless próprio. O `agente` é dono de `repos/` e
+  `state/`; o `dev` só administra e não roda git nesses repositórios.
 - Segredo do agente vem de `/srv/dev/secrets/agente.env` e do `.envrc` do projeto. Nunca no bloco `env`
   de `settings.json`, que é texto puro em arquivo versionável.
 - API da Hostinger e gateway Composio: leitura livre. Qualquer chamada que altere estado para e pergunta

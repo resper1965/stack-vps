@@ -5,7 +5,11 @@ Tunnel (reserva). Se os dois caírem, o console do hPanel é a emergência. Nenh
 responde no IP público.
 
 O caminho principal é o **Windows**, não o WSL: em 05/10/2026 o WSL travou e deixou de responder,
-e o acesso não deve depender dele. O VS Code (Remote-SSH) usa a mesma configuração.
+e o acesso não deve depender dele.
+
+**Qual conexão usar:** `stack-agente` é a estação de trabalho (você e os agentes, VS Code
+Remote-SSH aqui). `stack` (usuário `dev`) é só para administração: sudo, `data/`, forense,
+`admin.env`. Não abra repositórios pela `stack`.
 
 ## Pré-requisitos no Windows
 
