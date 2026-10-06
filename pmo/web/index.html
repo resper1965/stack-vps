@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMO</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="topo">
+  <div class="marca"><span class="ponto"></span> PMO</div>
+  <div class="atualizado" id="atualizado">carregando…</div>
+</header>
+
+<main class="wrap">
+  <section class="contadores" id="contadores"></section>
+
+  <section id="faixa-esquecidos" class="faixa" hidden>
+    <h2>Esquecidos <span class="qtd" id="qtd-esquecidos"></span></h2>
+    <div class="faixa-lista" id="lista-esquecidos"></div>
+  </section>
+
+  <details class="mudou" id="mudou" hidden>
+    <summary>O que mudou desde ontem</summary>
+    <div id="mudou-corpo"></div>
+  </details>
+
+  <section class="filtros">
+    <input id="busca" type="search" placeholder="Buscar projeto…" autocomplete="off">
+    <select id="f-pasta"><option value="">Todas as pastas</option></select>
+    <select id="f-dono"><option value="">Todos os donos</option></select>
+    <select id="f-tipo"><option value="">Todos os tipos</option></select>
+    <select id="f-estagio"><option value="">Todos os estágios</option></select>
+  </section>
+
+  <section class="grade" id="grade"></section>
+
+  <section class="secao" id="secao-destinar" hidden>
+    <h2>A destinar <span class="qtd" id="qtd-destinar"></span></h2>
+    <p class="nota">Pastas sem git vindas do laptop. Traga para virar projeto ou descarte.</p>
+    <div class="lista" id="lista-destinar"></div>
+  </section>
+
+  <details class="secao" id="secao-arquivados" hidden>
+    <summary><h2>Arquivados <span class="qtd" id="qtd-arquivados"></span></h2></summary>
+    <div class="lista" id="lista-arquivados"></div>
+  </details>
+</main>
+
+<div class="veu" id="veu" hidden></div>
+<aside class="detalhe" id="detalhe" hidden aria-modal="true" role="dialog"></aside>
+
+<dialog id="dlg-descartar">
+  <form method="dialog" class="dlg">
+    <h3>Descartar <span id="dlg-nome"></span></h3>
+    <label class="opcao"><input type="radio" name="modo" value="arquivar" checked>
+      <span><b>Arquivar</b> — reversível. Repositório fica só leitura no GitHub; a pasta vai para o arquivo da VPS.</span></label>
+    <label class="opcao" id="opcao-excluir"><input type="radio" name="modo" value="excluir">
+      <span><b>Excluir de vez</b> — apaga o repositório no GitHub (restaurável por 90 dias lá) e move as cópias para a lixeira da VPS (30 dias).</span></label>
+    <div id="confirma-bloco" hidden>
+      <label>Digite <code id="dlg-confirma-nome"></code> para confirmar
+        <input id="dlg-confirma" autocomplete="off"></label>
+    </div>
+    <p class="aviso" id="dlg-cliente" hidden>Repositório de cliente: só pode ser arquivado.</p>
+    <menu><button value="cancelar">Cancelar</button><button id="dlg-ok" value="ok" class="perigo">Descartar</button></menu>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

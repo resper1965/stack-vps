@@ -1,0 +1,142 @@
+{
+ "gerado_em": "2026-10-06T06:00:00+00:00",
+ "coleta_incompleta": false,
+ "contadores": {
+  "projetos": 4,
+  "esquecidos": 1,
+  "em_andamento": 2,
+  "em_revisao": 1,
+  "parados": 1,
+  "prs_abertos": 3,
+  "ci_vermelho": 1,
+  "a_destinar": 1
+ },
+ "mudou_desde_ontem": {
+  "novos": [
+   "exemplo/novo-projeto"
+  ],
+  "mudou_estagio": [
+   "exemplo/api-pagamentos"
+  ],
+  "viraram_esquecidos": [
+   "exemplo/politicas-iso"
+  ]
+ },
+ "projetos": [
+  {
+   "id": "exemplo/api-pagamentos",
+   "nome": "api-pagamentos",
+   "dono": "exemplo",
+   "url": "https://github.com/",
+   "privado": true,
+   "arquivado": false,
+   "dias": 1,
+   "tipo": "app",
+   "estagio": "em revisão",
+   "estagio_sugerido": "em revisão",
+   "proximo": "revisar PR #12",
+   "prs": 2,
+   "issues": 4,
+   "ci": "success",
+   "wip": [],
+   "pasta": "/srv/dev/projetos/ness-desenvolvimento/api pagamentos",
+   "esquecido": null,
+   "analise": {
+    "situacao": "Andando: 2 PRs aguardando revisão há 2 dias.",
+    "proximos_passos": [
+     {
+      "descricao": "Revisar e integrar o PR #12"
+     },
+     {
+      "descricao": "Cobrir o fluxo de estorno com testes",
+      "issue_sugerida": {
+       "titulo": "Testes do estorno",
+       "corpo": "Cobrir estorno parcial e total."
+      }
+     }
+    ],
+    "bloqueios": [],
+    "riscos": [
+     "Dependência com vulnerabilidade conhecida"
+    ]
+   }
+  },
+  {
+   "id": "exemplo/politicas-iso",
+   "nome": "politicas-iso",
+   "dono": "exemplo",
+   "url": "https://github.com/",
+   "privado": true,
+   "arquivado": false,
+   "dias": 21,
+   "tipo": "documento",
+   "estagio": "em andamento",
+   "estagio_sugerido": "em andamento",
+   "proximo": "enviar ao cliente",
+   "prs": 0,
+   "issues": 1,
+   "ci": null,
+   "wip": [
+    "wip/laptop-2026-10-06"
+   ],
+   "pasta": "/srv/dev/projetos/agentes/politicas iso",
+   "esquecido": "sem atividade há 21 dias"
+  },
+  {
+   "id": "exemplo/site-institucional",
+   "nome": "site-institucional",
+   "dono": "exemplo",
+   "url": "https://github.com/",
+   "privado": false,
+   "arquivado": false,
+   "dias": 3,
+   "tipo": null,
+   "estagio": null,
+   "estagio_sugerido": "em andamento",
+   "proximo": null,
+   "prs": 1,
+   "issues": 0,
+   "ci": "failure",
+   "wip": [],
+   "pasta": null,
+   "esquecido": null
+  },
+  {
+   "id": "exemplo/prototipo-velho",
+   "nome": "prototipo-velho",
+   "dono": "exemplo",
+   "url": "https://github.com/",
+   "privado": true,
+   "arquivado": false,
+   "dias": 240,
+   "tipo": null,
+   "estagio": null,
+   "estagio_sugerido": "parado",
+   "proximo": null,
+   "prs": 0,
+   "issues": 0,
+   "ci": null,
+   "wip": [],
+   "pasta": null,
+   "esquecido": null
+  }
+ ],
+ "arquivados": [
+  {
+   "id": "exemplo/antigo",
+   "nome": "antigo",
+   "dono": "exemplo",
+   "arquivado": true,
+   "dias": 400,
+   "estagio_sugerido": "encerrado",
+   "prs": 0
+  }
+ ],
+ "a_destinar": [
+  {
+   "id": "destinar:DESENVOLVIMENTO/pasta sem git",
+   "caminho": "DESENVOLVIMENTO/pasta sem git",
+   "arquivos": 12
+  }
+ ]
+}

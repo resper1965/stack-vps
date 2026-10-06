@@ -1,0 +1,198 @@
+// Painel do PMO. Todo texto vindo dos dados entra por textContent (nunca innerHTML).
+"use strict";
+
+const CORES = {
+  "ideia": "var(--e-ideia)", "em andamento": "var(--e-andamento)", "em revisão": "var(--e-revisao)",
+  "entregue": "var(--e-entregue)", "encerrado": "var(--e-encerrado)", "parado": "var(--e-parado)",
+};
+const ESTAGIOS = Object.keys(CORES);
+const TIPOS = ["app", "documento", "conhecimento", "agente"];
+const RAIZ = "/srv/dev/projetos/";
+let dados = null;
+
+function el(tag, attrs = {}, ...filhos) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "style") n.setAttribute("style", v);
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const f of filhos.flat()) if (f !== null && f !== undefined && f !== false) n.append(f instanceof Node ? f : String(f));
+  return n;
+}
+const $ = (id) => document.getElementById(id);
+const estagio = (p) => p.estagio || p.estagio_sugerido || "em andamento";
+const pastaDe = (p) => (p.pasta && p.pasta.startsWith(RAIZ)) ? p.pasta.slice(RAIZ.length).split("/")[0] : "(fora da VPS)";
+const quando = (dias) => dias === 0 ? "hoje" : dias === 1 ? "ontem" : dias >= 9999 ? "sem atividade" : `${dias} dias`;
+const ehCliente = (p) => (p.dono || "").toLowerCase() === "nessenergy";
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 3500);
+}
+
+async function acao(acao, alvo, confirmacao) {
+  try {
+    const r = await fetch("acao", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acao, alvo, confirmacao }) });
+    if (!r.ok) throw new Error(await r.text());
+    toast(`Pedido registrado: ${acao} ${alvo}. Executa em até 1 minuto.`);
+  } catch (e) { toast(`Não foi possível registrar: ${e.message}`); }
+}
+
+function etiquetaEstagio(p) {
+  const e = estagio(p), sug = !p.estagio;
+  return el("span", { class: `etiqueta estagio${sug ? " sugerido" : ""}`, style: `--cor:${CORES[e] || CORES.parado}`,
+    title: sug ? "estágio sugerido pelo PMO — confirmar no STATE.md" : "" }, sug ? `~${e}` : e);
+}
+
+function cartao(p) {
+  const passo = (p.analise && p.analise.proximos_passos && p.analise.proximos_passos[0] && p.analise.proximos_passos[0].descricao) || p.proximo;
+  return el("button", { class: "cartao", style: `--cor:${CORES[estagio(p)] || CORES.parado}`, onclick: () => abrir(p) },
+    el("h3", {}, el("span", {}, p.nome), p.esquecido ? el("span", { class: "marca-esquecido", title: p.esquecido }, "●") : null),
+    el("div", { class: "dono" }, `${p.dono} · ${pastaDe(p)}`),
+    el("div", { class: "linha" }, etiquetaEstagio(p), p.tipo ? el("span", { class: "etiqueta" }, p.tipo) : null,
+      el("span", { class: "etiqueta" }, quando(p.dias)),
+      p.prs ? el("span", { class: "etiqueta" }, `${p.prs} PR`) : null,
+      p.ci === "failure" ? el("span", { class: "etiqueta ruim" }, "CI vermelho") : null),
+    el("div", { class: "passo" }, passo ? `→ ${passo}` : (p.esquecido || "sem próximo passo")));
+}
+
+function abrir(p) {
+  const d = $("detalhe"); d.replaceChildren();
+  const a = p.analise || {};
+  const vscode = p.pasta ? "vscode://vscode-remote/ssh-remote+stack-agente" + encodeURI(p.pasta) : null;
+  d.append(
+    el("header", {}, el("div", {}, el("h2", {}, p.nome), el("div", { class: "sub" }, `${p.dono} · ${p.privado ? "privado" : "público"}`)),
+      el("button", { class: "fechar", "aria-label": "Fechar", onclick: fechar }, "×")),
+    p.esquecido ? el("section", {}, el("div", { class: "alerta-caixa" }, `Esquecido: ${p.esquecido}. Retome, marque como parado ou descarte.`)) : null,
+    el("section", {}, el("dl", { class: "kv" },
+      el("dt", {}, "Estágio"), el("dd", {}, etiquetaEstagio(p)),
+      el("dt", {}, "Tipo"), el("dd", {}, p.tipo || "não declarado"),
+      el("dt", {}, "Última atividade"), el("dd", {}, quando(p.dias)),
+      el("dt", {}, "Pasta na VPS"), el("dd", {}, p.pasta || "não clonado"),
+      el("dt", {}, "PRs / issues"), el("dd", {}, `${p.prs || 0} / ${p.issues || 0}`),
+      el("dt", {}, "CI"), el("dd", {}, p.ci || "sem CI"))),
+    a.situacao ? el("section", {}, el("h4", {}, "Situação"), el("p", {}, a.situacao)) : null,
+    el("section", {}, el("h4", {}, "Próximos passos"),
+      a.proximos_passos && a.proximos_passos.length
+        ? el("ol", {}, a.proximos_passos.map((s) => el("li", {}, s.descricao,
+            s.issue_sugerida ? el("button", { class: "bt", style: "margin-left:6px;padding:2px 8px;font-size:12px",
+              onclick: () => navigator.clipboard.writeText(`${s.issue_sugerida.titulo}\n\n${s.issue_sugerida.corpo}`).then(() => toast("Issue copiada")) }, "copiar issue") : null)))
+        : el("p", {}, p.proximo || "Nenhum declarado. Peça ao agente no projeto ou preencha o STATE.md.")),
+    a.bloqueios && a.bloqueios.length ? el("section", {}, el("h4", {}, "Bloqueios"), el("ul", {}, a.bloqueios.map((b) => el("li", {}, b)))) : null,
+    a.riscos && a.riscos.length ? el("section", {}, el("h4", {}, "Riscos"), el("ul", {}, a.riscos.map((b) => el("li", {}, b)))) : null,
+    p.wip && p.wip.length ? el("section", {}, el("h4", {}, "Trabalho em andamento salvo"),
+      el("ul", {}, p.wip.map((w) => el("li", {}, w))), el("p", { class: "nota" }, "Decida se vira PR ou se descarta a branch.")) : null,
+    el("section", { class: "botoes" },
+      vscode ? el("a", { class: "bt primario", href: vscode }, "Abrir no VS Code") : null,
+      p.url ? el("a", { class: "bt", href: p.url, target: "_blank", rel: "noopener" }, "Abrir no GitHub") : null,
+      el("button", { class: "bt", onclick: () => acao("reanalisar", p.id) }, "Reanalisar"),
+      p.arquivado
+        ? el("button", { class: "bt", onclick: () => acao("restaurar", p.id) }, "Restaurar")
+        : el("button", { class: "bt perigo", onclick: () => descartar(p) }, "Descartar")));
+  $("veu").hidden = false; d.hidden = false; d.scrollTop = 0;
+}
+function fechar() { $("detalhe").hidden = true; $("veu").hidden = true; }
+
+function descartar(p) {
+  const dlg = $("dlg-descartar"), cliente = ehCliente(p);
+  $("dlg-nome").textContent = p.nome; $("dlg-confirma-nome").textContent = p.nome; $("dlg-confirma").value = "";
+  $("opcao-excluir").hidden = cliente; $("dlg-cliente").hidden = !cliente;
+  dlg.querySelector('input[value="arquivar"]').checked = true; $("confirma-bloco").hidden = true;
+  dlg.onchange = () => { $("confirma-bloco").hidden = dlg.querySelector('input[name="modo"]:checked').value !== "excluir"; };
+  dlg.onclose = () => {
+    if (dlg.returnValue !== "ok") return;
+    const modo = dlg.querySelector('input[name="modo"]:checked').value;
+    if (modo === "excluir") {
+      if ($("dlg-confirma").value.trim() !== p.nome) { toast("Nome não confere. Nada foi feito."); return; }
+      acao("excluir", p.id, $("dlg-confirma").value.trim());
+    } else acao("arquivar", p.id);
+  };
+  dlg.showModal();
+}
+
+function opcoes(sel, valores) {
+  const atual = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  for (const v of valores) sel.append(el("option", { value: v }, v));
+  sel.value = atual;
+}
+
+function filtrar() {
+  const q = $("busca").value.trim().toLowerCase(), fp = $("f-pasta").value, fd = $("f-dono").value,
+    ft = $("f-tipo").value, fe = $("f-estagio").value;
+  const lista = dados.projetos.filter((p) =>
+    (!q || p.nome.toLowerCase().includes(q) || p.dono.toLowerCase().includes(q)) &&
+    (!fp || pastaDe(p) === fp) && (!fd || p.dono === fd) && (!ft || (p.tipo || "") === ft) && (!fe || estagio(p) === fe));
+  lista.sort((a, b) => (b.esquecido ? 1 : 0) - (a.esquecido ? 1 : 0) || a.dias - b.dias);
+  const g = $("grade"); g.replaceChildren();
+  if (!lista.length) g.append(el("div", { class: "vazio" }, "Nenhum projeto com esses filtros."));
+  else g.append(...lista.map(cartao));
+}
+
+function render() {
+  const c = dados.contadores;
+  const quandoGerado = new Date(dados.gerado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  const at = $("atualizado"); at.textContent = `atualizado ${quandoGerado}` + (dados.coleta_incompleta ? " · coleta incompleta" : "");
+  at.classList.toggle("incompleta", !!dados.coleta_incompleta);
+
+  const cont = $("contadores"); cont.replaceChildren();
+  const add = (n, rotulo, filtro, alerta) => cont.append(el("button", { class: `contador${alerta && n ? " alerta" : ""}`,
+    onclick: filtro }, el("b", {}, n), el("span", {}, rotulo)));
+  add(c.projetos, "projetos", () => { $("f-estagio").value = ""; filtrar(); });
+  add(c.esquecidos, "esquecidos", () => $("faixa-esquecidos").scrollIntoView({ behavior: "smooth" }), true);
+  add(c.em_andamento, "em andamento", () => { $("f-estagio").value = "em andamento"; filtrar(); });
+  add(c.em_revisao, "em revisão", () => { $("f-estagio").value = "em revisão"; filtrar(); });
+  add(c.parados, "parados", () => { $("f-estagio").value = "parado"; filtrar(); });
+  add(c.prs_abertos, "PRs abertos");
+  add(c.ci_vermelho, "CI vermelho", null, true);
+  add(c.a_destinar, "a destinar", () => $("secao-destinar").scrollIntoView({ behavior: "smooth" }));
+
+  const esq = dados.projetos.filter((p) => p.esquecido).sort((a, b) => b.dias - a.dias);
+  $("faixa-esquecidos").hidden = !esq.length; $("qtd-esquecidos").textContent = esq.length;
+  $("lista-esquecidos").replaceChildren(...esq.map((p) => el("button", { class: "chip", onclick: () => abrir(p) }, p.nome, el("small", {}, p.esquecido))));
+
+  const m = dados.mudou_desde_ontem || {};
+  const linhas = [["Novos", m.novos], ["Mudaram de estágio", m.mudou_estagio], ["Viraram esquecidos", m.viraram_esquecidos]]
+    .filter(([, l]) => l && l.length);
+  $("mudou").hidden = !linhas.length;
+  $("mudou-corpo").replaceChildren(...linhas.map(([t, l]) => el("p", {}, el("b", {}, `${t}: `), l.join(", "))));
+
+  opcoes($("f-pasta"), [...new Set(dados.projetos.map(pastaDe))].sort());
+  opcoes($("f-dono"), [...new Set(dados.projetos.map((p) => p.dono))].sort());
+  opcoes($("f-tipo"), TIPOS); opcoes($("f-estagio"), ESTAGIOS);
+  filtrar();
+
+  const dest = dados.a_destinar || [];
+  $("secao-destinar").hidden = !dest.length; $("qtd-destinar").textContent = dest.length;
+  $("lista-destinar").replaceChildren(...dest.map((x) => el("div", { class: "item" },
+    el("span", {}, `${x.caminho} `, el("small", { style: "color:var(--suave)" }, `${x.arquivos} arquivos`)),
+    el("span", { class: "acoes" },
+      el("button", { class: "bt", onclick: () => acao("trazer", x.id) }, "Trazer"),
+      el("button", { class: "bt perigo", onclick: () => { if (confirm(`Descartar ${x.caminho}? Vai para a lixeira da VPS por 30 dias.`)) acao("descartar", x.id); } }, "Descartar")))));
+
+  const arq = dados.arquivados || [];
+  $("secao-arquivados").hidden = !arq.length; $("qtd-arquivados").textContent = arq.length;
+  $("lista-arquivados").replaceChildren(...arq.map((p) => el("div", { class: "item" },
+    el("span", {}, `${p.dono}/${p.nome}`),
+    el("span", { class: "acoes" }, el("button", { class: "bt", onclick: () => abrir(p) }, "Ver"),
+      el("button", { class: "bt", onclick: () => acao("restaurar", p.id) }, "Restaurar")))));
+}
+
+async function carregar() {
+  const fonte = new URLSearchParams(location.search).get("dados") || "painel.json";
+  try {
+    const r = await fetch(`${fonte}?t=${Date.now()}`);
+    dados = await r.json();
+    render();
+  } catch (e) { $("atualizado").textContent = `não foi possível carregar os dados (${e.message})`; }
+}
+
+for (const id of ["busca", "f-pasta", "f-dono", "f-tipo", "f-estagio"]) $(id).addEventListener("input", filtrar);
+$("veu").addEventListener("click", fechar);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") fechar(); });
+carregar();
+setInterval(carregar, 5 * 60 * 1000);
