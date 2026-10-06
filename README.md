@@ -24,7 +24,7 @@ Testes: `bash tests/run.sh` (precisa de `shellcheck`).
 
 ## Scripts de trabalho (como `agente`, depois do 04)
 
-`sudo -u agente -H /opt/stack-vps/scripts/NN-….sh`
+`sudo -u agente -H bash -c 'cd ~ && /opt/stack-vps/scripts/NN-….sh'` (a partir do home do agente: ele não lê a pasta do `dev`)
 
 | # | Script | O que faz |
 |---|---|---|
