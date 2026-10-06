@@ -30,7 +30,7 @@ install -d -m 755 -o root -g root /srv/dev/bin
 install -m 755 -o root -g root "$REPO"/bin/health.sh \
   "$REPO"/scripts/{08-clonar-repos,09-clonar-escopo,10-inventario,11-state,12-push-state}.sh /srv/dev/bin/
 install -m 755 -o root -g root "$REPO"/scripts/13-weekly-review.sh /srv/dev/bin/weekly-review.sh
-install -m 644 -o root -g root "$REPO"/compose/playwright.yml /srv/dev/bin/
+install -m 644 -o root -g root "$REPO"/compose/playwright.yml "$REPO"/compose/postgres.yml /srv/dev/bin/
 
 # backup e restore fora do /srv/dev/repos: o timer nao pode depender de um clone
 install -d -m 755 /usr/local/lib/stack-vps/lib

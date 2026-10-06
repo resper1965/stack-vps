@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Sobe a dupla principal/revisor do projeto atual, com os papeis lidos do STATE.md.
+# Uso: rig-dupla [--plan] [diretorio-do-projeto]
+# Instalado pelo 22-openrig.sh. Recusa main/master e papel A DEFINIR.
+set -euo pipefail
+PLAN=; [[ ${1:-} == --plan ]] && { PLAN=--plan; shift; }
+RAIZ=$(git -C "${1:-.}" rev-parse --show-toplevel)
+NOME=$(basename "$RAIZ")
+S=${OPENRIG_HOME:-/srv/dev/state/openrig}/specs
+
+BR=$(git -C "$RAIZ" branch --show-current)
+[[ $BR == main || $BR == master || -z $BR ]] && { echo "em '$BR': crie antes a branch chore/..."; exit 1; }
+[[ -f $RAIZ/STATE.md ]] || { echo "$NOME sem STATE.md"; exit 1; }
+
+# "**Agente principal:** Claude Code" -> claude-code
+runtime() {
+  local v; v=$(grep -m1 -E "^\*\*Agente $1:\*\*" "$RAIZ/STATE.md" | sed 's/^[^:]*:\*\* *//' | tr 'A-Z' 'a-z')
+  case $v in
+    *claude*) echo claude-code;;
+    *codex*)  echo codex;;
+    *) echo "STATE.md de $NOME: agente $1 = '${v:-vazio}'; defina Claude ou Codex" >&2; exit 1;;
+  esac
+}
+P=$(runtime principal); R=$(runtime revisor)
+
+# nome de rig aceita so [A-Za-z0-9_-]; n.pentest vira n-pentest
+RIG=$(echo "$NOME" | sed 's/[^A-Za-z0-9_-]/-/g')
+D=$S/rigs/$RIG
+mkdir -p "$D"; cp "$S/CULTURE.md" "$D/"
+cat > "$D/rig.yaml" <<EOF
+version: "0.2"
+name: $RIG
+summary: Dupla de $NOME conforme o STATE.md (principal $P, revisor $R).
+culture_file: CULTURE.md
+
+pods:
+  - id: dev
+    label: $NOME
+    members:
+      - id: principal
+        agent_ref: "local:../../agents/development/implementer"
+        runtime: $P
+        profile: default
+        cwd: "."
+      - id: revisor
+        agent_ref: "local:../../agents/development/qa"
+        runtime: $R
+        profile: default
+        cwd: "."
+    edges:
+      - kind: delegates_to
+        from: principal
+        to: revisor
+
+edges: []
+EOF
+
+echo "$NOME: principal $P, revisor $R | seats dev-principal@$RIG, dev-revisor@$RIG"
+exec rig up "$D/rig.yaml" --cwd "$RAIZ" $PLAN

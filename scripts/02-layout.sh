@@ -15,6 +15,8 @@ getent group agente >/dev/null || groupadd agente   # o usuario nasce no 16; o g
 install -d -m 750 -o dev -g agente /srv/dev/secrets /srv/dev/secrets/projetos
 [[ -f /srv/dev/secrets/admin.env ]]  || install -m 600 -o dev -g dev    /dev/null /srv/dev/secrets/admin.env
 [[ -f /srv/dev/secrets/agente.env ]] || install -m 640 -o dev -g agente /dev/null /srv/dev/secrets/agente.env
+# chaves de projeto: um arquivo so para todos (decisao de 30/09); o dev edita, o agente le
+[[ -f /srv/dev/secrets/projetos.env ]] || install -m 640 -o dev -g agente /dev/null /srv/dev/secrets/projetos.env
 # dados de cliente e evidencias: so o dev
 chmod 750 /srv/dev/data
 install -d -m 750 -o dev -g dev /srv/forense

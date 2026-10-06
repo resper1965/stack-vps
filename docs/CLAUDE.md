@@ -12,6 +12,7 @@ Vale para todas as sessões em `/srv/dev`, dos dois agentes.
   e cite a alternativa só se for de fato competitiva.
 - Se o caminho escolhido for pior, fale. Discordar é útil; concordar por educação não é.
 - Faltando informação para decidir, faça **uma** pergunta — a que realmente destrava.
+- ponytail fica ligado por padrão.
 
 ## 2. Escopo e permissões
 
@@ -22,8 +23,10 @@ Vale para todas as sessões em `/srv/dev`, dos dois agentes.
 - Os agentes rodam como o usuário `agente` (conexão `stack-agente` ou comandos `ia`/`iax`): sem `sudo`,
   sem acesso a `data/` e `/srv/forense`, com Docker rootless próprio. O `agente` é dono de `repos/` e
   `state/`; o `dev` só administra e não roda git nesses repositórios.
-- Segredo do agente vem de `/srv/dev/secrets/agente.env` e do `.envrc` do projeto. Nunca no bloco `env`
-  de `settings.json`, que é texto puro em arquivo versionável.
+- Segredo do agente vem de `/srv/dev/secrets/agente.env`. Nunca no bloco `env` de `settings.json`,
+  que é texto puro em arquivo versionável.
+- Chave de projeto fica em `/srv/dev/secrets/projetos.env`, já carregada no shell do agente: use a variável,
+  nunca copie o valor para `.env` de repositório nem o imprima. `admin.env` é só dos scripts de infra.
 - API da Hostinger e gateway Composio: leitura livre. Qualquer chamada que altere estado para e pergunta
   antes, dizendo o endpoint e o efeito.
 - Docker publica porta só em `127.0.0.1` ou no IP da tailnet (`-p 127.0.0.1:3000:3000`).
@@ -77,3 +80,20 @@ Aceitas pelo Ricardo em 16/09/2026. Deixaram de ser proposta.
 Citação de cláusula, artigo ou prazo vinda das skills de GRC é apoio, não fonte normativa:
 conferir contra a norma original e sinalizar no texto o que não foi verificado.
 Documento gerado declara no rodapé qual tenant e qual versão do pacote de customização foram usados.
+
+## 8. Serviços de teste
+
+- Banco para teste sobe descartável, nunca instalado no host:
+  `PG_PORTA=<porta livre> docker compose -p <projeto> -f /srv/dev/bin/postgres.yml up -d --wait`.
+  Conexão `postgres://dev:dev@127.0.0.1:<porta>/app`. Os dados vivem em memória.
+- `-p <projeto>` sempre, para não derrubar o banco de outro projeto.
+- Porta só em `127.0.0.1`. Porta publicada pelo Docker passa por cima do firewall.
+- Ao terminar: `docker compose -p <projeto> -f /srv/dev/bin/postgres.yml down`.
+- Dado de cliente não entra em banco de teste; usar dado sintético.
+
+## 9. Forense
+
+- Na VPS entram só repositórios: código e método (`modusoperandi`, `carteira`) e o repositório `casos`.
+- Material recebido (originais) e rascunhos de trabalho **não vêm para a VPS**: ficam só na estação
+  forense, onde valem a custódia e o apagamento em D+30. Não baixar, copiar nem pedir esse material aqui.
+- Faltou material para concluir uma análise: registrar no caso o que falta; não buscar por outro meio.

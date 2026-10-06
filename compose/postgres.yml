@@ -1,0 +1,22 @@
+# PostgreSQL descartavel para teste. Dados em memoria: some ao derrubar.
+# Porta so em 127.0.0.1: porta publicada pelo Docker passa por cima do UFW.
+# Uso (na raiz do projeto, -p com o nome dele para nao colidir com outro):
+#   PG_PORTA=5433 docker compose -p <projeto> -f /srv/dev/bin/postgres.yml up -d --wait
+#   docker compose -p <projeto> -f /srv/dev/bin/postgres.yml down
+# Conexao: postgres://dev:dev@127.0.0.1:${PG_PORTA:-5432}/app
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: app
+    ports:
+      - "127.0.0.1:${PG_PORTA:-5432}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d app"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

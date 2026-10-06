@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code + Codex no usuario agente, com marketplaces, plugins, MCP e skills proprias.
+# Claude Code, Codex e Antigravity CLI no usuario agente, com marketplaces, plugins, MCP e skills proprias.
 # Roda COMO agente (nao como root nem dev): os agentes moram em /home/agente. Idempotente.
 set -euo pipefail
 [[ $(id -un) == agente ]] || { echo "rode como agente: sudo -u agente -H ./04-agents.sh"; exit 1; }
@@ -35,6 +35,30 @@ for s in "$D"/skills/*/; do ln -sfn "$s" ~/.claude/skills/"$(basename "$s")"; do
 codex plugin marketplace add "$D" >/dev/null 2>&1 || true
 codex plugin add ness-skills@ness-skills >/dev/null 2>&1 || true
 
+# CLAUDE.md §2: escrita em /srv/dev/state (pareceres, inventario). Sessao aberta num repo
+# so escreve no proprio repo; sem isto o revisor nao grava em state/reviews.
+C=~/.claude/settings.json; [[ -f $C ]] || echo '{}' > "$C"
+jq '.permissions.additionalDirectories = ((.permissions.additionalDirectories // []) + ["/srv/dev/state"] | unique)' "$C" > "$C.tmp" && mv "$C.tmp" "$C"
+X=~/.codex/config.toml; mkdir -p ~/.codex; touch "$X"
+if ! grep -q '^\[sandbox_workspace_write\]' "$X"; then
+  printf '\n[sandbox_workspace_write]\nwritable_roots = ["/srv/dev/state"]\n' >> "$X"
+elif ! grep -q '"/srv/dev/state"' "$X"; then
+  echo "AVISO: $X ja tem [sandbox_workspace_write]; inclua /srv/dev/state em writable_roots a mao"
+fi
+
+# Antigravity CLI (agy), terceiro harness. Binario unico em ~/.local/bin; o instalador confere o SHA-512.
+# Login headless: copiar ~/.gemini/antigravity-cli/antigravity-oauth-token de uma maquina ja logada.
+command -v agy >/dev/null || curl -fsSL https://antigravity.google/cli/install.sh | bash >/dev/null
+for p in obra/superpowers DietrichGebert/ponytail; do agy plugin install "https://github.com/$p" >/dev/null 2>&1 || true; done
+
+# superpowers e obrigatorio nos tres agentes: os installs acima engolem erro, aqui nao
+falta=()
+claude plugin list 2>/dev/null | grep -A3 'superpowers@superpowers-marketplace' | grep -q enabled || falta+=(claude)
+codex plugin list 2>/dev/null | grep -qE '^superpowers@superpowers-marketplace +installed, enabled' || falta+=(codex)
+agy plugin list 2>/dev/null | grep -q '"name": "superpowers"' || falta+=(agy)
+(( ${#falta[@]} == 0 )) || { echo "ERRO: superpowers nao ficou ativo em: ${falta[*]}"; exit 1; }
+
 echo "claude: $(claude --version) | plugins: $(claude plugin list 2>/dev/null | grep -c '❯')"
 echo "codex:  $(codex --version)"
-echo "login interativo (claude / codex) e o MCP do Composio ficam por sua conta."
+echo "agy:    $(agy --version)"
+echo "login interativo (claude / codex / agy) e o MCP do Composio ficam por sua conta."

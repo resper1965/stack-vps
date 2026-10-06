@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ferramentas de base + Node LTS via mise, com Node no PATH nao interativo.
+# Ferramentas de base + Node 24 via mise, com Node no PATH nao interativo.
 # Idempotente. Uso: sudo ./03-tooling.sh
 set -euo pipefail
 [[ $EUID -eq 0 ]] || { echo "rode como root"; exit 1; }
@@ -40,7 +40,7 @@ sudo -u dev bash <<'DEV'
 set -e
 command -v ~/.local/bin/mise >/dev/null || curl -fsSL https://mise.run | sh >/dev/null 2>&1
 grep -q 'mise activate' ~/.bashrc || echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
-~/.local/bin/mise use -g node@lts >/dev/null 2>&1
+~/.local/bin/mise use -g node@24 >/dev/null 2>&1
 DEV
 
 # Hooks de ciclo de vida dos plugins de skill rodam em shell nao interativo,

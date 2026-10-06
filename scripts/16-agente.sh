@@ -26,7 +26,8 @@ if ! grep -q '# stack-vps: ambiente do agente' /home/agente/.bashrc; then
 fi
 
 # repos e state sao do agente; data e forense so do dev
-chown -R agente:agente /srv/dev/repos /srv/dev/state
+install -d -o agente -g agente /srv/dev/verticais   # atalhos por vertical (26-verticais.sh)
+chown -R agente:agente /srv/dev/repos /srv/dev/state /srv/dev/verticais
 chmod 750 /srv/dev/data; install -d -m 750 -o dev -g dev /srv/forense
 
 # desfaz o modelo anterior (grupo compartilhado), se existir
@@ -69,6 +70,6 @@ sudo -u agente XDG_RUNTIME_DIR="/run/user/$U" DBUS_SESSION_BUS_ADDRESS="unix:pat
 sudo -u agente -H bash -c '
   command -v ~/.local/bin/mise >/dev/null || curl -fsSL https://mise.run | sh >/dev/null 2>&1
   grep -q "mise activate" ~/.bashrc || echo "eval \"\$(~/.local/bin/mise activate bash)\"" >> ~/.bashrc
-  ~/.local/bin/mise use -g node@lts >/dev/null 2>&1'
+  ~/.local/bin/mise use -g node@24 >/dev/null 2>&1'
 echo "agente: $(id agente)"
 echo "docker rootless: $(sudo -u agente XDG_RUNTIME_DIR="/run/user/$U" systemctl --user is-active docker)"
