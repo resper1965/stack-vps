@@ -61,6 +61,6 @@ EOF
 systemctl enable --now unattended-upgrades
 
 # Tailscale entra junto com o baseline: e o caminho principal de acesso.
-"$(dirname "$(readlink -f "$0")")"/01b-tailscale.sh
+bash "$(dirname "$(readlink -f "$0")")"/01b-tailscale.sh
 
 echo "baseline ok. Valide 'ssh dev@<host>' em OUTRA sessao antes de fechar esta."
