@@ -40,6 +40,9 @@ install -m 755 "$REPO"/scripts/alertar.sh "$REPO"/scripts/vigia-health.sh "$REPO
 install -m 644 "$REPO"/systemd/stack-backup.service "$REPO"/systemd/stack-backup.timer \
   "$REPO"/systemd/stack-health.service "$REPO"/systemd/stack-health.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now stack-backup.timer stack-health.timer
-echo "backup: $(systemctl list-timers stack-backup.timer --no-legend | awk '{print $1, $2, $3}')"
+systemctl enable --now stack-health.timer
+# backup so com as chaves do R2 no admin.env (decisao de 05/10/2026: restic depois da migracao)
+if grep -q '^R2_ACCESS_KEY_ID=.' /srv/dev/secrets/admin.env 2>/dev/null; then systemctl enable --now stack-backup.timer
+else systemctl disable --now stack-backup.timer 2>/dev/null || true; fi
+echo "backup: $(systemctl is-enabled stack-backup.timer 2>/dev/null || echo desligado)"
 echo "tmux-dev: $(systemctl is-active tmux-dev)"

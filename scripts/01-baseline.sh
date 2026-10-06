@@ -8,6 +8,7 @@ PUBKEY="${1:-}"
 [[ -n "$PUBKEY" ]] || { echo "uso: $0 \"<chave-publica-ed25519>\""; exit 1; }
 [[ "$PUBKEY" == ssh-ed25519* ]] || { echo "chave precisa ser ed25519"; exit 1; }
 
+hostnamectl set-hostname stack
 id dev &>/dev/null || adduser --disabled-password --gecos "" dev
 usermod -aG sudo dev
 getent group docker >/dev/null && usermod -aG docker dev
