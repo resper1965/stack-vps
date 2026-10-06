@@ -38,23 +38,38 @@ if [[ -z $TID ]]; then
 fi
 echo "tunnel: $TID"
 
-# 2. ingress local — servico novo entra aqui, nunca como porta aberta
-cat > "$CFD/config.yml" <<YML
-tunnel: $TID
-credentials-file: $CFD/credentials.json
+# 2. ingress local — servico novo entra aqui, nunca como porta aberta.
+# Hostnames extras em TUNNEL_EXTRA (admin.env): "host=servico host2=servico2",
+# ex.: TUNNEL_EXTRA="coder.ness.com.br=http://localhost:7080"
+EXTRAS=()
+for par in ${TUNNEL_EXTRA-coder.ness.com.br=http://localhost:7080}; do EXTRAS+=("$par"); done
+{ printf 'tunnel: %s
+credentials-file: %s/credentials.json
 ingress:
-  - hostname: $HOST
+' "$TID" "$CFD"
+  printf '  - hostname: %s
     service: ssh://localhost:22
-  - service: http_status:404
-YML
+' "$HOST"
+  for par in "${EXTRAS[@]}"; do printf '  - hostname: %s
+    service: %s
+' "${par%%=*}" "${par#*=}"; done
+  printf '  - service: http_status:404
+'; } > "$CFD/config.yml"
 
-# 3. DNS: CNAME proxied para o tunnel
-ZID=$(api "https://api.cloudflare.com/client/v4/zones?name=$ZONA" | jq_ 'print((d["result"] or [{}])[0].get("id",""))')
-REC=$(api "https://api.cloudflare.com/client/v4/zones/$ZID/dns_records?name=$HOST" | jq_ 'r=d.get("result") or [];print(r[0]["id"] if r else "")')
-BODY="{\"type\":\"CNAME\",\"name\":\"$HOST\",\"content\":\"$TID.cfargotunnel.com\",\"proxied\":true}"
-if [[ -n $REC ]]; then api -X PUT "https://api.cloudflare.com/client/v4/zones/$ZID/dns_records/$REC" -d "$BODY" >/dev/null
-else api -X POST "https://api.cloudflare.com/client/v4/zones/$ZID/dns_records" -d "$BODY" >/dev/null; fi
-echo "dns: $HOST -> $TID.cfargotunnel.com"
+# 3. DNS: CNAME proxied para o tunnel, cada host na sua zona (host sem o primeiro rotulo)
+cname() {
+  local h=$1 z zid rec body
+  z=${h#*.}
+  zid=$(api "https://api.cloudflare.com/client/v4/zones?name=$z" | jq_ 'print((d["result"] or [{}])[0].get("id",""))')
+  [[ -n $zid ]] || { echo "ERRO: zona $z nao esta nesta conta Cloudflare"; exit 1; }
+  rec=$(api "https://api.cloudflare.com/client/v4/zones/$zid/dns_records?name=$h" | jq_ 'r=d.get("result") or [];print(r[0]["id"] if r else "")')
+  body="{\"type\":\"CNAME\",\"name\":\"$h\",\"content\":\"$TID.cfargotunnel.com\",\"proxied\":true}"
+  if [[ -n $rec ]]; then api -X PUT "https://api.cloudflare.com/client/v4/zones/$zid/dns_records/$rec" -d "$body" >/dev/null
+  else api -X POST "https://api.cloudflare.com/client/v4/zones/$zid/dns_records" -d "$body" >/dev/null; fi
+  echo "dns: $h -> $TID.cfargotunnel.com"
+}
+cname "$HOST"
+for par in "${EXTRAS[@]}"; do cname "${par%%=*}"; done
 
 # 4. Access: aplicacao + politica de e-mail
 APP=$(api "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps" \
@@ -70,9 +85,9 @@ if [[ -z $POL ]]; then api -X POST "https://api.cloudflare.com/client/v4/account
 else api -X PUT "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps/$APP/policies/$POL" -d "$POLBODY" >/dev/null; fi
 echo "access: $HOST liberado apenas para $EMAIL"
 
-# 5. servico
+# 5. servico (reinicia para pegar ingress novo)
 [[ -f /etc/systemd/system/cloudflared.service ]] || cloudflared service install
-systemctl enable --now cloudflared
+systemctl enable cloudflared >/dev/null 2>&1; systemctl restart cloudflared
 sleep 3
 systemctl is-active --quiet cloudflared && echo "cloudflared: ativo" || { journalctl -u cloudflared -n 20 --no-pager; exit 1; }
 
