@@ -13,6 +13,14 @@ for destino in 100.64.0.0/10 169.254.169.254/32; do
   iptables -C DOCKER-USER -d "$destino" -j DROP 2>/dev/null || iptables -I DOCKER-USER 1 -d "$destino" -j DROP
 done
 
+# DNS dos containers: resolvedores publicos, nao o do provedor (que guarda NXDOMAIN de registro
+# recem-criado por ate meia hora e ja derrubou o agente do Coder). Reinicia o Docker so se mudar.
+if [[ ${STACK_TESTE:-} != 1 ]]; then
+  D=/etc/docker/daemon.json; [[ -s $D ]] || echo '{}' > "$D"
+  novo=$(jq -S '.dns = ["1.1.1.1", "8.8.8.8"]' "$D")
+  if [[ $novo != "$(jq -S . "$D")" ]]; then echo "$novo" > "$D"; systemctl restart docker; fi
+fi
+
 if [[ ${1:-} == --instalar ]]; then
   install -m 755 "$0" /usr/local/lib/stack-vps/31-rede-containers.sh
   install -m 644 "$REPO/systemd/stack-rede-containers.service" /etc/systemd/system/
