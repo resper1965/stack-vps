@@ -34,6 +34,9 @@ outro nem a máquina; tudo recriável pelos scripts do repositório.
 
 ## 1. Sistema base
 
+Agentes: Claude Code (contas bekaa e ionic), Codex (ChatGPT Pro; OpenRouter com `-p openrouter`) e
+Antigravity CLI (`agy`), todos no usuário `agente`; OpenRig para a dupla principal/revisor.
+
 Já existe: Ubuntu 24.04, SSH só por chave, fail2ban, unattended-upgrades, UFW (22 só na tailnet),
 Tailscale (`100.76.167.6`), Cloudflare Tunnel de reserva, Docker + Compose, tmux persistente,
 `mise` com Node LTS, ripgrep, fd, jq, htop, ncdu, restic, rclone.
@@ -54,18 +57,13 @@ Entra:
 Não entra no host: Go, Rust, .NET, PHP (o `mise` instala por projeto quando um repo pedir); banco
 de dados no sistema.
 
-## 2. Frente B — forense (container `forense`)
+## 2. Frente B — forense
 
-- Imagem própria (`docker/forense/Dockerfile`, base Debian slim) com: sleuthkit, binwalk, foremost,
-  bulk_extractor, volatility3, exiftool, oletools, pdfid, yara, hashdeep, whois, dnsx, httpx,
-  subfinder.
-- Uso: `forense <caso>` abre um shell no container com `/srv/forense/<caso>/evidencias` montado
-  **somente leitura** e `/srv/forense/<caso>/trabalho` com escrita.
-- **Cadeia de custódia**: `forense-ingerir <caso> <arquivo>` copia para `evidencias/`, calcula
-  SHA-256 e acrescenta uma linha em `custodia.log` (data UTC, arquivo, hash, quem). O log é só de
-  acréscimo (`chattr +a`).
-- `/srv/forense` fica fora do alcance do usuário `agente` e entra no backup.
-- Ataque ativo (nmap, nuclei, ffuf contra alvo): no `npentest`, alcançado pela tailnet.
+Revisto em 06/10/2026 pela decisão do Ricardo de 30/09 (CLAUDE.md §9): **material de caso não entra
+na VPS**. Na VPS ficam só os repositórios de código e método (`modusoperandi`, `carteira`) e o
+repositório `casos`; originais e rascunhos ficam na estação forense, sob custódia e apagamento em D+30.
+Ferramentas de análise, se usadas aqui, trabalham só com dado sintético ou público. Pentest ativo segue
+no host `npentest`. `/srv/forense` existe, vazio, fora do alcance do `agente`.
 
 ## 3. Frente C — documentos de GRC
 
@@ -114,7 +112,7 @@ separa os papéis em vez de compartilhar a árvore.
 /srv/dev/secrets/
 ├── admin.env      600 dev     Cloudflare com escrita, Hostinger, R2, restic, canais de alerta
 ├── agente.env     640 :agente tokens mínimos do agente
-└── projetos/<p>.env           chaves de cada projeto; .envrc do projeto faz "dotenv" deste arquivo
+└── projetos.env   640 :agente chaves de projeto, um arquivo só (decisão de 30/09), carregado no shell do agente
 ```
 
 ### Tokens do agente
