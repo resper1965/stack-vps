@@ -107,7 +107,8 @@ faz_criar() {
   [[ -d $d ]] || { registra PENDENTE criar "$dono" "$repo" "pasta nao existe"; return; }
   if git -C "$d" rev-parse --git-dir >/dev/null 2>&1; then
     # pasta dentro de outro repositorio: o git enxerga o pai, e o envio levaria o pai inteiro
-    if [[ $(git -C "$d" rev-parse --show-toplevel) != "$(cd "$d" && pwd -P)" ]]; then
+    # --show-prefix vazio = a pasta e a raiz do repositorio (independe do formato do caminho no Windows)
+    if [[ -n $(git -C "$d" rev-parse --show-prefix) ]]; then
       registra PENDENTE criar "$dono" "$repo" "pasta dentro de outro repositorio: $(git -C "$d" rev-parse --show-toplevel)"; return; fi
     eh_git=1
   fi
