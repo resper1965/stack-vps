@@ -91,9 +91,12 @@ Documento gerado declara no rodapé qual tenant e qual versão do pacote de cust
 - Ao terminar: `docker compose -p <projeto> -f /srv/dev/bin/postgres.yml down`.
 - Dado de cliente não entra em banco de teste; usar dado sintético.
 
-## 9. Forense
+## 9. Forense e documentos
 
-- Na VPS entram só repositórios: código e método (`modusoperandi`, `carteira`) e o repositório `casos`.
-- Material recebido (originais) e rascunhos de trabalho **não vêm para a VPS**: ficam só na estação
-  forense, onde valem a custódia e o apagamento em D+30. Não baixar, copiar nem pedir esse material aqui.
+- Decisão do Ricardo em 06/10/2026 (substitui a de 30/09): **tudo vem para a VPS**, inclusive material
+  de caso forense e documentos de cliente. O laptop deixa de guardar trabalho.
+- Código vai para o GitHub; documentos, planilhas, PDFs, dados pessoais e material de caso **não** —
+  ficam só na VPS (`/srv/dev/projetos/<projeto>`, fora do git, ou `/srv/dev/laptop/` até o Ricardo
+  destinar). Nunca commitar esse material, nem em branch.
+- Custódia e apagamento em D+30 do material de caso continuam valendo; agora são feitos na VPS.
 - Faltou material para concluir uma análise: registrar no caso o que falta; não buscar por outro meio.
