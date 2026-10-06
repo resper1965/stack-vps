@@ -1,0 +1,9 @@
+[Unit]
+Description=Coleta diaria do PMO
+[Service]
+Type=oneshot
+User=agente
+Environment=PYTHONPATH=/opt
+EnvironmentFile=/srv/dev/secrets/agente.env
+ExecStart=/usr/bin/python3 -m pmo.painel
+TimeoutStartSec=30min

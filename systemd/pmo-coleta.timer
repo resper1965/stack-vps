@@ -1,0 +1,7 @@
+[Unit]
+Description=Coleta diaria do PMO (06:00 de Brasilia)
+[Timer]
+OnCalendar=*-*-* 09:00:00 UTC
+Persistent=true
+[Install]
+WantedBy=timers.target

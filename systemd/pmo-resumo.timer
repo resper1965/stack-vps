@@ -1,0 +1,7 @@
+[Unit]
+Description=Resumo do PMO (segunda 08:00 de Brasilia)
+[Timer]
+OnCalendar=Mon *-*-* 11:00:00 UTC
+Persistent=true
+[Install]
+WantedBy=timers.target

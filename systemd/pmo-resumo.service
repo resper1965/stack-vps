@@ -1,0 +1,6 @@
+[Unit]
+Description=Resumo semanal de projetos esquecidos
+[Service]
+Type=oneshot
+Environment=PYTHONPATH=/opt
+ExecStart=/usr/bin/python3 -m pmo.resumo

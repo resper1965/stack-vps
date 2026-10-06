@@ -1,0 +1,14 @@
+[Unit]
+Description=Painel do PMO (so na tailnet)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+User=agente
+Environment=PYTHONPATH=/opt
+ExecStart=/usr/bin/python3 -m pmo.servidor --host 100.76.167.6 --porta 8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
