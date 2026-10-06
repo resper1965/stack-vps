@@ -1,0 +1,23 @@
+# Runners efemeros do GitHub Actions para UMA organizacao (projeto compose por org).
+# Um container por job: EPHEMERAL=1 faz o runner se desregistrar ao fim e o restart sobe outro limpo.
+# sysbox: o job pode usar Docker sem modo privilegiado e sem o socket do host.
+# Uso: ORG=nessenergy docker compose -p runners-$ORG --env-file /srv/runners/$ORG.env -f compose/runners.yml up -d --scale runner=3
+services:
+  runner:
+    image: myoung34/github-runner:ubuntu-noble
+    runtime: sysbox-runc
+    environment:
+      RUNNER_SCOPE: org
+      ORG_NAME: ${ORG:?}
+      ACCESS_TOKEN: ${RUNNER_TOKEN:?}
+      EPHEMERAL: "1"
+      LABELS: stack
+      RUNNER_NAME_PREFIX: stack
+      DISABLE_AUTO_UPDATE: "1"
+      START_DOCKER_SERVICE: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+    restart: always

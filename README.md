@@ -45,6 +45,24 @@ Notas:
 - A extensão do Claude no VS Code usa sempre a conta padrão (bekaa); para ionic, `claude` no terminal.
 - `agy`: login headless copiando `~/.gemini/antigravity-cli/antigravity-oauth-token` de uma máquina já logada.
 
+## Equipe: Coder e runners (como root, depois da base)
+
+| # | Script | O que faz |
+|---|---|---|
+| 30 | `30-sysbox.sh` | runtime sysbox: Docker dentro do container sem modo privilegiado |
+| 31 | `31-rede-containers.sh --instalar` | containers sem acesso à tailnet e ao metadata; DNS público para os containers |
+| 32 | `32-coder.sh` | Coder Community + Postgres em `https://coder.ness.com.br` (só `127.0.0.1:7080`, exposto pelo tunnel) |
+| 33 | `33-runners.sh <org> …` | runners efêmeros do GitHub Actions por organização (`runs-on: [self-hosted, stack]`) |
+
+- Modelo `web` em `coder/templates/web` (publicar: copiar para o container do Coder e `coder templates push web`).
+  Workspace: sysbox, 6 GB, Docker interno, Node 24, gh, Claude Code, Codex e Antigravity; logins dos agentes num
+  volume por pessoa; desliga após 2 h ocioso.
+- Login no Coder pelo GitHub com cadastro fechado: o admin cria cada pessoa
+  (`coder users create --login-type github --username <u> --email <e>`). OAuth App em
+  `CODER_GITHUB_CLIENT_ID`/`CODER_GITHUB_CLIENT_SECRET` no `admin.env`; depois `sudo ./scripts/32-coder.sh`.
+- Senha inicial do admin `ricardo`: `/srv/coder/primeiro-admin.txt` (root).
+- Runners: `RUNNER_TOKEN` (admin:org) no `admin.env`; só em organizações sem repositório público usando o rótulo.
+
 ## Outros
 
 | Script | O que faz |
