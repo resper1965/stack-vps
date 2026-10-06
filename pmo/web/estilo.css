@@ -53,9 +53,8 @@ code { font-size: 13px; }
 .filtros input { flex: 1 1 220px; }
 
 .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.cartao { position: relative; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 12px 12px 12px 16px;
+.cartao { position: relative; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 12px;
   box-shadow: var(--sombra); cursor: pointer; text-align: left; color: inherit; font: inherit; overflow: hidden; }
-.cartao::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--cor, var(--e-parado)); }
 .cartao:hover, .cartao:focus-visible { border-color: var(--acento); outline: none; }
 .cartao h3 { margin: 0 0 4px; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; }
 .cartao .dono { color: var(--suave); font-size: 12px; }
