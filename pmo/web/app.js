@@ -64,7 +64,8 @@ function abrir(p) {
   const d = $("detalhe"); d.replaceChildren();
   const a = p.analise || {};
   const vscode = p.pasta ? "vscode://vscode-remote/ssh-remote+stack-agente" + encodeURI(p.pasta) : null;
-  d.append(
+  // append nativo escreve "null" para secao vazia: filtrar antes
+  d.append(...[
     el("header", {}, el("div", {}, el("h2", {}, p.nome), el("div", { class: "sub" }, `${p.dono} · ${p.privado ? "privado" : "público"}`)),
       el("button", { class: "fechar", "aria-label": "Fechar", onclick: fechar }, "×")),
     p.esquecido ? el("section", {}, el("div", { class: "alerta-caixa" }, `Esquecido: ${p.esquecido}. Retome, marque como parado ou descarte.`)) : null,
@@ -92,7 +93,7 @@ function abrir(p) {
       el("button", { class: "bt", onclick: () => acao("reanalisar", p.id) }, "Reanalisar"),
       p.arquivado
         ? el("button", { class: "bt", onclick: () => acao("restaurar", p.id) }, "Restaurar")
-        : el("button", { class: "bt perigo", onclick: () => descartar(p) }, "Descartar")));
+        : el("button", { class: "bt perigo", onclick: () => descartar(p) }, "Descartar"))].filter(Boolean));
   $("veu").hidden = false; d.hidden = false; d.scrollTop = 0;
 }
 function fechar() { $("detalhe").hidden = true; $("veu").hidden = true; }
