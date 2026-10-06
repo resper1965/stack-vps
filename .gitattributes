@@ -2,3 +2,4 @@
 systemd/* text eol=lf
 bin/* text eol=lf
 coder/** text eol=lf
+pmo/** text eol=lf
