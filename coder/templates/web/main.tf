@@ -19,11 +19,14 @@ resource "coder_agent" "main" {
   # logins dos agentes moram num volume por pessoa: login uma vez, vale para todos os workspaces dela
   startup_script = <<-EOT
     set -e
+    # Docker interno primeiro: nao depende do resto
+    sudo sh -c 'nohup dockerd >/tmp/dockerd.log 2>&1 &'
+    # volume novo nasce com dono root
+    sudo chown coder:coder "$HOME/.persist"
     for d in claude claude-ionic codex gemini; do
       mkdir -p "$HOME/.persist/$d"
       [ -L "$HOME/.$d" ] || { rm -rf "$HOME/.$d"; ln -s "$HOME/.persist/$d" "$HOME/.$d"; }
     done
-    sudo sh -c 'nohup dockerd >/tmp/dockerd.log 2>&1 &'
   EOT
   env = {
     GIT_AUTHOR_NAME     = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
