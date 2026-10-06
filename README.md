@@ -53,6 +53,7 @@ Notas:
 | 31 | `31-rede-containers.sh --instalar` | containers sem acesso à tailnet e ao metadata; DNS público para os containers |
 | 32 | `32-coder.sh` | Coder Community + Postgres em `https://coder.ness.com.br` (só `127.0.0.1:7080`, exposto pelo tunnel) |
 | 33 | `33-runners.sh <org> …` | runners efêmeros do GitHub Actions por organização (`runs-on: [self-hosted, stack]`) |
+| 34 | `34-pmo.sh` | painel do PMO em `http://100.76.167.6:8080` (só VPN): coleta diária, alarme de esquecidos, descartar/restaurar |
 
 - Modelo `web` em `coder/templates/web` (publicar: copiar para o container do Coder e `coder templates push web`).
   Workspace: sysbox, 6 GB, Docker interno, Node 24, gh, Claude Code, Codex e Antigravity; logins dos agentes num

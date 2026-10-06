@@ -82,6 +82,21 @@ Provisionamento (`sudo ./scripts/NN.sh`) roda de um clone do `stack-vps` que o a
 
 Do terminal do `dev`, `ia` e `iax` abrem o Claude e o Codex como `agente` no diretório atual.
 
+## Painel do PMO
+
+`http://100.76.167.6:8080` (só pela VPN). Mostra todos os repositórios dos donos em `pmo/donos.txt`,
+descobertos sozinhos todo dia às 06:00 (Brasília), mais as pastas sem git de `/srv/dev/laptop` em
+"A destinar".
+
+- **Esquecido**: `em andamento` sem atividade há 14 dias, `em revisão` há 30, ou estágio declarado sem
+  próximo passo. Resumo toda segunda às 08:00 (ntfy e e-mail).
+- **Tipo e estágio** vêm do `STATE.md` (`**Tipo:**`, `**Estágio:**`, `**Próximo passo:**`); sem eles, o
+  painel mostra o estágio sugerido com `~`.
+- **Ações**: Arquivar (reversível, Restaurar desfaz), Excluir de vez (digitar o nome; o GitHub guarda
+  90 dias, a cópia local 30), Trazer/Descartar para "A destinar", Reanalisar. Repositórios `nessenergy`
+  só arquivam. Tudo registrado em `/srv/dev/state/pmo/acoes.log`.
+- Excluir no GitHub exige `delete_repo` no token do `admin.env`.
+
 ## Alertas
 
 `stack-health.timer` roda o `health.sh` de hora em hora e, so quando o estado muda, avisa por
