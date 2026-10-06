@@ -44,7 +44,7 @@ def estagio_sugerido(dias_sem_atividade, prs_abertos, arquivado):
     return "em andamento"
 
 
-def esquecido(estagio, dias, proximo, arquivado):
+def esquecido(estagio, dias, proximo, arquivado, declarado=True):
     """Motivo pelo qual o projeto está esquecido, ou None."""
     if arquivado or estagio in INATIVOS:
         return None
@@ -53,6 +53,6 @@ def esquecido(estagio, dias, proximo, arquivado):
         return f"em revisão há {dias} dias"
     if est in ("em andamento", "ideia") and dias > LIMITE_ANDAMENTO:
         return f"sem atividade há {dias} dias"
-    if not proximo:
+    if declarado and not proximo:
         return "sem próximo passo"
     return None

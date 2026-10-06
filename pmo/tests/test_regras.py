@@ -36,6 +36,11 @@ class Esquecido(unittest.TestCase):
         self.assertIsNone(esquecido("encerrado", 400, None, False))
         self.assertIsNone(esquecido("parado", 400, None, False))
 
+    def test_sem_state_nao_cobra_proximo_passo(self):
+        # sem STATE.md declarado, so a inatividade alarma; senao tudo vira esquecido
+        self.assertIsNone(esquecido("em andamento", 2, None, False, declarado=False))
+        self.assertIsNotNone(esquecido("em andamento", 20, None, False, declarado=False))
+
     def test_sem_estagio_usa_atividade(self):
         # estágio desconhecido conta como em andamento quando há atividade recente esquecida
         self.assertIsNotNone(esquecido(None, 20, "x", False))

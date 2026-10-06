@@ -52,6 +52,6 @@ def coletar(gh, donos, locais, agora):
                 "tipo": st["tipo"], "estagio": st["estagio"], "estagio_sugerido": sug, "proximo": st["proximo"],
                 "prs": res["prs"], "issues": res["issues"], "ci": res["ci"], "wip": res["wip"],
                 "pasta": locais.get(f"{d}/{nome}".lower()),
-                "esquecido": esquecido(st["estagio"] or sug, dias, st["proximo"], arq),
+                "esquecido": esquecido(st["estagio"] or sug, dias, st["proximo"], arq, declarado=st["estagio"] is not None),
             })
     return registros
