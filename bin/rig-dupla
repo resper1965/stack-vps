@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sobe a dupla principal/revisor do projeto atual, com os papeis lidos do STATE.md.
 # Uso: rig-dupla [--plan] [diretorio-do-projeto]
-# Instalado pelo 14-openrig.sh. Recusa main/master e papel A DEFINIR.
+# Instalado pelo 22-openrig.sh. Recusa main/master e papel A DEFINIR.
 set -euo pipefail
 PLAN=; [[ ${1:-} == --plan ]] && { PLAN=--plan; shift; }
 RAIZ=$(git -C "${1:-.}" rev-parse --show-toplevel)

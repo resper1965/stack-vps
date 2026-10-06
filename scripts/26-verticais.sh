@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Visao por vertical de negocio: /srv/dev/verticais/<vertical>/<divisao>/<projeto> como
 # atalho para o clone real, mais um <vertical>.code-workspace para abrir no VS Code.
-# Os clones nao mudam de lugar: inventario, painel, OpenRig e scripts 08-15 seguem iguais.
+# Os clones nao mudam de lugar: inventario, painel, OpenRig e scripts 08-13 seguem iguais.
 # Mapa em docs/verticais.tsv (decisao do Ricardo; linha A DEFINIR fica de fora).
-# Roda COMO dev. Idempotente: refaz os atalhos do zero a cada execucao.
+# Roda COMO agente. Idempotente: refaz os atalhos do zero a cada execucao.
 set -euo pipefail
-[[ $(id -un) == dev ]] || { echo "rode como dev"; exit 1; }
+[[ $(id -un) == agente ]] || { echo "rode como agente: sudo -u agente -H $0"; exit 1; }
 R=$(cd "$(dirname "$0")/.." && pwd)
 MAPA=$R/docs/verticais.tsv
 ESCOPO=/srv/dev/state/escopo-auditoria.tsv

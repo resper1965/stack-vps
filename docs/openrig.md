@@ -50,7 +50,7 @@ O merge é sempre seu. Ninguém faz push em `main`.
 ```mermaid
 flowchart TD
   a[04-agents.sh<br/>Claude e Codex podem escrever em /srv/dev/state] --> b
-  b[14-openrig.sh<br/>instala o CLI, copia os agentes,<br/>tira acceptEdits/Exa/Context7,<br/>anexa as regras do ambiente ao papel] --> c
+  b[22-openrig.sh<br/>instala o CLI, copia os agentes,<br/>tira acceptEdits/Exa/Context7,<br/>anexa as regras do ambiente ao papel] --> c
   c[rig-dupla, por projeto<br/>STATE.md → rig.yaml → rig up]
 ```
 

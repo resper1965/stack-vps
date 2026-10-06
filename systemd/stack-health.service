@@ -1,0 +1,7 @@
+[Unit]
+Description=Health da VPS com alerta na mudanca de estado
+
+[Service]
+Type=oneshot
+TimeoutStartSec=5min
+ExecStart=/usr/local/lib/stack-vps/vigia-health.sh

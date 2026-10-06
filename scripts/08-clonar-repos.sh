@@ -3,9 +3,9 @@
 # Idempotente: repo ja clonado so faz fetch. Roda como dev.
 set -uo pipefail
 TSV="${1:?informe o caminho do repos-classificacao.tsv}"
-set -a; . /srv/dev/secrets/.env; set +a
+set -a; . /srv/dev/secrets/agente.env; set +a
 ok=0; fail=0
-while IFS=$'\t' read -r tree repo push lang kb arq; do
+while IFS=$'\t' read -r tree repo _push _lang _kb _arq; do
   [[ $tree == arvore ]] && continue
   dest="/srv/dev/repos/$tree/$repo"
   if [[ -d $dest/.git ]]; then git -C "$dest" fetch -q --all 2>/dev/null && ok=$((ok+1)) || fail=$((fail+1)); continue; fi

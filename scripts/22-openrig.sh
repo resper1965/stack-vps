@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # OpenRig (github.com/mvschwarz/openrig): dupla principal + revisor em tmux, papeis do STATE.md.
-# Roda COMO dev, depois do 04-agents.sh. Idempotente. Uso: ./14-openrig.sh [versao]
+# Roda COMO agente, depois do 04-agents.sh. Idempotente. Uso: ./22-openrig.sh [versao]
 # Nao sobe equipe nenhuma: so instala, configura e gera a spec. Subir e manual (ver fim).
 set -euo pipefail
-[[ $(id -un) == dev ]] || { echo "rode como dev"; exit 1; }
+[[ $(id -un) == agente ]] || { echo "rode como agente: sudo -u agente -H $0"; exit 1; }
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 VER=${1:-latest}
 
@@ -49,8 +49,7 @@ done
 cp "$PKG/daemon/specs/rigs/launch/first-project/CULTURE.md" "$S/"
 
 # Cada projeto ganha seu rig na hora de subir, com os papeis do STATE.md
-install -m 755 "$R/bin/rig-dupla" /srv/dev/bin/rig-dupla
-ln -sfn /srv/dev/bin/rig-dupla ~/.local/bin/rig-dupla
+mkdir -p ~/.local/bin; install -m 755 "$R/bin/rig-dupla" ~/.local/bin/rig-dupla
 
 echo "openrig: $(rig --version) | home: $H"
 echo "subir num projeto (STATE.md com principal/revisor definidos, nunca em main/master):"

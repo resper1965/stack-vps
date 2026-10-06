@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Duas contas Claude: bekaa (padrao, ~/.claude) e ionic (~/.claude-ionic).
 # Decisao do Ricardo em 30/09/2026: vertical ionic usa a conta ionic; todas as outras, a bekaa.
-# `claude` dentro de projeto da vertical ionic (pelos atalhos do 18-verticais.sh) usa a conta
+# `claude` dentro de projeto da vertical ionic (pelos atalhos do 26-verticais.sh) usa a conta
 # ionic sozinho. Forcar: claude-bekaa / claude-ionic. CLAUDE_CONFIG_DIR ja definido e respeitado.
 # Plugins, skills e settings sao os mesmos nas duas: o ~/.claude-ionic aponta para o ~/.claude.
 # So o CLI respeita CLAUDE_CONFIG_DIR; a extensao do VS Code usa sempre a conta padrao.
-# Roda COMO dev, depois do 04-agents.sh. Idempotente.
+# Roda COMO agente, depois do 04-agents.sh. Idempotente.
 set -euo pipefail
-[[ $(id -un) == dev ]] || { echo "rode como dev"; exit 1; }
+[[ $(id -un) == agente ]] || { echo "rode como agente: sudo -u agente -H $0"; exit 1; }
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 B=~/.claude; I=~/.claude-ionic
 mkdir -p "$B" "$I"; chmod 700 "$I"
@@ -23,7 +23,7 @@ done
 CLAUDE_CONFIG_DIR=$I claude mcp add --scope user --transport http cloudflare-docs https://docs.mcp.cloudflare.com/mcp >/dev/null 2>&1 || true
 
 if ! grep -q '^# >>> contas-claude' ~/.bashrc; then cat >> ~/.bashrc <<'EOF'
-# >>> contas-claude (20-contas-claude.sh)
+# >>> contas-claude (28-contas-claude.sh)
 _claude_ionic() {
   local f l; f=$(pwd -P)
   [[ $PWD == /srv/dev/verticais/ionic/* ]] && return 0

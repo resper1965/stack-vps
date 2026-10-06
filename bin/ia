@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# ia: abre o Claude Code como "agente" no diretorio atual. iax: o mesmo com o Codex.
+# O agente nao tem sudo, nao le data/ nem forense/ e so ve os segredos de agente.env.
+set -euo pipefail
+case ${0##*/} in ia) cmd=claude ;; iax) cmd=codex ;; *) echo "chame como ia ou iax"; exit 1 ;; esac
+# shellcheck disable=SC2016  # o script interno e expandido pelo bash do agente, nao por este
+exec sudo -u agente -H bash -c '
+  cd "$1" 2>/dev/null || cd /srv/dev/repos; shift
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+  DOCKER_HOST="unix:///run/user/$(id -u)/docker.sock"; export DOCKER_HOST
+  set -a; . /srv/dev/secrets/agente.env; set +a
+  # o .envrc do projeto vem por cima (token do dono certo); exige "direnv allow" feito pelo agente
+  if [[ -f "$PWD/.envrc" ]]; then eval "$(direnv export bash 2>/dev/null)"; fi
+  umask 002
+  exec "$0" "$@"' "$cmd" "$PWD" "$@"

@@ -1,26 +1,20 @@
 #!/usr/bin/env bash
-# Secrets compartilhados: um arquivo so para todos os projetos, carregado no shell do dev.
+# Secrets compartilhados: um arquivo so para todos os projetos, carregado no shell do agente.
 # Decisao do Ricardo em 30/09/2026: um arquivo para tudo, sem separar por vertical.
-# Tokens de infraestrutura (GitHub, Cloudflare) ficam em secrets/.env, lidos so pelos scripts:
+# Tokens de infraestrutura (GitHub, Cloudflare) ficam em secrets/admin.env, lidos so pelos scripts:
 # nao entram no ambiente dos agentes.
-# Roda COMO dev. Idempotente.
+# Roda COMO agente. Idempotente.
 set -euo pipefail
-[[ $(id -un) == dev ]] || { echo "rode como dev"; exit 1; }
+[[ $(id -un) == agente ]] || { echo "rode como agente: sudo -u agente -H $0"; exit 1; }
 P=/srv/dev/secrets/projetos.env
 
-[[ -f $P ]] || { install -m 600 /dev/null "$P"; cat > "$P" <<'EOF'
-# Chaves usadas pelos projetos. Uma por linha: NOME=valor (sem espacos em volta do =).
-# Carregado em todo shell do dev: terminal, VS Code, Claude Code e Codex enxergam.
-# Nunca copie valores daqui para .env de repositorio.
-EOF
-}
-chmod 600 "$P"
+[[ -r $P ]] || { echo "sem $P legivel: rode 02-layout.sh (cria 640 dev:agente)"; exit 1; }
 
 # no topo do .bashrc: o Ubuntu sai cedo em shell nao interativo, e o que fica embaixo nao roda.
 # Le linha a linha em vez de dar source: valor com espaco funciona e nada do arquivo e executado.
 if ! grep -q '^# >>> projetos.env' ~/.bashrc; then
   { cat <<'EOF'
-# >>> projetos.env (19-secrets.sh)
+# >>> projetos.env (27-secrets.sh)
 if [ -r /srv/dev/secrets/projetos.env ]; then
   while IFS= read -r _l || [ -n "$_l" ]; do
     [[ $_l =~ ^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue

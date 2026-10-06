@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup restic da VPS para o R2
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/stack-vps/14-backup.sh
+Nice=10
+IOSchedulingClass=idle

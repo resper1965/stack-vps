@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Preenche Agente principal/revisor no STATE.md de cada repo do escopo.
 # Decisao do Ricardo em 30/09/2026: Claude Code principal, Codex revisor, em todos.
-# So troca campo que esta A DEFINIR; decisao ja escrita fica. Roda como dev.
-# Uso: 15-papeis.sh [--push]   (sem --push so commita; nunca toca em main/master)
+# So troca campo que esta A DEFINIR; decisao ja escrita fica. Roda como agente.
+# Uso: 23-papeis.sh [--push]   (sem --push so commita; nunca toca em main/master)
 set -uo pipefail
 ESCOPO=/srv/dev/state/escopo-auditoria.tsv
 PRINCIPAL='Claude Code'; REVISOR='Codex'
 NOVA="chore/papeis-$(date +%Y-%m-%d)"
-PUSH=; [[ ${1:-} == --push ]] && { PUSH=1; set -a; . /srv/dev/secrets/.env; set +a; }
+PUSH=; [[ ${1:-} == --push ]] && { PUSH=1; set -a; . /srv/dev/secrets/agente.env; set +a; }
 feitos=0; ja=0; pulados=0; enviados=0
 
 while IFS=$'\t' read -r dono repo arvore dir; do

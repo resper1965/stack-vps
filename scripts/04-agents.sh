@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Claude Code, Codex e Antigravity CLI no usuario dev, com marketplaces, plugins, MCP e skills proprias.
-# Roda COMO dev (nao como root). Idempotente.
+# Claude Code, Codex e Antigravity CLI no usuario agente, com marketplaces, plugins, MCP e skills proprias.
+# Roda COMO agente (nao como root nem dev): os agentes moram em /home/agente. Idempotente.
 set -euo pipefail
-[[ $(id -un) == dev ]] || { echo "rode como dev"; exit 1; }
+[[ $(id -un) == agente ]] || { echo "rode como agente: sudo -u agente -H ./04-agents.sh"; exit 1; }
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 
 # npm 11 bloqueia postinstall por padrao; o claude-code precisa do dele
@@ -27,7 +27,7 @@ codex mcp add cloudflare-docs -- npx -y mcp-remote https://docs.mcp.cloudflare.c
 # skills proprias: um clone, dois agentes.
 # Claude le por symlink; Codex nao tem diretorio de skills, so plugin — dai o marketplace local.
 D=/srv/dev/repos/infra/claude-skills
-[[ -d $D/.git ]] || { set -a; . /srv/dev/secrets/.env; set +a
+[[ -d $D/.git ]] || { set -a; . /srv/dev/secrets/agente.env; set +a
   git clone -q "https://x-access-token:${GITHUB_TOKEN}@github.com/resper1965/claude-skills.git" "$D"
   git -C "$D" remote set-url origin https://github.com/resper1965/claude-skills.git; }
 mkdir -p ~/.claude/skills

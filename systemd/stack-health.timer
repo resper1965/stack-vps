@@ -1,0 +1,9 @@
+[Unit]
+Description=Health da VPS de hora em hora
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
