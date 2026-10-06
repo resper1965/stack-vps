@@ -45,7 +45,7 @@ Entra:
 | `uv` (Python por projeto, via `mise`) | frentes B, C e D |
 | `gh`, `wrangler`, `vercel`, `supabase` | CLIs das plataformas (npm global ou binário oficial) |
 | `gcloud` + `bq` | BigQuery; login de usuário (`gcloud auth login`), **sem arquivo de chave** |
-| OmniRoute (container) | gateway de LLM (Featherless e outros provedores) em `127.0.0.1` e no IP da tailnet; chaves dos provedores só no gateway (`admin.env`); consumidores (`agente`, projetos, `npentest`) recebem uma chave do próprio gateway |
+| OpenRouter (serviço externo, nada instalado) | acesso a modelos por API compatível com OpenAI (`OPENAI_BASE_URL=https://openrouter.ai/api/v1`); uma chave por pessoa e por agente, cada uma com limite de crédito e revogável; Featherless segue com chave própria para os modelos de pentest |
 | `direnv` | segredos por projeto ao entrar na pasta |
 | `lazygit` | revisão e commit pelo terminal |
 | `cloudflared` | instalado pelo `03` (hoje nenhum script instala) |
@@ -158,7 +158,7 @@ idempotentes, que entram depois sem nova reinstalação.
 | Onda | Conteúdo | Quando |
 |---|---|---|
 | 1 | Seção 5 inteira (usuários, segredos, tokens, `ia`/`iax`); `cloudflared` no `03`; alertas e health ampliado | antes da reinstalação, junto com as correções da revisão da migração |
-| 2 | Sistema base (seção 1), OmniRoute e kit de serviços | logo depois da janela |
+| 2 | Sistema base (seção 1) e kit de serviços | logo depois da janela |
 | 3 | Frentes B, C e D; painel; preview para cliente; `atualizar`; arquivo de dormentes | conforme a necessidade |
 
 ## Testes
