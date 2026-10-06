@@ -22,4 +22,15 @@ git -C "$R" show "$B:ignorado.log" >/dev/null 2>&1; [[ $? != 0 ]]; afirma $? "re
 L="$T/limpo"; mkdir -p "$L"; git -C "$L" init -q -b main; echo a > "$L/a"; git -C "$L" add .; git -C "$L" commit -qm a
 WIP_DATA=2026-10-06 bash "$S" "$L" >/dev/null 2>&1
 git -C "$L" rev-parse -q --verify "refs/heads/$B" >/dev/null; [[ $? != 0 ]]; afirma $? "repo limpo: nada a salvar"
+# documentos e arquivos excluidos ficam fora do wip (e continuam na pasta)
+novo_tmp
+R="$T/p2"; mkdir -p "$R/docs"; git -C "$R" init -q -b main; echo a > "$R/a"; git -C "$R" add .; git -C "$R" commit -qm a
+echo x > "$R/docs/Proposta.DOCX"; echo y > "$R/dados.csv"; echo z > "$R/chave.txt"; echo ok > "$R/codigo.js"
+WIP_DATA=2026-10-06 WIP_EXCLUIR="chave.txt" bash "$S" "$R" >/dev/null 2>&1
+B=wip/laptop-2026-10-06
+git -C "$R" show "$B:codigo.js" >/dev/null 2>&1; afirma $? "codigo entra"
+git -C "$R" show "$B:docs/Proposta.DOCX" >/dev/null 2>&1; [[ $? != 0 ]]; afirma $? "docx fica fora"
+git -C "$R" show "$B:dados.csv" >/dev/null 2>&1; [[ $? != 0 ]]; afirma $? "csv fica fora"
+git -C "$R" show "$B:chave.txt" >/dev/null 2>&1; [[ $? != 0 ]]; afirma $? "arquivo excluido fica fora"
+[[ -f $R/docs/Proposta.DOCX && -f $R/chave.txt ]]; afirma $? "arquivos continuam na pasta"
 fim
