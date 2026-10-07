@@ -47,6 +47,7 @@ CRON='0 7 * * 1 /srv/dev/bin/weekly-review.sh >> /srv/dev/state/weekly.log 2>&1'
 echo 'dev ALL=(agente) NOPASSWD: ALL' > /etc/sudoers.d/91-dev-agente
 chmod 440 /etc/sudoers.d/91-dev-agente; visudo -c -q
 install -m 755 "$REPO/bin/ia" /usr/local/bin/ia; ln -sf /usr/local/bin/ia /usr/local/bin/iax
+install -m 755 "$REPO/bin/git-credential-stack" /usr/local/bin/git-credential-stack
 
 # Docker rootless: o AppArmor do Ubuntu 24.04 bloqueia namespace de usuario sem este perfil
 cat > /etc/apparmor.d/usr.bin.rootlesskit <<'AA'
@@ -72,6 +73,7 @@ sudo -u agente -H bash -c '
   command -v ~/.local/bin/mise >/dev/null || curl -fsSL https://mise.run | sh >/dev/null 2>&1
   grep -q "mise activate" ~/.bashrc || echo "eval \"\$(~/.local/bin/mise activate bash)\"" >> ~/.bashrc
   ~/.local/bin/mise use -g node@24 uv@0.5.11 terraform@1.15.8 gitleaks@8 >/dev/null 2>&1
-  git config --global user.name "Ricardo Esper"; git config --global user.email resper@bekaa.eu'
+  git config --global user.name "Ricardo Esper"; git config --global user.email resper@bekaa.eu
+  git config --global credential.https://github.com.helper stack'
 echo "agente: $(id agente)"
 echo "docker rootless: $(sudo -u agente XDG_RUNTIME_DIR="/run/user/$U" systemctl --user is-active docker)"
