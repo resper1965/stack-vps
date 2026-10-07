@@ -76,7 +76,7 @@ def main():
     corpo = json.dumps({"model": m["modelo"], "messages": [{"role": "user", "content": pergunta}]}).encode()
     req = urllib.request.Request(f"{base}/chat/completions", data=corpo, method="POST", headers={
         "Authorization": f"Bearer {chave(nome_chave)}", "Content-Type": "application/json",
-        "X-Title": "stack-vps"})
+        "X-Title": "stack-vps", "User-Agent": "stack-vps/modelo"})  # sem UA, a Featherless cai no bloqueio 1010 do Cloudflare
     try:
         with urllib.request.urlopen(req, timeout=300) as r:
             print(json.load(r)["choices"][0]["message"]["content"])

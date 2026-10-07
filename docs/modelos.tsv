@@ -1,2 +1,3 @@
 apelido	provedor	modelo	uso
-auto	openrouter	openrouter/auto	o OpenRouter escolhe o modelo pela pergunta
+auto	openrouter	openrouter/auto	dia a dia: o OpenRouter escolhe o modelo
+primus	featherless	trendmicro-ailab/Llama-Primus-Reasoning	analise de ciberseguranca
