@@ -156,7 +156,7 @@ POR_DEPENDENCIA = (("next.js", "next"), ("react", "react"), ("vue", "vue"), ("as
                    ("prisma", "prisma"), ("drizzle", "drizzle-orm"), ("tailwind", "tailwindcss"),
                    ("ia", "@anthropic-ai/sdk"), ("ia", "openai"), ("ia", "ai"), ("ia", "@modelcontextprotocol/sdk"))
 SEGREDO_NO_REPO = re.compile(r"(^|/)(\.env(\.[\w-]+)?|\.envrc|id_(rsa|ed25519|ecdsa)|[^/]+\.(pem|key|pfx|p12))$")
-NAO_E_SEGREDO = re.compile(r"\.env\.(example|sample|template|dist)$")
+NAO_E_SEGREDO = re.compile(r"\.env\.(example|exemplo|sample|template|dist|modelo)$")
 
 
 def detectar_tecnologias(caminhos, package_json, linguagem):

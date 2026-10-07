@@ -108,7 +108,7 @@ class Classificacao(unittest.TestCase):
 class Tecnologias(unittest.TestCase):
     def test_detecta_pelos_arquivos_e_package_json(self):
         from pmo.regras import detectar_tecnologias
-        caminhos = ["package.json", "apps/core/wrangler.jsonc", "supabase/config.toml", "Dockerfile",
+        caminhos = ["package.json", "apps/core/wrangler.jsonc", "supabase/config.toml", "Dockerfile", ".env.exemplo",
                     "infra/main.tf", ".env.production", ".env.example", "pyproject.toml"]
         pkg = '{"dependencies": {"next": "15", "react": "19", "@supabase/supabase-js": "2"}, "devDependencies": {"@anthropic-ai/sdk": "1"}}'
         t = detectar_tecnologias(caminhos, pkg, "TypeScript")
