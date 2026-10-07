@@ -1,3 +1,6 @@
 apelido	provedor	modelo	uso
 auto	openrouter	openrouter/auto	dia a dia: o OpenRouter escolhe o modelo
 primus	featherless	trendmicro-ailab/Llama-Primus-Reasoning	analise de ciberseguranca
+glm	featherless	zai-org/GLM-5.3	pentest: planejamento e analise (mais forte)
+glm-flash	featherless	zai-org/GLM-5.3-Flash	pentest: o mesmo, mais rapido e barato
+livre	featherless	OBLITERATUS/Qwen3.8-27B-OBLITERATED	ofensivo: sem recusa, com tool calling, para passo que um modelo comum barraria
