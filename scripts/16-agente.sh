@@ -65,12 +65,13 @@ for _ in $(seq 1 20); do [[ -S /run/user/$U/bus ]] && break; sleep 0.5; done
 sudo -u agente XDG_RUNTIME_DIR="/run/user/$U" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$U/bus" \
   bash -c 'systemctl --user is-active --quiet docker || dockerd-rootless-setuptool.sh install >/dev/null'
 
-# Node, uv e Terraform do proprio agente (o do dev mora em /home/dev, 750). uv na versao do CI do
+# Node, uv, Terraform, gitleaks e identidade git do proprio agente (commits saem como o Ricardo) (o do dev mora em /home/dev, 750). uv na versao do CI do
 # Alupdata; Terraform na versao que gravou o estado do bootstrap (versao mais velha nao le o estado).
 # shellcheck disable=SC2016
 sudo -u agente -H bash -c '
   command -v ~/.local/bin/mise >/dev/null || curl -fsSL https://mise.run | sh >/dev/null 2>&1
   grep -q "mise activate" ~/.bashrc || echo "eval \"\$(~/.local/bin/mise activate bash)\"" >> ~/.bashrc
-  ~/.local/bin/mise use -g node@24 uv@0.5.11 terraform@1.15.8 gitleaks@8 >/dev/null 2>&1'
+  ~/.local/bin/mise use -g node@24 uv@0.5.11 terraform@1.15.8 gitleaks@8 >/dev/null 2>&1
+  git config --global user.name "Ricardo Esper"; git config --global user.email resper@bekaa.eu'
 echo "agente: $(id agente)"
 echo "docker rootless: $(sudo -u agente XDG_RUNTIME_DIR="/run/user/$U" systemctl --user is-active docker)"
