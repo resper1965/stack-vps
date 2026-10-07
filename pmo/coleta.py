@@ -5,7 +5,7 @@ import re
 import sys
 from datetime import datetime
 
-from pmo.regras import ler_state, estagio_sugerido, esquecido
+from pmo.regras import ler_state, estagio_sugerido, esquecido, sugerir, primeiro_paragrafo
 
 
 def _data(iso):
@@ -59,6 +59,12 @@ def _registro(gh, r, locais, agora):
     ultima = _data(r.get("pushed_at"))
     dias = (agora - ultima).days if ultima else 9999
     sug = estagio_sugerido(dias, res["prs"], arq)
+    resumo = (r.get("description") or "").strip() or None
+    if resumo is None:
+        try:
+            resumo = primeiro_paragrafo(gh.readme(d, nome))
+        except Exception:  # noqa: BLE001 — README e enfeite; nao derruba o registro
+            resumo = None
     return {
         "id": f"{d}/{nome}", "nome": nome, "dono": d, "url": r.get("html_url"),
         "privado": bool(r.get("private")), "arquivado": arq,
@@ -67,4 +73,6 @@ def _registro(gh, r, locais, agora):
         "prs": res["prs"], "issues": res["issues"], "ci": res["ci"], "wip": res["wip"],
         "pasta": locais.get(f"{d}/{nome}".lower()),
         "esquecido": esquecido(st["estagio"] or sug, dias, st["proximo"], arq, declarado=st["estagio"] is not None),
+        "resumo": resumo, "linguagem": r.get("language"),
+        "sugestao": sugerir(d, nome, r.get("language"), resumo),
     }

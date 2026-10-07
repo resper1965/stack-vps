@@ -1,8 +1,9 @@
-"""Regras puras do PMO: leitura do STATE.md, estágio sugerido e detecção de projeto esquecido."""
+"""Regras puras do PMO: STATE.md, estágio sugerido, projeto esquecido e classificação (empresa, cliente, tipo)."""
 import re
 import unicodedata
 
-TIPOS = ("app", "documento", "conhecimento", "agente")
+TIPOS = ("app", "site", "agente", "dados", "infra", "documento", "conhecimento")
+EMPRESAS = ("ness", "bekaa", "ionic", "forense", "pessoal", "trustness")
 ESTAGIOS = ("ideia", "em andamento", "em revisão", "entregue", "encerrado", "parado")
 INATIVOS = ("encerrado", "parado", "entregue")
 LIMITE_ANDAMENTO = 14
@@ -57,3 +58,63 @@ def esquecido(estagio, dias, proximo, arquivado, declarado=True):
     if declarado and not proximo:
         return "sem próximo passo"
     return None
+
+
+# ponytail: classificacao por heuristica de dono/nome/linguagem; o Ricardo corrige no painel e a escolha dele vale
+EMPRESA_DO_DONO = {"bekaa-trusted-advisors": "bekaa", "t4isb-infra": "bekaa", "forense-io": "forense",
+                   "nessenergy": "ness", "familia-almeida": "pessoal"}
+CLIENTE_DO_DONO = {"t4isb-infra": "t4isb"}
+EMPRESA_DO_NOME = (("ionic", r"ionic|ihos|txramp|pq44"), ("bekaa", r"bekaa|aegis|twyn|orm\b|orm-"),
+                   ("forense", r"forense|pericia"), ("pessoal", r"esper|wedding|familia|blog|sabrina|renata|fisio"),
+                   ("ness", r"^n[.\-_]?[a-z0-9]|ness"))
+TIPO_DO_NOME = (("infra", r"infra|stack|ops\b|terraform|ansible|availab|avaiab|proxmox|router"),
+                ("site", r"site|landing|blog"), ("agente", r"agent|mcp|bot\b|pentest|copilot"),
+                ("dados", r"data|lake|etl|pipeline"), ("conhecimento", r"skill|template|knowledge|notas|kb\b"),
+                ("documento", r"isms|iso|polic|proposta|relatorio|contrato"))
+
+
+def sugerir(dono, nome, linguagem, descricao):
+    """Palpite de empresa, cliente e tipo a partir do dono, do nome, da linguagem e da descrição."""
+    n = _sem_acento(f"{nome} {descricao or ''}").lower()
+    empresa = EMPRESA_DO_DONO.get(dono.lower())
+    if empresa is None:
+        empresa = next((e for e, rx in EMPRESA_DO_NOME if re.search(rx, nome.lower())), None)
+    cliente = CLIENTE_DO_DONO.get(dono.lower()) or ("alup" if "alup" in n else None)
+    if (linguagem or "") == "HCL":
+        tipo = "infra"
+    else:
+        tipo = next((t for t, rx in TIPO_DO_NOME if re.search(rx, n)), None)
+        tipo = tipo or ("documento" if not linguagem else "app")
+    return {"empresa": empresa, "cliente": cliente, "tipo": tipo}
+
+
+def primeiro_paragrafo(texto, limite=280):
+    """Primeiro parágrafo de texto corrido de um README (sem título, selo, imagem ou HTML)."""
+    par = []
+    for linha in (texto or "").splitlines():
+        s = linha.strip()
+        if not s:
+            if par:
+                break
+            continue
+        if s.startswith(("#", "<", "![", "[![", "---", "```", "|", ">")):
+            if par:
+                break
+            continue
+        par.append(s)
+    if not par:
+        return None
+    r = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", " ".join(par))
+    r = re.sub(r"[*_`]{1,3}", "", r)
+    return r[:limite]
+
+
+def aplicar_classes(painel, classes):
+    """Classe final de cada projeto: escolha do Ricardo > STATE.md (tipo) > sugestão."""
+    for chave in ("projetos", "arquivados"):
+        for p in painel.get(chave, []):
+            c, s = classes.get(p["id"]) or {}, p.get("sugestao") or {}
+            p["classe"] = {"empresa": c.get("empresa") or s.get("empresa"), "area": c.get("area") or None,
+                           "cliente": c.get("cliente") or (None if c else s.get("cliente")),
+                           "tipo": c.get("tipo") or p.get("tipo") or s.get("tipo"), "confirmada": bool(c)}
+    return painel

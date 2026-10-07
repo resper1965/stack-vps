@@ -58,8 +58,14 @@ class GitHub:
             return self.paginas(f"/users/{dono}/repos?per_page=100")
 
     def state_md(self, dono, repo):
+        return self._texto(f"/repos/{dono}/{repo}/contents/STATE.md")
+
+    def readme(self, dono, repo):
+        return self._texto(f"/repos/{dono}/{repo}/readme")
+
+    def _texto(self, caminho):
         try:
-            c = self.get(f"/repos/{dono}/{repo}/contents/STATE.md")
+            c = self.get(caminho)
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return None

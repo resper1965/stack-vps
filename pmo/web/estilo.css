@@ -59,6 +59,11 @@ code { font-size: 13px; }
 .cartao h3 { margin: 0 0 4px; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; }
 .cartao .dono { color: var(--suave); font-size: 12px; }
 .cartao .linha { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 6px; }
+.cartao .resumo { font-size: 13px; color: var(--suave); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; }
+.dlg label { display: grid; gap: 4px; font-size: 14px; }
+.dlg select, .dlg input[type=text] { padding: 8px; border-radius: 8px; border: 1px solid var(--borda); background: var(--fundo); color: inherit; font: inherit; }
+.dlg menu button.primario { background: var(--acento); color: #fff; border-color: var(--acento); }
 .cartao .passo { font-size: 13px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .etiqueta { font-size: 12px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--borda); white-space: nowrap; }
 .etiqueta.estagio { color: #fff; border: 0; background: var(--cor); }

@@ -16,8 +16,10 @@ import sys
 from datetime import datetime, timezone
 
 from pmo.coleta import mapear_locais
+from pmo.pasta import NOME
+from pmo.regras import aplicar_classes
 
-CLIENTES = {"nessenergy"}
+CLIENTES = {"nessenergy/alupdatalake", "nessenergy/sitealupar"}  # so arquivar; o resto da nessenergy e da Ness
 JANELA_DUPLICADO = 600
 DIAS_LIXEIRA = 30
 PASTA = "/usr/local/bin/pmo-pasta"
@@ -28,7 +30,9 @@ class Recusado(Exception):
 
 
 def _pasta_como_agente(*args, entrada=None, saida=None):
-    r = subprocess.run(["sudo", "-n", "-u", "agente", PASTA, *args], stdin=entrada,
+    dados = entrada if isinstance(entrada, bytes) else None
+    r = subprocess.run(["sudo", "-n", "-u", "agente", PASTA, *args], input=dados,
+                       stdin=None if dados is not None else entrada,
                        stdout=saida or subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=1800)
     msg = r.stderr.decode("utf-8", "replace").strip()
     if r.returncode:
@@ -52,6 +56,11 @@ def aplicar_ajustes(painel, ajustes):
     for alvo, a in ajustes.items():
         if a["em"] <= gerado:
             continue
+        if a["de"] and a["de"] == a["para"]:  # so atualiza campos (ex.: pasta depois de clonar)
+            for x in painel.get(a["de"], []):
+                if x["id"] == alvo:
+                    x.update(a.get("campos") or {})
+            continue
         achados = []
         for de in [a["de"]] if a["de"] else ["projetos", "arquivados"]:  # de=None: sai de qualquer lista
             achados += [x for x in painel.get(de, []) if x["id"] == alvo]
@@ -63,7 +72,8 @@ def aplicar_ajustes(painel, ajustes):
     return painel
 
 
-def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora, donos, pasta=_pasta_como_agente):
+def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora, donos, pasta=_pasta_como_agente,
+              painel=None, classes=None, verticais_estado=None):
     feitos = os.path.join(fila, "feitos")
     lixeira = os.path.join(arquivo, "excluidos")
     for d in (feitos, arquivo, lixeira):
@@ -79,8 +89,8 @@ def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora
         with open(log, "a", encoding="utf-8") as f:
             f.write(f"{agora.isoformat()}\t" + "\t".join(limpo) + "\n")
 
-    def ajustar(alvo, de, para):
-        ajustados[alvo] = {"de": de, "para": para, "em": agora.isoformat()}
+    def ajustar(alvo, de, para, campos=None):
+        ajustados[alvo] = {"de": de, "para": para, "em": agora.isoformat(), **({"campos": campos} if campos else {})}
 
     recentes = {}
     for nome in os.listdir(feitos):
@@ -108,7 +118,7 @@ def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora
         else:
             try:
                 resultado = _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira,
-                                      data, donos, pasta, ajustar)
+                                      data, donos, pasta, ajustar, ped.get("pasta"))
             except Recusado as e:
                 resultado = f"recusado: {e}"
             except Exception as e:  # noqa: BLE001 — falha de uma acao nao para a fila
@@ -124,11 +134,39 @@ def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora
     json.dump(ajustados, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
     os.replace(tmp, ajustes)
 
+    if painel and classes and verticais_estado:
+        try:
+            _sincronizar_verticais(painel, ajustados, classes, verticais_estado, pasta)
+        except Exception as e:  # noqa: BLE001 — atalho e conveniencia; nao derruba as acoes
+            registrar("verticais", "-", f"erro: {e}")
+
     limite = agora.timestamp() - DIAS_LIXEIRA * 86400
     for n in os.listdir(lixeira):
         p = os.path.join(lixeira, n)
         if os.path.isfile(p) and not os.path.islink(p) and os.path.getmtime(p) < limite:
             os.remove(p)
+
+
+def _sincronizar_verticais(painel, ajustados, classes, estado, pasta):
+    """Refaz /srv/dev/verticais (como agente) so quando o mapa empresa/area/pasta mudou."""
+    d = aplicar_ajustes(json.load(open(painel, encoding="utf-8")), ajustados)
+    try:
+        cls = json.load(open(classes, encoding="utf-8"))
+    except (OSError, ValueError):
+        cls = {}
+    aplicar_classes(d, cls)
+    mapa = sorted(({"empresa": p["classe"]["empresa"], "area": p["classe"]["area"], "pasta": p["pasta"]}
+                   for p in d.get("projetos", []) if p.get("pasta") and p["classe"]["empresa"]),
+                  key=lambda x: x["pasta"])
+    novo = json.dumps(mapa, ensure_ascii=False, sort_keys=True)
+    try:
+        if open(estado, encoding="utf-8").read() == novo:
+            return
+    except OSError:
+        pass
+    pasta("verticais", "-", entrada=novo.encode())
+    with open(estado, "w", encoding="utf-8") as f:
+        f.write(novo)
 
 
 def _guardar(pasta, local, destino):
@@ -138,7 +176,8 @@ def _guardar(pasta, local, destino):
     pasta("remover", local)
 
 
-def _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira, data, donos, pasta, ajustar):
+def _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira, data, donos, pasta, ajustar,
+              pasta_destino=None):
     if acao in ("trazer", "descartar"):
         if not alvo.startswith("destinar:"):
             raise Recusado("so vale para itens a destinar")
@@ -166,6 +205,16 @@ def _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira
         raise Recusado(f"dono fora de donos.txt: {dono}")
     local = mapear_locais(raiz_projetos).get(alvo.lower())
 
+    if acao == "clonar":
+        if not isinstance(pasta_destino, str) or not NOME.fullmatch(pasta_destino):
+            raise Recusado(f"nome de pasta invalido: {pasta_destino!r}")
+        if local:
+            raise Recusado(f"ja clonado em {local}")
+        destino = os.path.join(raiz_projetos, pasta_destino, repo)
+        res = pasta("clonar", alvo, destino)
+        ajustar(alvo, "projetos", "projetos", {"pasta": destino})
+        return res
+
     if acao == "arquivar":
         gh.arquivar(dono, repo, True)
         if local:
@@ -184,7 +233,7 @@ def _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira
         return "OK: restaurado" + (" (pasta de volta)" if copias else "")
 
     if acao == "excluir":
-        if dono.lower() in CLIENTES:
+        if alvo.lower() in CLIENTES:
             raise Recusado("repositorio de cliente: so pode ser arquivado")
         if conf != repo:
             raise Recusado("nome digitado nao confere")
@@ -202,7 +251,9 @@ def main():
     token = open("/etc/pmo/token", encoding="utf-8").read().strip() or sys.exit("token vazio em /etc/pmo/token")
     donos = open(os.path.join(os.path.dirname(__file__), "donos.txt"), encoding="utf-8").read().split()
     processar("/var/lib/pmo/fila", GitHub(token), "/srv/dev/projetos", "/srv/dev/laptop", "/srv/dev/arquivo",
-              "/var/lib/pmo/acoes.log", "/var/lib/pmo/ajustes.json", datetime.now(timezone.utc), donos)
+              "/var/lib/pmo/acoes.log", "/var/lib/pmo/ajustes.json", datetime.now(timezone.utc), donos,
+              painel="/srv/dev/state/pmo/painel.json", classes="/var/lib/pmo/classes.json",
+              verticais_estado="/var/lib/pmo/verticais.json")
 
 
 if __name__ == "__main__":

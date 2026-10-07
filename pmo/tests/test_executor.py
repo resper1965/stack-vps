@@ -1,4 +1,4 @@
-import json, os, subprocess, tempfile, time, unittest
+import io, json, os, subprocess, tempfile, time, unittest
 from datetime import datetime, timezone
 from pmo.executor import processar, aplicar_ajustes
 from pmo import pasta
@@ -24,9 +24,10 @@ class Executor(unittest.TestCase):
         os.makedirs(os.path.join(self.lap, "DESENVOLVIMENTO", "pasta velha"))
         open(os.path.join(self.lap, "DESENVOLVIMENTO", "pasta velha", "b.md"), "w").write("y")
         self.painel = {"gerado_em": "2026-10-06T09:00:00+00:00",
-                       "projetos": [{"id": "org/orm", "arquivado": False}, {"id": "nessenergy/cliente", "arquivado": False}],
+                       "projetos": [{"id": "org/orm", "arquivado": False}, {"id": "nessenergy/sitealupar", "arquivado": False},
+                                    {"id": "nessenergy/nDocument", "arquivado": False}, {"id": "org/novo", "arquivado": False}],
                        "arquivados": [], "a_destinar": [{"id": "destinar:DESENVOLVIMENTO/pasta velha"}]}
-        self.gh = GhFalso(); self.trazidos = []
+        self.gh = GhFalso(); self.trazidos = []; self.chamadas_pasta = []
 
     def clone(self, onde, alvo):
         os.makedirs(onde)
@@ -34,19 +35,23 @@ class Executor(unittest.TestCase):
         subprocess.run(["git", "-C", onde, "remote", "add", "origin", f"https://github.com/{alvo}.git"], check=True)
         open(os.path.join(onde, "a.txt"), "w").write(alvo)
 
-    def pedir(self, acao, alvo, conf=None, quando=None):
+    def pedir(self, acao, alvo, conf=None, quando=None, **extra):
         n = f"{int((quando or time.time()) * 1000)}-{acao}-{len(os.listdir(self.fila))}.json"
-        json.dump({"acao": acao, "alvo": alvo, "confirmacao": conf, "pedido_em": quando or time.time()},
+        json.dump({"acao": acao, "alvo": alvo, "confirmacao": conf, "pedido_em": quando or time.time(), **extra},
                   open(os.path.join(self.fila, n), "w"))
 
     def _pasta(self, *args, entrada=None, saida=None):
         if args[0] == "trazer":
             self.trazidos.append(args[1]); return "OK: trazido"
-        return pasta.executar(list(args), entrada, saida, raizes=(self.proj, self.lap))
+        self.chamadas_pasta.append(args[0])
+        if isinstance(entrada, bytes):
+            entrada = io.BytesIO(entrada)
+        return pasta.executar(list(args), entrada, saida, raizes=(self.proj, self.lap),
+                              base_git=getattr(self, "base", pasta.BASE_GIT), verticais=os.path.join(self.t, "verticais"))
 
-    def rodar(self):
+    def rodar(self, **extra):
         processar(self.fila, self.gh, self.proj, self.lap, self.arq, self.log, self.ajustes, AGORA,
-                  donos={"org", "nessenergy"}, pasta=self._pasta)
+                  donos={"org", "nessenergy"}, pasta=self._pasta, **extra)
 
     def painel_atual(self):
         return aplicar_ajustes(json.loads(json.dumps(self.painel)), json.load(open(self.ajustes)))
@@ -87,9 +92,52 @@ class Executor(unittest.TestCase):
         self.assertNotIn("org/orm", [x["id"] for x in self.painel_atual()["projetos"]])
 
     def test_cliente_nunca_exclui(self):
-        self.pedir("excluir", "nessenergy/cliente", "cliente"); self.rodar()
+        self.pedir("excluir", "nessenergy/sitealupar", "sitealupar"); self.rodar()
         self.assertEqual(self.gh.chamadas, [])
         self.assertIn("recusado", self.log_txt())
+
+    def test_repo_da_nessenergy_que_nao_e_cliente_pode_excluir(self):
+        self.pedir("excluir", "nessenergy/nDocument", "nDocument"); self.rodar()
+        self.assertIn(("excluir", "nessenergy", "nDocument"), self.gh.chamadas)
+
+    def _github_local(self):
+        self.base = os.path.join(self.t, "gh") + "/"
+        origem = os.path.join(self.t, "origem")
+        subprocess.run(["git", "init", "-q", origem], check=True)
+        open(os.path.join(origem, "x.txt"), "w").write("novo")
+        subprocess.run(["git", "-C", origem, "add", "."], check=True)
+        subprocess.run(["git", "-C", origem, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"], check=True)
+        subprocess.run(["git", "clone", "-q", "--bare", origem, os.path.join(self.base, "org", "novo.git")], check=True)
+
+    def test_clonar(self):
+        self._github_local()
+        self.pedir("clonar", "org/novo", pasta="ness"); self.rodar()
+        destino = os.path.join(self.proj, "ness", "novo")
+        self.assertEqual(open(os.path.join(destino, "x.txt")).read(), "novo")
+        novo = next(x for x in self.painel_atual()["projetos"] if x["id"] == "org/novo")
+        self.assertEqual(novo["pasta"], destino, "o painel mostra a pasta sem esperar a coleta")
+
+    def test_clonar_pasta_invalida(self):
+        self._github_local()
+        for i, p in enumerate(("../fora", "a/b", ".oculta", "", None)):
+            self.pedir("clonar", "org/novo", quando=time.time() + 700 * i, pasta=p)
+        self.rodar()
+        self.assertEqual(self.log_txt().count("recusado"), 5)
+        self.assertEqual(os.listdir(self.proj), ["bekaa"])
+
+    def test_verticais_sincroniza_quando_muda(self):
+        painel = os.path.join(self.t, "painel.json"); classes = os.path.join(self.t, "classes.json")
+        estado = os.path.join(self.t, "verticais.json")
+        p = dict(self.painel); p["projetos"] = [{"id": "org/orm", "pasta": self.pasta, "sugestao": {"empresa": "bekaa"}}]
+        json.dump(p, open(painel, "w")); json.dump({"org/orm": {"area": "orm"}}, open(classes, "w"))
+        self.rodar(painel=painel, classes=classes, verticais_estado=estado)
+        link = os.path.join(self.t, "verticais", "bekaa", "orm", os.path.basename(self.pasta))
+        self.assertEqual(os.readlink(link), self.pasta)
+        self.rodar(painel=painel, classes=classes, verticais_estado=estado)
+        self.assertEqual(self.chamadas_pasta.count("verticais"), 1, "sem mudanca, nao refaz")
+        json.dump({"org/orm": {"empresa": "ionic", "area": "saude"}}, open(classes, "w"))
+        self.rodar(painel=painel, classes=classes, verticais_estado=estado)
+        self.assertTrue(os.path.islink(os.path.join(self.t, "verticais", "ionic", "saude", os.path.basename(self.pasta))))
 
     def test_dono_fora_da_lista_recusado(self):
         self.pedir("excluir", "estranho/repo", "repo"); self.pedir("arquivar", "estranho/outro"); self.rodar()

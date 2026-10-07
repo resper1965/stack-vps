@@ -26,7 +26,7 @@ if ! grep -q '# stack-vps: ambiente do agente' /home/agente/.bashrc; then
 fi
 
 # repos e state sao do agente; data e forense so do dev
-install -d -o agente -g agente /srv/dev/verticais   # atalhos por vertical (26-verticais.sh)
+install -d -o agente -g agente /srv/dev/verticais   # atalhos por empresa/area, refeitos pelo painel do PMO
 chown -R agente:agente /srv/dev/repos /srv/dev/state /srv/dev/verticais
 chmod 750 /srv/dev/data; install -d -m 750 -o dev -g dev /srv/forense
 

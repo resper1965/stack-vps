@@ -32,7 +32,7 @@ Testes: `bash tests/run.sh` (precisa de `shellcheck`).
 | 23 | `23-papeis.sh [--push]` | preenche principal/revisor nos `STATE.md` (Claude Code principal, Codex revisor); commita em `chore/…` |
 | 24 | `24-modelos.sh` | `codex -p openrouter [-m fornecedor/modelo]` pelo OpenRouter; `codex` sem `-p` segue no ChatGPT Pro |
 | 25 | `25-testes.sh` | valida o Postgres descartável (`/srv/dev/bin/postgres.yml`, em memória, só `127.0.0.1`) |
-| 26 | `26-verticais.sh` | atalhos `/srv/dev/verticais/<vertical>/<divisão>/<projeto>` e um `.code-workspace` por vertical (mapa em `docs/verticais.tsv`) |
+| 26 | (aposentado) | atalhos `/srv/dev/verticais/<empresa>/<área>/<projeto>` agora saem da classificação feita no painel do PMO (executor → `pmo-pasta verticais`) |
 | 27 | `27-secrets.sh` | carrega `secrets/projetos.env` (um arquivo para todos os projetos) no shell do agente |
 | 28 | `28-contas-claude.sh` | duas contas Claude: bekaa (`~/.claude`, padrão) e ionic (`~/.claude-ionic`, vertical ionic); `claude-bekaa`/`claude-ionic` forçam |
 | 29 | `29-skills.sh` | skills de Cloudflare, Supabase, Vercel e GitHub nos três agentes; ponytail em `full` por padrão |

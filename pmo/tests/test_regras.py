@@ -1,5 +1,5 @@
 import unittest
-from pmo.regras import ler_state, estagio_sugerido, esquecido
+from pmo.regras import ler_state, estagio_sugerido, esquecido, TIPOS
 
 
 class LerState(unittest.TestCase):
@@ -56,6 +56,60 @@ class Sugerido(unittest.TestCase):
         self.assertEqual(estagio_sugerido(3, 1, False), "em revisão")
         self.assertEqual(estagio_sugerido(3, 0, False), "em andamento")
         self.assertEqual(estagio_sugerido(3, 0, True), "encerrado")
+
+
+class Classificacao(unittest.TestCase):
+    def test_empresa_e_cliente_pelo_dono(self):
+        from pmo.regras import sugerir
+        self.assertEqual(sugerir("bekaa-trusted-advisors", "fixfacilities", "TypeScript", "")["empresa"], "bekaa")
+        s = sugerir("t4isb-infra", "rede", "HCL", "")
+        self.assertEqual((s["empresa"], s["cliente"], s["tipo"]), ("bekaa", "t4isb", "infra"))
+        s = sugerir("nessenergy", "Alupdatalake", "Python", "datalake da Alup")
+        self.assertEqual((s["empresa"], s["cliente"], s["tipo"]), ("ness", "alup", "dados"))
+        self.assertEqual(sugerir("forense-io", "caso", None, "")["empresa"], "forense")
+        self.assertEqual(sugerir("familia-almeida", "x", None, "")["empresa"], "pessoal")
+
+    def test_empresa_pelo_nome_na_conta_pessoal(self):
+        from pmo.regras import sugerir
+        self.assertEqual(sugerir("resper1965", "ihOS", "TypeScript", "")["empresa"], "ionic")
+        self.assertEqual(sugerir("resper1965", "n.360", "TypeScript", "")["empresa"], "ness")
+        self.assertEqual(sugerir("resper1965", "Aegis-Auditor", "TypeScript", "")["empresa"], "bekaa")
+        self.assertEqual(sugerir("resper1965", "esper-site", "Astro", "")["empresa"], "pessoal")
+        self.assertIsNone(sugerir("resper1965", "qualquer", "Go", "")["empresa"])
+
+    def test_tipo(self):
+        from pmo.regras import sugerir
+        tipo = lambda nome, ling=None, desc="": sugerir("resper1965", nome, ling, desc)["tipo"]
+        self.assertEqual(tipo("stack-vps", "Shell"), "infra")
+        self.assertEqual(tipo("esper-site", "Astro"), "site")
+        self.assertEqual(tipo("ness-report-mcp", "TypeScript"), "agente")
+        self.assertEqual(tipo("claude-skills", "Python"), "conhecimento")
+        self.assertEqual(tipo("twyn-isms", None), "documento")
+        self.assertEqual(tipo("n.sign", "TypeScript"), "app")
+
+    def test_primeiro_paragrafo_do_readme(self):
+        from pmo.regras import primeiro_paragrafo
+        t = "# Titulo\n\n[![ci](x)](y)\n<p align=center><img src=a></p>\n\nPainel de **riscos** para a [Ness](https://n).\nSegunda linha.\n\nOutro paragrafo."
+        self.assertEqual(primeiro_paragrafo(t), "Painel de riscos para a Ness. Segunda linha.")
+        self.assertIsNone(primeiro_paragrafo("# so titulo\n"))
+        self.assertEqual(len(primeiro_paragrafo("a" * 500)), 280)
+
+    def test_classe_final_precedencia(self):
+        from pmo.regras import aplicar_classes
+        p = {"projetos": [{"id": "o/a", "tipo": "documento", "sugestao": {"empresa": "ness", "cliente": None, "tipo": "app"}},
+                          {"id": "o/b", "tipo": None, "sugestao": {"empresa": None, "cliente": None, "tipo": "site"}}],
+             "arquivados": []}
+        aplicar_classes(p, {"o/a": {"empresa": "bekaa", "area": "orm", "cliente": "", "tipo": ""}})
+        a, b = p["projetos"]
+        self.assertEqual(a["classe"], {"empresa": "bekaa", "area": "orm", "cliente": None, "tipo": "documento", "confirmada": True})
+        self.assertEqual(b["classe"], {"empresa": None, "area": None, "cliente": None, "tipo": "site", "confirmada": False})
+
+
+class Tipos(unittest.TestCase):
+    def test_state_aceita_tipos_novos(self):
+        for t in ("site", "dados", "infra"):
+            self.assertIn(t, TIPOS)
+            self.assertEqual(ler_state(f"**Tipo:** {t}\n")["tipo"], t)
 
 
 if __name__ == "__main__":

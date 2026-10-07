@@ -86,6 +86,22 @@ class Coleta(unittest.TestCase):
         gh = GitHub("t", abrir=falso(rotas))
         self.assertEqual([r["id"] for r in coletar(gh, ["org1"], {}, AGORA)], ["org1/b"])
 
+    def test_resumo_e_sugestao(self):
+        rotas = self.rotas()
+        lista = [dict(repo("a"), description="Painel de riscos", language="TypeScript"), repo("b", arquivado=True)]
+        rotas["/orgs/org1/repos?type=all&per_page=100"] = Resp(lista)
+        rotas.pop("/orgs/org1/repos?type=all&per_page=100&page=2")
+        rotas["/repos/org1/b/readme"] = Resp({"content": base64.b64encode("# B\n\nSite do **b**.\n".encode()).decode()})
+        regs = {r["id"]: r for r in coletar(GitHub("t", abrir=falso(rotas)), ["org1"], {}, AGORA)}
+        self.assertEqual(regs["org1/a"]["resumo"], "Painel de riscos")
+        self.assertEqual(regs["org1/b"]["resumo"], "Site do b.")
+        self.assertEqual(regs["org1/b"]["sugestao"]["tipo"], "site", "o resumo do README entra no palpite")
+        self.assertEqual(regs["org1/a"]["linguagem"], "TypeScript")
+
+    def test_sem_readme_resumo_vazio(self):
+        regs = {r["id"]: r for r in coletar(GitHub("t", abrir=falso(self.rotas())), ["org1"], {}, AGORA)}
+        self.assertIsNone(regs["org1/a"]["resumo"])
+
 
 class Locais(unittest.TestCase):
     def test_mapeia_origin(self):

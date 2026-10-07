@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Duas contas Claude: bekaa (padrao, ~/.claude) e ionic (~/.claude-ionic).
 # Decisao do Ricardo em 30/09/2026: vertical ionic usa a conta ionic; todas as outras, a bekaa.
-# `claude` dentro de projeto da vertical ionic (pelos atalhos do 26-verticais.sh) usa a conta
+# `claude` dentro de projeto da vertical ionic (pelos atalhos que o painel do PMO monta pela classificacao) usa a conta
 # ionic sozinho. Forcar: claude-bekaa / claude-ionic. CLAUDE_CONFIG_DIR ja definido e respeitado.
 # Plugins, skills e settings sao os mesmos nas duas: o ~/.claude-ionic aponta para o ~/.claude.
 # So o CLI respeita CLAUDE_CONFIG_DIR; a extensao do VS Code usa sempre a conta padrao.

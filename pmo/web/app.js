@@ -6,7 +6,9 @@ const CORES = {
   "entregue": "var(--e-entregue)", "encerrado": "var(--e-encerrado)", "parado": "var(--e-parado)",
 };
 const ESTAGIOS = Object.keys(CORES);
-const TIPOS = ["app", "documento", "conhecimento", "agente"];
+const TIPOS = ["app", "site", "agente", "dados", "infra", "documento", "conhecimento"];
+const EMPRESAS = ["ness", "bekaa", "ionic", "forense", "pessoal", "trustness"];
+const SEM_CLONE = "(sem clone na VPS)";
 const RAIZ = "/srv/dev/projetos/";
 let dados = null;
 
@@ -24,21 +26,25 @@ function el(tag, attrs = {}, ...filhos) {
 }
 const $ = (id) => document.getElementById(id);
 const estagio = (p) => p.estagio || p.estagio_sugerido || "em andamento";
-const pastaDe = (p) => (p.pasta && p.pasta.startsWith(RAIZ)) ? p.pasta.slice(RAIZ.length).split("/")[0] : "(fora da VPS)";
+const pastaDe = (p) => (p.pasta && p.pasta.startsWith(RAIZ)) ? p.pasta.slice(RAIZ.length).split("/")[0] : SEM_CLONE;
+const classe = (p) => p.classe || {};
+const tipoDe = (p) => classe(p).tipo || p.tipo || "";
 const quando = (dias) => dias === 0 ? "hoje" : dias === 1 ? "ontem" : dias >= 9999 ? "sem atividade" : `${dias} dias`;
-const ehCliente = (p) => (p.dono || "").toLowerCase() === "nessenergy";
+// repositorios de cliente: so arquivar (o executor recusa excluir de qualquer forma)
+const ehCliente = (p) => ["nessenergy/alupdatalake", "nessenergy/sitealupar"].includes((p.id || "").toLowerCase());
 
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
   clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 3500);
 }
 
-async function acao(acao, alvo, confirmacao) {
+async function acao(acao, alvo, confirmacao, extra = {}) {
   try {
     const r = await fetch("acao", { method: "POST", headers: { "Content-Type": "application/json", "X-PMO": "1" },
-      body: JSON.stringify({ acao, alvo, confirmacao }) });
+      body: JSON.stringify({ acao, alvo, confirmacao, ...extra }) });
     if (!r.ok) throw new Error(await r.text());
-    toast(`Pedido registrado: ${acao} ${alvo}. Executa em até 1 minuto.`);
+    if (acao === "classificar") { toast(`${alvo} classificado.`); fechar(); await carregar(); }
+    else toast(`Pedido registrado: ${acao} ${alvo}. Executa em até 1 minuto.`);
   } catch (e) { toast(`Não foi possível registrar: ${e.message}`); }
 }
 
@@ -52,8 +58,10 @@ function cartao(p) {
   const passo = (p.analise && p.analise.proximos_passos && p.analise.proximos_passos[0] && p.analise.proximos_passos[0].descricao) || p.proximo;
   return el("button", { class: "cartao", style: `--cor:${CORES[estagio(p)] || CORES.parado}`, onclick: () => abrir(p) },
     el("h3", {}, el("span", {}, p.nome), p.esquecido ? el("span", { class: "marca-esquecido", title: p.esquecido }, "●") : null),
-    el("div", { class: "dono" }, `${p.dono} · ${pastaDe(p)}`),
-    el("div", { class: "linha" }, etiquetaEstagio(p), p.tipo ? el("span", { class: "etiqueta" }, p.tipo) : null,
+    el("div", { class: "dono" }, [classe(p).empresa, classe(p).area, classe(p).cliente && `cliente ${classe(p).cliente}`]
+      .filter(Boolean).join(" · ") || `${p.dono} · a classificar`),
+    p.resumo ? el("div", { class: "resumo" }, p.resumo) : null,
+    el("div", { class: "linha" }, etiquetaEstagio(p), tipoDe(p) ? el("span", { class: "etiqueta" }, tipoDe(p)) : null,
       el("span", { class: "etiqueta" }, quando(p.dias)),
       p.prs ? el("span", { class: "etiqueta" }, `${p.prs} PR`) : null,
       p.ci === "failure" ? el("span", { class: "etiqueta ruim" }, "CI vermelho") : null),
@@ -70,11 +78,15 @@ function abrir(p) {
     el("header", {}, el("div", {}, el("h2", {}, p.nome), el("div", { class: "sub" }, `${p.dono} · ${p.privado ? "privado" : "público"}`)),
       el("button", { class: "fechar", "aria-label": "Fechar", onclick: fechar }, "×")),
     p.esquecido ? el("section", {}, el("div", { class: "alerta-caixa" }, `Esquecido: ${p.esquecido}. Retome, marque como parado ou descarte.`)) : null,
+    p.resumo ? el("section", {}, el("h4", {}, "Do que se trata"), el("p", {}, p.resumo)) : null,
     el("section", {}, el("dl", { class: "kv" },
+      el("dt", {}, "Empresa"), el("dd", {}, (classe(p).empresa || "a classificar") + (classe(p).confirmada ? "" : " (sugerida)")),
+      el("dt", {}, "Área"), el("dd", {}, classe(p).area || "—"),
+      el("dt", {}, "Cliente"), el("dd", {}, classe(p).cliente || "—"),
       el("dt", {}, "Estágio"), el("dd", {}, etiquetaEstagio(p)),
-      el("dt", {}, "Tipo"), el("dd", {}, p.tipo || "não declarado"),
+      el("dt", {}, "Tipo"), el("dd", {}, tipoDe(p) || "não declarado"),
       el("dt", {}, "Última atividade"), el("dd", {}, quando(p.dias)),
-      el("dt", {}, "Pasta na VPS"), el("dd", {}, p.pasta || "não clonado"),
+      el("dt", {}, "Pasta na VPS"), el("dd", {}, p.pasta || "sem clone na VPS"),
       el("dt", {}, "PRs / issues"), el("dd", {}, `${p.prs || 0} / ${p.issues || 0}`),
       el("dt", {}, "CI"), el("dd", {}, p.ci || "sem CI"))),
     a.situacao ? el("section", {}, el("h4", {}, "Situação"), el("p", {}, a.situacao)) : null,
@@ -91,6 +103,8 @@ function abrir(p) {
     el("section", { class: "botoes" },
       vscode ? el("a", { class: "bt primario", href: vscode }, "Abrir no VS Code") : null,
       github ? el("a", { class: "bt", href: github, target: "_blank", rel: "noopener" }, "Abrir no GitHub") : null,
+      !p.pasta && !p.arquivado ? el("button", { class: "bt primario", onclick: () => clonar(p) }, "Clonar na VPS") : null,
+      el("button", { class: "bt", onclick: () => classificar(p) }, "Classificar"),
       p.arquivado
         ? el("button", { class: "bt", onclick: () => acao("restaurar", p.id) }, "Restaurar")
         : el("button", { class: "bt perigo", onclick: () => descartar(p) }, "Descartar"))].filter(Boolean));
@@ -115,6 +129,41 @@ function descartar(p) {
   dlg.showModal();
 }
 
+const todos = () => [...dados.projetos, ...(dados.arquivados || [])];
+const distintos = (f) => [...new Set(todos().map(f).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+function preencher(lista, valores) { $(lista).replaceChildren(...valores.map((v) => el("option", { value: v }))); }
+
+function classificar(p) {
+  const dlg = $("dlg-classificar"), c = classe(p);
+  $("cls-nome").textContent = p.nome;
+  $("cls-empresa").replaceChildren(el("option", { value: "" }, "a classificar"), ...EMPRESAS.map((e) => el("option", { value: e }, e)));
+  $("cls-tipo").replaceChildren(el("option", { value: "" }, "não declarado"), ...TIPOS.map((t) => el("option", { value: t }, t)));
+  $("cls-empresa").value = c.empresa || ""; $("cls-tipo").value = tipoDe(p);
+  $("cls-area").value = c.area || ""; $("cls-cliente").value = c.cliente || "";
+  preencher("lista-areas", distintos((x) => classe(x).area)); preencher("lista-clientes", distintos((x) => classe(x).cliente));
+  dlg.onclose = () => {
+    if (dlg.returnValue !== "ok") return;
+    acao("classificar", p.id, null, { classe: { empresa: $("cls-empresa").value, area: $("cls-area").value.trim(),
+      cliente: $("cls-cliente").value.trim(), tipo: $("cls-tipo").value } });
+  };
+  dlg.showModal();
+}
+
+function clonar(p) {
+  const dlg = $("dlg-clonar"), pastas = distintos((x) => pastaDe(x) === SEM_CLONE ? null : pastaDe(x));
+  // sugestao: a pasta onde ja estao mais projetos da mesma empresa; senao o nome da empresa
+  const conta = {};
+  for (const x of todos()) if (classe(x).empresa && classe(x).empresa === classe(p).empresa && pastaDe(x) !== SEM_CLONE)
+    conta[pastaDe(x)] = (conta[pastaDe(x)] || 0) + 1;
+  const sugerida = Object.entries(conta).sort((a, b) => b[1] - a[1])[0]?.[0] || classe(p).empresa || "";
+  $("cln-nome").textContent = p.nome; $("cln-pasta").value = sugerida; preencher("lista-pastas", pastas);
+  const mostrar = () => { $("cln-destino").textContent = `vai para ${RAIZ}${$("cln-pasta").value.trim() || "…"}/${p.nome}`; };
+  $("cln-pasta").oninput = mostrar; mostrar();
+  dlg.onclose = () => { if (dlg.returnValue === "ok" && $("cln-pasta").value.trim()) acao("clonar", p.id, null, { pasta: $("cln-pasta").value.trim() }); };
+  dlg.showModal();
+}
+
 function opcoes(sel, valores) {
   const atual = sel.value;
   while (sel.options.length > 1) sel.remove(1);
@@ -124,10 +173,11 @@ function opcoes(sel, valores) {
 
 function filtrar() {
   const q = $("busca").value.trim().toLowerCase(), fp = $("f-pasta").value, fd = $("f-dono").value,
-    ft = $("f-tipo").value, fe = $("f-estagio").value;
+    ft = $("f-tipo").value, fe = $("f-estagio").value, fem = $("f-empresa").value, fa = $("f-area").value;
   const lista = dados.projetos.filter((p) =>
-    (!q || p.nome.toLowerCase().includes(q) || p.dono.toLowerCase().includes(q)) &&
-    (!fp || pastaDe(p) === fp) && (!fd || p.dono === fd) && (!ft || (p.tipo || "") === ft) && (!fe || estagio(p) === fe));
+    (!q || p.nome.toLowerCase().includes(q) || p.dono.toLowerCase().includes(q) || (p.resumo || "").toLowerCase().includes(q)) &&
+    (!fp || pastaDe(p) === fp) && (!fd || p.dono === fd) && (!ft || tipoDe(p) === ft) && (!fe || estagio(p) === fe) &&
+    (!fem || (classe(p).empresa || "a classificar") === fem) && (!fa || classe(p).area === fa));
   lista.sort((a, b) => (b.esquecido ? 1 : 0) - (a.esquecido ? 1 : 0) || a.dias - b.dias);
   const g = $("grade"); g.replaceChildren();
   if (!lista.length) g.append(el("div", { class: "vazio" }, "Nenhum projeto com esses filtros."));
@@ -165,6 +215,7 @@ function render() {
   opcoes($("f-pasta"), [...new Set(dados.projetos.map(pastaDe))].sort());
   opcoes($("f-dono"), [...new Set(dados.projetos.map((p) => p.dono))].sort());
   opcoes($("f-tipo"), TIPOS); opcoes($("f-estagio"), ESTAGIOS);
+  opcoes($("f-empresa"), [...EMPRESAS, "a classificar"]); opcoes($("f-area"), distintos((x) => classe(x).area));
   filtrar();
 
   const dest = dados.a_destinar || [];
@@ -194,7 +245,7 @@ async function carregar() {
   } catch (e) { $("atualizado").textContent = `não foi possível carregar os dados (${e.message})`; }
 }
 
-for (const id of ["busca", "f-pasta", "f-dono", "f-tipo", "f-estagio"]) $(id).addEventListener("input", filtrar);
+for (const id of ["busca", "f-empresa", "f-area", "f-pasta", "f-dono", "f-tipo", "f-estagio"]) $(id).addEventListener("input", filtrar);
 $("veu").addEventListener("click", fechar);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") fechar(); });
 carregar();

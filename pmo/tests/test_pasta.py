@@ -1,4 +1,4 @@
-import io, os, tarfile, tempfile, unittest
+import io, json, os, subprocess, tarfile, tempfile, unittest
 from pmo.pasta import Recusado, executar
 
 
@@ -58,6 +58,68 @@ class Pasta(unittest.TestCase):
     def test_comando_desconhecido(self):
         with self.assertRaises(Recusado):
             self.rodar("rm", self.p)
+
+
+class Clonar(unittest.TestCase):
+    def setUp(self):
+        self.t = tempfile.mkdtemp()
+        self.proj = os.path.join(self.t, "projetos"); os.makedirs(self.proj)
+        # "GitHub" local: base/<dono>/<repo>.git
+        self.base = os.path.join(self.t, "gh") + "/"
+        origem = os.path.join(self.t, "origem")
+        subprocess.run(["git", "init", "-q", "-b", "main", origem], check=True)
+        open(os.path.join(origem, "a.txt"), "w").write("x")
+        subprocess.run(["git", "-C", origem, "add", "."], check=True)
+        subprocess.run(["git", "-C", origem, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "a"], check=True)
+        subprocess.run(["git", "clone", "-q", "--bare", origem, os.path.join(self.base, "org", "repo.git")], check=True)
+
+    def rodar(self, *args):
+        return executar(list(args), raizes=(self.proj,), base_git=self.base)
+
+    def test_clona(self):
+        destino = os.path.join(self.proj, "ness", "repo")
+        self.assertTrue(self.rodar("clonar", "org/repo", destino).startswith("OK"))
+        self.assertEqual(open(os.path.join(destino, "a.txt")).read(), "x")
+
+    def test_recusas(self):
+        os.makedirs(os.path.join(self.proj, "ness", "existe"))
+        for alvo, destino in (("org/repo", os.path.join(self.proj, "ness", "existe")),
+                              ("org/repo", os.path.join(self.proj, "raso")),
+                              ("org/repo", os.path.join(self.proj, "a", "b", "fundo")),
+                              ("org/repo", os.path.join(self.t, "fora", "repo")),
+                              ("org/../x", os.path.join(self.proj, "ness", "x")),
+                              ("--upload-pack=x/y", os.path.join(self.proj, "ness", "y"))):
+            with self.subTest(alvo=alvo, destino=destino), self.assertRaises(Recusado):
+                self.rodar("clonar", alvo, destino)
+
+
+class Verticais(unittest.TestCase):
+    def setUp(self):
+        self.t = tempfile.mkdtemp()
+        self.proj = os.path.join(self.t, "projetos"); self.v = os.path.join(self.t, "verticais")
+        for d in ("ionic-health/ihOS", "ness/n360", "ness/outro"):
+            os.makedirs(os.path.join(self.proj, d))
+
+    def rodar(self, mapa):
+        return executar(["verticais", "-"], io.BytesIO(json.dumps(mapa).encode()), raizes=(self.proj,), verticais=self.v)
+
+    def test_monta_e_refaz(self):
+        p = lambda d: os.path.join(self.proj, d)
+        self.rodar([{"empresa": "ionic", "area": "saude", "pasta": p("ionic-health/ihOS")},
+                    {"empresa": "ness", "area": None, "pasta": p("ness/n360")}])
+        self.assertEqual(os.readlink(os.path.join(self.v, "ionic", "saude", "ihOS")), p("ionic-health/ihOS"))
+        self.assertTrue(os.path.islink(os.path.join(self.v, "ness", "geral", "n360")))
+        self.rodar([{"empresa": "ness", "area": "geral", "pasta": p("ness/outro")}])
+        self.assertFalse(os.path.exists(os.path.join(self.v, "ionic")), "atalho antigo sai")
+        self.assertTrue(os.path.islink(os.path.join(self.v, "ness", "geral", "outro")))
+
+    def test_ignora_item_invalido(self):
+        self.rodar([{"empresa": "../x", "area": "a", "pasta": os.path.join(self.proj, "ness/n360")},
+                    {"empresa": "ness", "area": "../../etc", "pasta": os.path.join(self.proj, "ness/n360")},
+                    {"empresa": "ness", "area": "a", "pasta": "/etc/ssh"},
+                    {"empresa": "ness", "area": "a", "pasta": os.path.join(self.proj, "ness/outro")}])
+        self.assertEqual(sorted(os.listdir(self.v)), ["ness"])
+        self.assertEqual(os.listdir(os.path.join(self.v, "ness", "a")), ["outro"])
 
 
 if __name__ == "__main__":

@@ -27,6 +27,8 @@
 
   <section class="filtros">
     <input id="busca" type="search" placeholder="Buscar projeto…" autocomplete="off">
+    <select id="f-empresa"><option value="">Todas as empresas</option></select>
+    <select id="f-area"><option value="">Todas as áreas</option></select>
     <select id="f-pasta"><option value="">Todas as pastas</option></select>
     <select id="f-dono"><option value="">Todos os donos</option></select>
     <select id="f-tipo"><option value="">Todos os tipos</option></select>
@@ -63,6 +65,28 @@
     </div>
     <p class="aviso" id="dlg-cliente" hidden>Repositório de cliente: só pode ser arquivado.</p>
     <menu><button value="cancelar">Cancelar</button><button id="dlg-ok" value="ok" class="perigo">Descartar</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlg-classificar">
+  <form method="dialog" class="dlg">
+    <h3>Classificar <span id="cls-nome"></span></h3>
+    <label>Empresa <select id="cls-empresa"></select></label>
+    <label>Área <input id="cls-area" type="text" list="lista-areas" maxlength="60" autocomplete="off" placeholder="escolha ou digite uma nova"></label>
+    <label>Cliente <input id="cls-cliente" type="text" list="lista-clientes" maxlength="60" autocomplete="off" placeholder="opcional"></label>
+    <label>Tipo <select id="cls-tipo"></select></label>
+    <datalist id="lista-areas"></datalist><datalist id="lista-clientes"></datalist>
+    <menu><button value="cancelar">Cancelar</button><button value="ok" class="primario">Salvar</button></menu>
+  </form>
+</dialog>
+
+<dialog id="dlg-clonar">
+  <form method="dialog" class="dlg">
+    <h3>Clonar <span id="cln-nome"></span> na VPS</h3>
+    <label>Pasta em /srv/dev/projetos <input id="cln-pasta" type="text" list="lista-pastas" maxlength="60" autocomplete="off"></label>
+    <datalist id="lista-pastas"></datalist>
+    <p class="nota" id="cln-destino"></p>
+    <menu><button value="cancelar">Cancelar</button><button value="ok" class="primario">Clonar</button></menu>
   </form>
 </dialog>
 

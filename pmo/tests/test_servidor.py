@@ -9,13 +9,15 @@ class Servidor(unittest.TestCase):
         web = os.path.join(cls.tmp, "web"); os.makedirs(web)
         open(os.path.join(web, "index.html"), "w").write("<h1>PMO</h1>")
         cls.painel = os.path.join(cls.tmp, "painel.json")
-        json.dump({"gerado_em": "2026-10-06T09:00:00+00:00", "projetos": [{"id": "o/a"}, {"id": "o/b"}],
+        json.dump({"gerado_em": "2026-10-06T09:00:00+00:00",
+                   "projetos": [{"id": "o/a", "sugestao": {"empresa": "ness", "tipo": "app"}}, {"id": "o/b"}],
                    "arquivados": [{"id": "o/velho"}], "a_destinar": [{"id": "destinar:DESENVOLVIMENTO/ORM Esper"}]},
                   open(cls.painel, "w"))
         cls.ajustes = os.path.join(cls.tmp, "ajustes.json")
         json.dump({"o/b": {"de": "projetos", "para": "arquivados", "em": "2026-10-06T12:00:00+00:00"}}, open(cls.ajustes, "w"))
         cls.fila = os.path.join(cls.tmp, "fila")
-        cls.srv = criar("127.0.0.1", 0, web, cls.painel, cls.fila, cls.ajustes, bloquear_local=False)
+        cls.classes = os.path.join(cls.tmp, "classes.json")
+        cls.srv = criar("127.0.0.1", 0, web, cls.painel, cls.fila, cls.ajustes, bloquear_local=False, classes=cls.classes)
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
         cls.porta = cls.srv.server_address[1]
 
@@ -85,6 +87,24 @@ class Servidor(unittest.TestCase):
             self.assertEqual(c.getresponse().status, 200, "leitura continua livre")
         finally:
             srv.shutdown()
+
+    def test_classificar_grava_na_hora(self):
+        st, _ = self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a",
+                                           "classe": {"empresa": "bekaa", "area": "ORM", "cliente": "t4isb", "tipo": "site"}})
+        self.assertEqual(st, 200)
+        a = next(x for x in json.loads(self.req("GET", "/painel.json")[1])["projetos"] if x["id"] == "o/a")
+        self.assertEqual(a["classe"], {"empresa": "bekaa", "area": "ORM", "cliente": "t4isb", "tipo": "site", "confirmada": True})
+
+    def test_classificar_recusa_valor_invalido(self):
+        for classe in ({"empresa": "acme"}, {"tipo": "foguete"}, {"area": "a\nb"}, {"cliente": "x" * 61}, "lixo"):
+            with self.subTest(classe=classe):
+                self.assertEqual(self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a", "classe": classe})[0], 400)
+
+    def test_clonar_leva_a_pasta(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "clonar", "alvo": "o/a", "pasta": "ness"})[0], 202)
+        pedidos = [json.load(open(os.path.join(self.fila, f))) for f in os.listdir(self.fila)]
+        self.assertIn("ness", [p.get("pasta") for p in pedidos if p["acao"] == "clonar"])
+        self.assertEqual(self.req("POST", "/acao", {"acao": "clonar", "alvo": "o/a", "pasta": "../x"})[0], 400)
 
 
 if __name__ == "__main__":
