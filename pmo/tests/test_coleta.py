@@ -98,6 +98,18 @@ class Coleta(unittest.TestCase):
         self.assertEqual(regs["org1/b"]["sugestao"]["tipo"], "site", "o resumo do README entra no palpite")
         self.assertEqual(regs["org1/a"]["linguagem"], "TypeScript")
 
+    def test_tecnologias_e_segredos(self):
+        rotas = self.rotas()
+        rotas["/repos/org1/a/git/trees/main"] = Resp({"tree": [{"path": "package.json"}, {"path": "wrangler.toml"},
+                                                               {"path": ".env.production"}]})
+        rotas["/repos/org1/a/contents/package.json"] = Resp({"content": base64.b64encode(b'{"dependencies": {"next": "15"}}').decode()})
+        regs = {r["id"]: r for r in coletar(GitHub("t", abrir=falso(rotas)), ["org1"], {}, AGORA)}
+        a = regs["org1/a"]
+        self.assertTrue({"next.js", "cloudflare", "node"} <= set(a["tecnologias"]))
+        self.assertEqual(a["segredos_no_repo"], [".env.production"])
+        self.assertIn("Cloudflare: wrangler secret / Secrets Store", a["segredos_onde"])
+        self.assertEqual(regs["org1/b"]["tecnologias"], [], "sem arvore (404) nao derruba o registro")
+
     def test_sem_readme_resumo_vazio(self):
         regs = {r["id"]: r for r in coletar(GitHub("t", abrir=falso(self.rotas())), ["org1"], {}, AGORA)}
         self.assertIsNone(regs["org1/a"]["resumo"])

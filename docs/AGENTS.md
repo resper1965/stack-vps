@@ -80,6 +80,11 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
   Nunca push direto em `main`/`master`.
 - Apagar, arquivar ou fundir projeto: recomende; quem executa é o Ricardo (painel do PMO).
 - Agente revisor nunca faz merge: parecer em `/srv/dev/state/reviews/<projeto>-AAAA-MM-DD.md`.
+- Issue do GitHub ligada ao trabalho: ao concluir, comente nela o que mudou (commit ou PR) e feche com
+  `Closes #N` no PR quando resolver. Trabalho sem issue e relevante: abra uma antes.
+- Linear (conta resper@bekaa.eu): se o projeto tem time ou projeto no Linear — campo `classe.linear` em
+  `curl -s http://100.76.167.6:8080/painel.json` —, atualize também a issue de lá (status e comentário)
+  pelo MCP `linear`. MCP sem login: avise o Ricardo para rodar `/mcp`; não use outro meio.
 - Documento, planilha, PDF, dado pessoal e material de caso nunca vão ao Git, nem em branch:
   ficam na VPS, fora do repositório. Fixture e exemplo usam dado sintético.
 - `STATE.md` na raiz de todo projeto ativo, atualizado no mesmo commit ao fim de cada trabalho:

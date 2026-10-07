@@ -5,6 +5,8 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
+from pmo.regras import contar
+
 SAIDA = "/srv/dev/state/pmo/painel.json"
 
 
@@ -41,16 +43,7 @@ def gerar(registros, destinar, anterior, agora):
     ativos = sorted((r for r in registros if not r.get("arquivado")), key=lambda r: r["id"].lower())
     arquivados = sorted((r for r in registros if r.get("arquivado")), key=lambda r: r["id"].lower())
     est = lambda r: r.get("estagio") or r.get("estagio_sugerido")
-    contadores = {
-        "projetos": len(ativos),
-        "esquecidos": sum(1 for r in ativos if r.get("esquecido")),
-        "em_andamento": sum(1 for r in ativos if est(r) == "em andamento"),
-        "em_revisao": sum(1 for r in ativos if est(r) == "em revisão"),
-        "parados": sum(1 for r in ativos if est(r) == "parado"),
-        "prs_abertos": sum(r.get("prs") or 0 for r in ativos),
-        "ci_vermelho": sum(1 for r in ativos if r.get("ci") == "failure"),
-        "a_destinar": len(destinar),
-    }
+    contadores = contar(ativos, len(destinar))
     antes = {r["id"]: r for r in (anterior or {}).get("projetos", [])}
     mudou = {"novos": [], "mudou_estagio": [], "viraram_esquecidos": []}
     if anterior and not incompleta:

@@ -62,6 +62,11 @@ grava_bloco ~/.claude/CLAUDE.md "instrucoes do agente" "$(instrucoes CLAUDE.md)"
 { printf -- '---\ntrigger: always_on\n---\n'; bloco; } > ~/.gemini/config/rules/modos-padrao.md
 { printf -- '---\ntrigger: always_on\n---\n'; cat "$DOCS/AGENTS.md"; } > ~/.gemini/config/rules/instrucoes.md
 
+# Linear (resper@bekaa.eu) nas duas contas do Claude; o login e OAuth, uma vez, com /mcp dentro do claude.
+# Sem chave em arquivo: o token fica no armazenamento de credenciais do proprio Claude.
+env -u CLAUDE_CONFIG_DIR claude mcp add --scope user --transport http linear https://mcp.linear.app/mcp >/dev/null 2>&1 || true
+CLAUDE_CONFIG_DIR=~/.claude-ionic claude mcp add --scope user --transport http linear https://mcp.linear.app/mcp >/dev/null 2>&1 || true
+
 # conferencia: nada do que foi pedido pode ter ficado de fora
 falta=()
 for s in cloudflare supabase deploy-to-vercel github-issues github-actions-hardening; do

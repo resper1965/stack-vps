@@ -5,7 +5,8 @@ import re
 import sys
 from datetime import datetime
 
-from pmo.regras import ler_state, estagio_sugerido, esquecido, sugerir, primeiro_paragrafo
+from pmo.regras import (ler_state, estagio_sugerido, esquecido, sugerir, primeiro_paragrafo,
+                        detectar_tecnologias, segredos_esperados)
 
 
 def _data(iso):
@@ -65,6 +66,12 @@ def _registro(gh, r, locais, agora):
             resumo = primeiro_paragrafo(gh.readme(d, nome))
         except Exception:  # noqa: BLE001 — README e enfeite; nao derruba o registro
             resumo = None
+    try:
+        caminhos = gh.arvore(d, nome, r.get("default_branch") or "main")
+        pj = gh.arquivo(d, nome, "package.json") if "package.json" in caminhos else None
+        tec = detectar_tecnologias(caminhos, pj, r.get("language"))
+    except Exception:  # noqa: BLE001 — stack e enfeite; nao derruba o registro
+        tec = detectar_tecnologias([], None, r.get("language"))
     return {
         "id": f"{d}/{nome}", "nome": nome, "dono": d, "url": r.get("html_url"),
         "privado": bool(r.get("private")), "arquivado": arq,
@@ -75,4 +82,5 @@ def _registro(gh, r, locais, agora):
         "esquecido": esquecido(st["estagio"] or sug, dias, st["proximo"], arq, declarado=st["estagio"] is not None),
         "resumo": resumo, "linguagem": r.get("language"),
         "sugestao": sugerir(d, nome, r.get("language"), resumo),
+        **tec, "segredos_onde": segredos_esperados(tec["tecnologias"]),
     }

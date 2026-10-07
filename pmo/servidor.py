@@ -17,7 +17,7 @@ from urllib.parse import unquote, urlsplit
 
 from pmo.executor import aplicar_ajustes
 from pmo.pasta import NOME
-from pmo.regras import EMPRESAS, TIPOS, aplicar_classes
+from pmo.regras import EMPRESAS, ESTAGIOS, TIPOS, aplicar_classes
 
 ACOES = {"arquivar", "excluir", "restaurar", "trazer", "descartar", "clonar"}
 
@@ -31,13 +31,15 @@ def _ler_json(caminho, padrao):
 
 
 def _classe_valida(c):
-    """Classe vinda do painel: empresa e tipo da lista; area e cliente texto curto de uma linha."""
-    assert isinstance(c, dict) and set(c) <= {"empresa", "area", "cliente", "tipo"}
+    """Classe vinda do painel: empresa, tipo e estagio da lista; area, cliente e linear texto curto."""
+    campos = ("empresa", "area", "cliente", "tipo", "linear", "estagio")
+    assert isinstance(c, dict) and set(c) <= set(campos)
     assert (c.get("empresa") or "") in EMPRESAS + ("",) and (c.get("tipo") or "") in TIPOS + ("",)
-    for k in ("area", "cliente"):
+    assert (c.get("estagio") or "") in ESTAGIOS + ("",)
+    for k in ("area", "cliente", "linear"):
         v = c.get(k) or ""
         assert isinstance(v, str) and len(v) <= 60 and (not v or NOME.fullmatch(v))
-    return {k: (c.get(k) or "").strip() for k in ("empresa", "area", "cliente", "tipo")}
+    return {k: (c.get(k) or "").strip() for k in campos}
 
 
 def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes="/var/lib/pmo/classes.json"):

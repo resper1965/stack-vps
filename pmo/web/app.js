@@ -62,6 +62,8 @@ function cartao(p) {
       .filter(Boolean).join(" · ") || `${p.dono} · a classificar`),
     p.resumo ? el("div", { class: "resumo" }, p.resumo) : null,
     el("div", { class: "linha" }, etiquetaEstagio(p), tipoDe(p) ? el("span", { class: "etiqueta" }, tipoDe(p)) : null,
+      ...(p.tecnologias || []).filter((t) => t !== (p.linguagem || "").toLowerCase()).slice(0, 3).map((t) => el("span", { class: "etiqueta tec" }, t)),
+      (p.segredos_no_repo || []).length ? el("span", { class: "etiqueta ruim", title: p.segredos_no_repo.join(", ") }, "segredo no repo") : null,
       el("span", { class: "etiqueta" }, quando(p.dias)),
       p.prs ? el("span", { class: "etiqueta" }, `${p.prs} PR`) : null,
       p.ci === "failure" ? el("span", { class: "etiqueta ruim" }, "CI vermelho") : null),
@@ -79,10 +81,17 @@ function abrir(p) {
       el("button", { class: "fechar", "aria-label": "Fechar", onclick: fechar }, "×")),
     p.esquecido ? el("section", {}, el("div", { class: "alerta-caixa" }, `Esquecido: ${p.esquecido}. Retome, marque como parado ou descarte.`)) : null,
     p.resumo ? el("section", {}, el("h4", {}, "Do que se trata"), el("p", {}, p.resumo)) : null,
+    (p.segredos_no_repo || []).length ? el("section", {}, el("div", { class: "alerta-caixa" },
+      `Arquivo com cara de segredo versionado: ${p.segredos_no_repo.join(", ")}. Tire do repositório, troque o valor e guarde onde indicado abaixo.`)) : null,
+    (p.tecnologias || []).length ? el("section", {}, el("h4", {}, "Tecnologias"),
+      el("div", { class: "linha" }, p.tecnologias.map((t) => el("span", { class: "etiqueta tec" }, t)))) : null,
+    (p.segredos_onde || []).length ? el("section", {}, el("h4", {}, "Onde ficam os segredos"),
+      el("ul", {}, p.segredos_onde.map((s) => el("li", {}, s)))) : null,
     el("section", {}, el("dl", { class: "kv" },
       el("dt", {}, "Empresa"), el("dd", {}, (classe(p).empresa || "a classificar") + (classe(p).confirmada ? "" : " (sugerida)")),
       el("dt", {}, "Área"), el("dd", {}, classe(p).area || "—"),
       el("dt", {}, "Cliente"), el("dd", {}, classe(p).cliente || "—"),
+      el("dt", {}, "Linear"), el("dd", {}, classe(p).linear || "—"),
       el("dt", {}, "Estágio"), el("dd", {}, etiquetaEstagio(p)),
       el("dt", {}, "Tipo"), el("dd", {}, tipoDe(p) || "não declarado"),
       el("dt", {}, "Última atividade"), el("dd", {}, quando(p.dias)),
@@ -105,6 +114,8 @@ function abrir(p) {
       github ? el("a", { class: "bt", href: github, target: "_blank", rel: "noopener" }, "Abrir no GitHub") : null,
       !p.pasta && !p.arquivado ? el("button", { class: "bt primario", onclick: () => clonar(p) }, "Clonar na VPS") : null,
       el("button", { class: "bt", onclick: () => classificar(p) }, "Classificar"),
+      !["parado", "encerrado", "entregue"].includes(estagio(p)) ? el("button", { class: "bt",
+        onclick: () => acao("classificar", p.id, null, { classe: classeAtual(p, { estagio: "parado" }) }) }, "Marcar como parado") : null,
       p.arquivado
         ? el("button", { class: "bt", onclick: () => acao("restaurar", p.id) }, "Restaurar")
         : el("button", { class: "bt perigo", onclick: () => descartar(p) }, "Descartar"))].filter(Boolean));
@@ -134,18 +145,26 @@ const distintos = (f) => [...new Set(todos().map(f).filter(Boolean))].sort((a, b
 
 function preencher(lista, valores) { $(lista).replaceChildren(...valores.map((v) => el("option", { value: v }))); }
 
+// classe salva hoje (para nao apagar campos ao mudar so um)
+const classeAtual = (p, mudar = {}) => ({ empresa: classe(p).empresa || "", area: classe(p).area || "",
+  cliente: classe(p).cliente || "", tipo: tipoDe(p), linear: classe(p).linear || "", estagio: classe(p).estagio || "", ...mudar });
+
 function classificar(p) {
   const dlg = $("dlg-classificar"), c = classe(p);
   $("cls-nome").textContent = p.nome;
   $("cls-empresa").replaceChildren(el("option", { value: "" }, "a classificar"), ...EMPRESAS.map((e) => el("option", { value: e }, e)));
   $("cls-tipo").replaceChildren(el("option", { value: "" }, "não declarado"), ...TIPOS.map((t) => el("option", { value: t }, t)));
   $("cls-empresa").value = c.empresa || ""; $("cls-tipo").value = tipoDe(p);
-  $("cls-area").value = c.area || ""; $("cls-cliente").value = c.cliente || "";
+  $("cls-area").value = c.area || ""; $("cls-cliente").value = c.cliente || ""; $("cls-linear").value = c.linear || "";
+  $("cls-estagio").replaceChildren(el("option", { value: "" }, "pelo STATE.md / sugerido"), ...ESTAGIOS.map((e) => el("option", { value: e }, e)));
+  $("cls-estagio").value = c.estagio || "";
+  preencher("lista-linear", distintos((x) => classe(x).linear));
   preencher("lista-areas", distintos((x) => classe(x).area)); preencher("lista-clientes", distintos((x) => classe(x).cliente));
   dlg.onclose = () => {
     if (dlg.returnValue !== "ok") return;
     acao("classificar", p.id, null, { classe: { empresa: $("cls-empresa").value, area: $("cls-area").value.trim(),
-      cliente: $("cls-cliente").value.trim(), tipo: $("cls-tipo").value } });
+      cliente: $("cls-cliente").value.trim(), tipo: $("cls-tipo").value, linear: $("cls-linear").value.trim(),
+      estagio: $("cls-estagio").value } });
   };
   dlg.showModal();
 }
@@ -173,11 +192,13 @@ function opcoes(sel, valores) {
 
 function filtrar() {
   const q = $("busca").value.trim().toLowerCase(), fp = $("f-pasta").value, fd = $("f-dono").value,
-    ft = $("f-tipo").value, fe = $("f-estagio").value, fem = $("f-empresa").value, fa = $("f-area").value;
+    ft = $("f-tipo").value, fe = $("f-estagio").value, fem = $("f-empresa").value, fa = $("f-area").value,
+    fte = $("f-tec").value;
   const lista = dados.projetos.filter((p) =>
     (!q || p.nome.toLowerCase().includes(q) || p.dono.toLowerCase().includes(q) || (p.resumo || "").toLowerCase().includes(q)) &&
     (!fp || pastaDe(p) === fp) && (!fd || p.dono === fd) && (!ft || tipoDe(p) === ft) && (!fe || estagio(p) === fe) &&
-    (!fem || (classe(p).empresa || "a classificar") === fem) && (!fa || classe(p).area === fa));
+    (!fem || (classe(p).empresa || "a classificar") === fem) && (!fa || classe(p).area === fa) &&
+    (!fte || (fte === "segredo no repo" ? (p.segredos_no_repo || []).length : (p.tecnologias || []).includes(fte))));
   lista.sort((a, b) => (b.esquecido ? 1 : 0) - (a.esquecido ? 1 : 0) || a.dias - b.dias);
   const g = $("grade"); g.replaceChildren();
   if (!lista.length) g.append(el("div", { class: "vazio" }, "Nenhum projeto com esses filtros."));
@@ -216,6 +237,7 @@ function render() {
   opcoes($("f-dono"), [...new Set(dados.projetos.map((p) => p.dono))].sort());
   opcoes($("f-tipo"), TIPOS); opcoes($("f-estagio"), ESTAGIOS);
   opcoes($("f-empresa"), [...EMPRESAS, "a classificar"]); opcoes($("f-area"), distintos((x) => classe(x).area));
+  opcoes($("f-tec"), ["segredo no repo", ...[...new Set(dados.projetos.flatMap((x) => x.tecnologias || []))].sort()]);
   filtrar();
 
   const dest = dados.a_destinar || [];
@@ -245,7 +267,7 @@ async function carregar() {
   } catch (e) { $("atualizado").textContent = `não foi possível carregar os dados (${e.message})`; }
 }
 
-for (const id of ["busca", "f-empresa", "f-area", "f-pasta", "f-dono", "f-tipo", "f-estagio"]) $(id).addEventListener("input", filtrar);
+for (const id of ["busca", "f-empresa", "f-area", "f-tec", "f-pasta", "f-dono", "f-tipo", "f-estagio"]) $(id).addEventListener("input", filtrar);
 $("veu").addEventListener("click", fechar);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") fechar(); });
 carregar();

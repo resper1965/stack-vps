@@ -60,6 +60,19 @@ class GitHub:
     def state_md(self, dono, repo):
         return self._texto(f"/repos/{dono}/{repo}/contents/STATE.md")
 
+    def arvore(self, dono, repo, ramo):
+        """Caminhos versionados do ramo (lista vazia se o repositorio estiver vazio ou sumir)."""
+        try:
+            c = self.get(f"/repos/{dono}/{repo}/git/trees/{ramo}?recursive=1")
+        except urllib.error.HTTPError as e:
+            if e.code in (404, 409):
+                return []
+            raise
+        return [x["path"] for x in (c or {}).get("tree", [])]
+
+    def arquivo(self, dono, repo, caminho):
+        return self._texto(f"/repos/{dono}/{repo}/contents/{caminho}")
+
     def readme(self, dono, repo):
         return self._texto(f"/repos/{dono}/{repo}/readme")
 

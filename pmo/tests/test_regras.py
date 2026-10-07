@@ -101,8 +101,44 @@ class Classificacao(unittest.TestCase):
              "arquivados": []}
         aplicar_classes(p, {"o/a": {"empresa": "bekaa", "area": "orm", "cliente": "", "tipo": ""}})
         a, b = p["projetos"]
-        self.assertEqual(a["classe"], {"empresa": "bekaa", "area": "orm", "cliente": None, "tipo": "documento", "confirmada": True})
-        self.assertEqual(b["classe"], {"empresa": None, "area": None, "cliente": None, "tipo": "site", "confirmada": False})
+        self.assertEqual(a["classe"], {"empresa": "bekaa", "area": "orm", "cliente": None, "tipo": "documento", "linear": None, "estagio": None, "confirmada": True})
+        self.assertEqual(b["classe"], {"empresa": None, "area": None, "cliente": None, "tipo": "site", "linear": None, "estagio": None, "confirmada": False})
+
+
+class Tecnologias(unittest.TestCase):
+    def test_detecta_pelos_arquivos_e_package_json(self):
+        from pmo.regras import detectar_tecnologias
+        caminhos = ["package.json", "apps/core/wrangler.jsonc", "supabase/config.toml", "Dockerfile",
+                    "infra/main.tf", ".env.production", ".env.example", "pyproject.toml"]
+        pkg = '{"dependencies": {"next": "15", "react": "19", "@supabase/supabase-js": "2"}, "devDependencies": {"@anthropic-ai/sdk": "1"}}'
+        t = detectar_tecnologias(caminhos, pkg, "TypeScript")
+        for esperado in ("typescript", "next.js", "react", "cloudflare", "supabase", "docker", "terraform", "python", "ia"):
+            self.assertIn(esperado, t["tecnologias"])
+        self.assertEqual(t["segredos_no_repo"], [".env.production"])
+
+    def test_sem_nada(self):
+        from pmo.regras import detectar_tecnologias
+        self.assertEqual(detectar_tecnologias([], None, None), {"tecnologias": [], "segredos_no_repo": []})
+        self.assertEqual(detectar_tecnologias(["package.json"], "lixo{", None)["tecnologias"], ["node"])
+
+    def test_onde_ficam_os_segredos(self):
+        from pmo.regras import segredos_esperados
+        self.assertIn("Cloudflare: wrangler secret / Secrets Store", segredos_esperados(["cloudflare", "next.js"]))
+        self.assertIn("Vercel: Environment Variables do projeto", segredos_esperados(["vercel"]))
+        self.assertEqual(segredos_esperados([])[-1], "Desenvolvimento na VPS: projetos.env ou .envrc (nunca no repositório)")
+
+
+class EstagioPeloPainel(unittest.TestCase):
+    def test_marcar_parado_tira_do_alarme_e_recalcula_contadores(self):
+        from pmo.regras import aplicar_classes
+        p = {"projetos": [{"id": "o/a", "estagio": None, "estagio_sugerido": "em andamento", "esquecido": "sem atividade há 200 dias"},
+                          {"id": "o/b", "estagio": None, "estagio_sugerido": "em andamento", "esquecido": "sem atividade há 30 dias"}],
+             "arquivados": [], "a_destinar": [], "contadores": {"esquecidos": 2, "parados": 0}}
+        aplicar_classes(p, {"o/a": {"estagio": "parado", "linear": "NESS-Core"}})
+        a = p["projetos"][0]
+        self.assertEqual((a["estagio"], a["esquecido"]), ("parado", None))
+        self.assertEqual(a["classe"]["linear"], "NESS-Core")
+        self.assertEqual((p["contadores"]["esquecidos"], p["contadores"]["parados"]), (1, 1))
 
 
 class Tipos(unittest.TestCase):

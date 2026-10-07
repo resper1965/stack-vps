@@ -1,4 +1,5 @@
 """Regras puras do PMO: STATE.md, estágio sugerido, projeto esquecido e classificação (empresa, cliente, tipo)."""
+import json
 import re
 import unicodedata
 
@@ -110,11 +111,80 @@ def primeiro_paragrafo(texto, limite=280):
 
 
 def aplicar_classes(painel, classes):
-    """Classe final de cada projeto: escolha do Ricardo > STATE.md (tipo) > sugestão."""
+    """Classe final de cada projeto: escolha do Ricardo > STATE.md (tipo) > sugestão.
+
+    O estágio marcado no painel (ex.: parado) vale como declarado: tira o projeto do alarme."""
     for chave in ("projetos", "arquivados"):
         for p in painel.get(chave, []):
             c, s = classes.get(p["id"]) or {}, p.get("sugestao") or {}
             p["classe"] = {"empresa": c.get("empresa") or s.get("empresa"), "area": c.get("area") or None,
                            "cliente": c.get("cliente") or (None if c else s.get("cliente")),
-                           "tipo": c.get("tipo") or p.get("tipo") or s.get("tipo"), "confirmada": bool(c)}
+                           "tipo": c.get("tipo") or p.get("tipo") or s.get("tipo"), "linear": c.get("linear") or None,
+                           "estagio": c.get("estagio") or None,
+                           "confirmada": bool(c)}
+            if c.get("estagio"):
+                p["estagio"] = c["estagio"]
+                p["esquecido"] = esquecido(c["estagio"], p.get("dias", 0), p.get("proximo") or "-", p.get("arquivado"))
+    if "contadores" in painel:
+        painel["contadores"].update(contar(painel.get("projetos", []), len(painel.get("a_destinar", []))))
     return painel
+
+
+def contar(ativos, n_destinar):
+    est = lambda r: r.get("estagio") or r.get("estagio_sugerido")
+    return {
+        "projetos": len(ativos),
+        "esquecidos": sum(1 for r in ativos if r.get("esquecido")),
+        "em_andamento": sum(1 for r in ativos if est(r) == "em andamento"),
+        "em_revisao": sum(1 for r in ativos if est(r) == "em revisão"),
+        "parados": sum(1 for r in ativos if est(r) == "parado"),
+        "prs_abertos": sum(r.get("prs") or 0 for r in ativos),
+        "ci_vermelho": sum(1 for r in ativos if r.get("ci") == "failure"),
+        "a_destinar": n_destinar,
+    }
+
+
+# ponytail: deteccao por nome de arquivo e dependencia do package.json da raiz; monorepo com
+# package.json por app so entra pelos arquivos. Ler os package.json de apps/* se faltar precisao.
+POR_ARQUIVO = (("cloudflare", r"(^|/)wrangler\.(toml|jsonc?)$"), ("vercel", r"(^|/)vercel\.json$"),
+               ("supabase", r"(^|/)supabase/"), ("docker", r"(^|/)(Dockerfile|docker-compose[^/]*|compose\.ya?ml)$"),
+               ("terraform", r"\.tf$"), ("python", r"(^|/)(pyproject\.toml|requirements[^/]*\.txt)$"),
+               ("node", r"(^|/)package\.json$"), ("go", r"(^|/)go\.mod$"), ("rust", r"(^|/)Cargo\.toml$"),
+               ("github actions", r"^\.github/workflows/"), ("firebase", r"(^|/)firebase\.json$"))
+POR_DEPENDENCIA = (("next.js", "next"), ("react", "react"), ("vue", "vue"), ("astro", "astro"), ("svelte", "svelte"),
+                   ("hono", "hono"), ("express", "express"), ("supabase", "@supabase/supabase-js"),
+                   ("prisma", "prisma"), ("drizzle", "drizzle-orm"), ("tailwind", "tailwindcss"),
+                   ("ia", "@anthropic-ai/sdk"), ("ia", "openai"), ("ia", "ai"), ("ia", "@modelcontextprotocol/sdk"))
+SEGREDO_NO_REPO = re.compile(r"(^|/)(\.env(\.[\w-]+)?|\.envrc|id_(rsa|ed25519|ecdsa)|[^/]+\.(pem|key|pfx|p12))$")
+NAO_E_SEGREDO = re.compile(r"\.env\.(example|sample|template|dist)$")
+
+
+def detectar_tecnologias(caminhos, package_json, linguagem):
+    """Stack pelos caminhos versionados e dependências; e arquivo com cara de segredo dentro do repositório."""
+    tec = {linguagem.lower()} if linguagem else set()
+    for nome, rx in POR_ARQUIVO:
+        if any(re.search(rx, c) for c in caminhos):
+            tec.add(nome)
+    if package_json:
+        try:
+            pj = json.loads(package_json)
+            deps = {**(pj.get("dependencies") or {}), **(pj.get("devDependencies") or {})}
+        except (ValueError, AttributeError):
+            deps = {}
+        tec.update(nome for nome, dep in POR_DEPENDENCIA if dep in deps)
+    segredos = sorted(c for c in caminhos if SEGREDO_NO_REPO.search(c) and not NAO_E_SEGREDO.search(c))
+    return {"tecnologias": sorted(tec), "segredos_no_repo": segredos}
+
+
+ONDE_FICA = (("cloudflare", "Cloudflare: wrangler secret / Secrets Store"),
+             ("vercel", "Vercel: Environment Variables do projeto"),
+             ("supabase", "Supabase: Vault / segredos das Edge Functions"),
+             ("terraform", "Nuvem do Terraform: cofre do provedor (no GCP, Secret Manager)"),
+             ("firebase", "Firebase: Secret Manager do projeto GCP"),
+             ("github actions", "GitHub Actions: Secrets do repositório ou da organização"))
+
+
+def segredos_esperados(tecnologias):
+    """Onde os segredos do projeto devem ficar, pela regra do ambiente, conforme as tecnologias."""
+    return [onde for t, onde in ONDE_FICA if t in tecnologias] + \
+        ["Desenvolvimento na VPS: projetos.env ou .envrc (nunca no repositório)"]

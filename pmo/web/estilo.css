@@ -68,6 +68,7 @@ code { font-size: 13px; }
 .etiqueta { font-size: 12px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--borda); white-space: nowrap; }
 .etiqueta.estagio { color: #fff; border: 0; background: var(--cor); }
 .etiqueta.sugerido { background: transparent; color: var(--cor); border: 1px dashed var(--cor); }
+.etiqueta.tec { color: var(--suave); }
 .etiqueta.ruim { color: var(--perigo); border-color: color-mix(in srgb, var(--perigo) 40%, var(--borda)); }
 .marca-esquecido { color: var(--perigo); font-size: 13px; }
 

@@ -90,13 +90,14 @@ class Servidor(unittest.TestCase):
 
     def test_classificar_grava_na_hora(self):
         st, _ = self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a",
-                                           "classe": {"empresa": "bekaa", "area": "ORM", "cliente": "t4isb", "tipo": "site"}})
+                                           "classe": {"empresa": "bekaa", "area": "ORM", "cliente": "t4isb", "tipo": "site", "linear": "BEK", "estagio": "parado"}})
         self.assertEqual(st, 200)
         a = next(x for x in json.loads(self.req("GET", "/painel.json")[1])["projetos"] if x["id"] == "o/a")
-        self.assertEqual(a["classe"], {"empresa": "bekaa", "area": "ORM", "cliente": "t4isb", "tipo": "site", "confirmada": True})
+        self.assertEqual(a["classe"], {"empresa": "bekaa", "area": "ORM", "cliente": "t4isb", "tipo": "site", "linear": "BEK", "estagio": "parado", "confirmada": True})
+        self.assertEqual(a["estagio"], "parado")
 
     def test_classificar_recusa_valor_invalido(self):
-        for classe in ({"empresa": "acme"}, {"tipo": "foguete"}, {"area": "a\nb"}, {"cliente": "x" * 61}, "lixo"):
+        for classe in ({"empresa": "acme"}, {"tipo": "foguete"}, {"estagio": "voando"}, {"area": "a\nb"}, {"cliente": "x" * 61}, "lixo"):
             with self.subTest(classe=classe):
                 self.assertEqual(self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a", "classe": classe})[0], 400)
 
