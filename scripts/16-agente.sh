@@ -48,6 +48,8 @@ echo 'dev ALL=(agente) NOPASSWD: ALL' > /etc/sudoers.d/91-dev-agente
 chmod 440 /etc/sudoers.d/91-dev-agente; visudo -c -q
 install -m 755 "$REPO/bin/ia" /usr/local/bin/ia; ln -sf /usr/local/bin/ia /usr/local/bin/iax
 install -m 755 "$REPO/bin/git-credential-stack" /usr/local/bin/git-credential-stack
+install -m 755 "$REPO/bin/modelo" /usr/local/bin/modelo   # catalogo OpenRouter/Featherless (docs/modelos.tsv)
+install -D -m 644 "$REPO/docs/modelos.tsv" /usr/local/share/stack-vps/modelos.tsv
 
 # Docker rootless: o AppArmor do Ubuntu 24.04 bloqueia namespace de usuario sem este perfil
 cat > /etc/apparmor.d/usr.bin.rootlesskit <<'AA'

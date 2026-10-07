@@ -67,6 +67,15 @@ grava_bloco ~/.claude/CLAUDE.md "instrucoes do agente" "$(instrucoes CLAUDE.md)"
 env -u CLAUDE_CONFIG_DIR claude mcp add --scope user --transport http linear https://mcp.linear.app/mcp >/dev/null 2>&1 || true
 CLAUDE_CONFIG_DIR=~/.claude-ionic claude mcp add --scope user --transport http linear https://mcp.linear.app/mcp >/dev/null 2>&1 || true
 
+# Continue (VS Code na VPS): modelos do catalogo docs/modelos.tsv. A chave e lida do agente.env por atalho,
+# sem copia: trocou la, vale aqui.
+mkdir -p ~/.continue
+ln -sfn /srv/dev/secrets/agente.env ~/.continue/.env
+modelo --continue > ~/.continue/config.yaml
+CS=$(find ~/.vscode-server/cli/servers -maxdepth 4 -path "*/server/bin/code-server" 2>/dev/null | head -1)
+if [[ -n $CS ]]; then "$CS" --install-extension continue.continue >/dev/null 2>&1 || echo "AVISO: Continue nao instalou"
+else echo "AVISO: abra o VS Code na VPS uma vez e rode de novo, para instalar o Continue"; fi
+
 # conferencia: nada do que foi pedido pode ter ficado de fora
 falta=()
 for s in cloudflare supabase deploy-to-vercel github-issues github-actions-hardening; do

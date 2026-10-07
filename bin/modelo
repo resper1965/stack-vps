@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""modelo: pergunta a um modelo do OpenRouter ou da Featherless pelo apelido do catalogo (docs/modelos.tsv).
+
+  modelo -l                          lista os apelidos
+  modelo <apelido> "pergunta"        responde no terminal
+  cat scan.txt | modelo <apelido> "resuma"   o que vier pelo pipe entra junto da pergunta
+
+Chave: variavel de ambiente (OPENROUTER_API_KEY, FEATHERLESS_API_KEY) ou, se faltar, o agente.env.
+Nunca imprime a chave.
+"""
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+CATALOGO = os.environ.get("MODELOS_TSV", "/usr/local/share/stack-vps/modelos.tsv")
+SEGREDOS = os.environ.get("MODELOS_ENV", "/srv/dev/secrets/agente.env")
+PROVEDORES = {
+    "openrouter": ("OPENROUTER_API_KEY", os.environ.get("MODELO_BASE_OPENROUTER", "https://openrouter.ai/api/v1")),
+    "featherless": ("FEATHERLESS_API_KEY", os.environ.get("MODELO_BASE_FEATHERLESS", "https://api.featherless.ai/v1")),
+}
+
+
+def catalogo():
+    with open(CATALOGO, encoding="utf-8") as f:
+        linhas = [l.rstrip("\n").split("\t") for l in f if l.strip()][1:]
+    return {c[0]: {"provedor": c[1], "modelo": c[2], "uso": c[3] if len(c) > 3 else ""} for c in linhas}
+
+
+def chave(nome):
+    if os.environ.get(nome):
+        return os.environ[nome]
+    try:
+        with open(SEGREDOS, encoding="utf-8") as f:
+            for l in f:
+                k, _, v = l.strip().partition("=")
+                if k == nome:
+                    return v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    sys.exit(f"falta {nome} (no ambiente ou em {SEGREDOS})")
+
+
+def config_continue(cat):
+    """~/.continue/config.yaml: um modelo por apelido; a chave entra por referencia (secrets.*), nunca o valor."""
+    bases = {"openrouter": "https://openrouter.ai/api/v1", "featherless": "https://api.featherless.ai/v1"}
+    linhas = ["# gerado por `modelo --continue` a partir de docs/modelos.tsv do stack-vps; nao editar a mao",
+              "name: stack-vps", "version: 1.0.0", "schema: v1", "models:"]
+    for a, m in cat.items():
+        linhas += [f"  - name: {a} ({m['provedor']})", "    provider: openai", f"    model: {m['modelo']}",
+                   f"    apiBase: {bases[m['provedor']]}",
+                   "    apiKey: ${{ secrets." + PROVEDORES[m["provedor"]][0] + " }}",
+                   "    roles: [chat, edit, apply]"]
+    return "\n".join(linhas) + "\n"
+
+
+def main():
+    cat = catalogo()
+    if sys.argv[1:2] == ["--continue"]:
+        return print(config_continue(cat), end="")
+    if len(sys.argv) < 2 or sys.argv[1] in ("-l", "--lista"):
+        for a, m in cat.items():
+            print(f"{a:16} {m['provedor']:12} {m['modelo']:50} {m['uso']}")
+        return
+    apelido, pergunta = sys.argv[1], " ".join(sys.argv[2:])
+    if apelido not in cat:
+        print(f"apelido desconhecido: {apelido} (veja: modelo -l)", file=sys.stderr)
+        sys.exit(2)
+    m = cat[apelido]
+    nome_chave, base = PROVEDORES[m["provedor"]]
+    if not sys.stdin.isatty():
+        entrada = sys.stdin.read()
+        if entrada.strip():
+            pergunta = f"{pergunta}\n\n{entrada}" if pergunta else entrada
+    corpo = json.dumps({"model": m["modelo"], "messages": [{"role": "user", "content": pergunta}]}).encode()
+    req = urllib.request.Request(f"{base}/chat/completions", data=corpo, method="POST", headers={
+        "Authorization": f"Bearer {chave(nome_chave)}", "Content-Type": "application/json",
+        "X-Title": "stack-vps"})
+    try:
+        with urllib.request.urlopen(req, timeout=300) as r:
+            print(json.load(r)["choices"][0]["message"]["content"])
+    except urllib.error.HTTPError as e:
+        sys.exit(f"{m['provedor']} respondeu {e.code}: {e.read().decode(errors='replace')[:300]}")
+
+
+if __name__ == "__main__":
+    main()
