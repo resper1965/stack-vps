@@ -33,4 +33,12 @@ git -C "$R" show "$B:docs/Proposta.DOCX" >/dev/null 2>&1; [[ $? != 0 ]]; afirma 
 git -C "$R" show "$B:dados.csv" >/dev/null 2>&1; [[ $? != 0 ]]; afirma $? "csv fica fora"
 git -C "$R" show "$B:chave.txt" >/dev/null 2>&1; [[ $? != 0 ]]; afirma $? "arquivo excluido fica fora"
 [[ -f $R/docs/Proposta.DOCX && -f $R/chave.txt ]]; afirma $? "arquivos continuam na pasta"
+# documento ja staged (sem commit) tambem fica fora: o indice do wip nasce do HEAD, nao do indice real
+novo_tmp
+R="$T/p3"; mkdir -p "$R"; git -C "$R" init -q -b main; echo a > "$R/a"; git -C "$R" add .; git -C "$R" commit -qm a
+echo x > "$R/Contrato.docx"; echo ok > "$R/b.js"; git -C "$R" add Contrato.docx b.js
+WIP_DATA=2026-10-06 bash "$S" "$R" >/dev/null 2>&1
+git -C "$R" show "$B:b.js" >/dev/null 2>&1; afirma $? "codigo staged entra"
+git -C "$R" show "$B:Contrato.docx" >/dev/null 2>&1; [[ $? != 0 ]]; afirma $? "docx staged fica fora"
+[[ $(git -C "$R" diff --cached --name-only | sort | xargs) == "Contrato.docx b.js" ]]; afirma $? "indice real intocado"
 fim

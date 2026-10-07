@@ -46,9 +46,10 @@ def estagio_sugerido(dias_sem_atividade, prs_abertos, arquivado):
 
 def esquecido(estagio, dias, proximo, arquivado, declarado=True):
     """Motivo pelo qual o projeto está esquecido, ou None."""
-    if arquivado or estagio in INATIVOS:
+    if arquivado or (estagio in INATIVOS and (declarado or estagio != "parado")):
         return None
-    est = estagio or "em andamento"
+    # "parado" sugerido (sem STATE.md) e palpite: alarma como inatividade, nao silencia
+    est = "em andamento" if not estagio or estagio == "parado" else estagio
     if est == "em revisão" and dias > LIMITE_REVISAO:
         return f"em revisão há {dias} dias"
     if est in ("em andamento", "ideia") and dias > LIMITE_ANDAMENTO:

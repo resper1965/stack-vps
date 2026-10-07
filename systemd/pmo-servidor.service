@@ -4,7 +4,7 @@ After=network-online.target tailscaled.service
 Wants=network-online.target
 
 [Service]
-User=agente
+User=pmo
 Environment=PYTHONPATH=/opt
 ExecStart=/usr/bin/python3 -m pmo.servidor --host 100.76.167.6 --porta 8080
 Restart=always

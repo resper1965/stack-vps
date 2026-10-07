@@ -2,6 +2,7 @@
 import configparser
 import os
 import re
+import sys
 from datetime import datetime
 
 from pmo.regras import ler_state, estagio_sugerido, esquecido
@@ -32,26 +33,38 @@ def mapear_locais(raiz):
     return locais
 
 
-def coletar(gh, donos, locais, agora):
+def coletar(gh, donos, locais, agora, anterior=None):
+    """Falha na listagem de um dono derruba a coleta; falha num repositorio so reaproveita o registro anterior dele."""
+    antes = {x["id"]: x for k in ("projetos", "arquivados") for x in (anterior or {}).get(k, [])}
     registros = []
     for dono in donos:
         for r in gh.repos(dono):
             if r.get("fork"):
                 continue
-            d, nome = r["owner"]["login"], r["name"]
-            arq = bool(r.get("archived"))
-            st = ler_state(gh.state_md(d, nome))
-            res = gh.resumo(d, nome, r.get("open_issues_count", 0))
-            ultima = _data(r.get("pushed_at"))
-            dias = (agora - ultima).days if ultima else 9999
-            sug = estagio_sugerido(dias, res["prs"], arq)
-            registros.append({
-                "id": f"{d}/{nome}", "nome": nome, "dono": d, "url": r.get("html_url"),
-                "privado": bool(r.get("private")), "arquivado": arq,
-                "ultima_atividade": r.get("pushed_at"), "dias": dias,
-                "tipo": st["tipo"], "estagio": st["estagio"], "estagio_sugerido": sug, "proximo": st["proximo"],
-                "prs": res["prs"], "issues": res["issues"], "ci": res["ci"], "wip": res["wip"],
-                "pasta": locais.get(f"{d}/{nome}".lower()),
-                "esquecido": esquecido(st["estagio"] or sug, dias, st["proximo"], arq, declarado=st["estagio"] is not None),
-            })
+            try:
+                registros.append(_registro(gh, r, locais, agora))
+            except Exception as e:  # noqa: BLE001 — um repo com 403/502/timeout nao congela o painel
+                rid = f"{r['owner']['login']}/{r['name']}"
+                print(f"repo {rid} sem coleta hoje: {e}", file=sys.stderr)
+                if rid in antes:
+                    registros.append(antes[rid])
     return registros
+
+
+def _registro(gh, r, locais, agora):
+    d, nome = r["owner"]["login"], r["name"]
+    arq = bool(r.get("archived"))
+    st = ler_state(gh.state_md(d, nome))
+    res = gh.resumo(d, nome, r.get("open_issues_count", 0))
+    ultima = _data(r.get("pushed_at"))
+    dias = (agora - ultima).days if ultima else 9999
+    sug = estagio_sugerido(dias, res["prs"], arq)
+    return {
+        "id": f"{d}/{nome}", "nome": nome, "dono": d, "url": r.get("html_url"),
+        "privado": bool(r.get("private")), "arquivado": arq,
+        "ultima_atividade": r.get("pushed_at"), "dias": dias,
+        "tipo": st["tipo"], "estagio": st["estagio"], "estagio_sugerido": sug, "proximo": st["proximo"],
+        "prs": res["prs"], "issues": res["issues"], "ci": res["ci"], "wip": res["wip"],
+        "pasta": locais.get(f"{d}/{nome}".lower()),
+        "esquecido": esquecido(st["estagio"] or sug, dias, st["proximo"], arq, declarado=st["estagio"] is not None),
+    }

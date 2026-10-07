@@ -35,7 +35,7 @@ function toast(msg) {
 
 async function acao(acao, alvo, confirmacao) {
   try {
-    const r = await fetch("acao", { method: "POST", headers: { "Content-Type": "application/json" },
+    const r = await fetch("acao", { method: "POST", headers: { "Content-Type": "application/json", "X-PMO": "1" },
       body: JSON.stringify({ acao, alvo, confirmacao }) });
     if (!r.ok) throw new Error(await r.text());
     toast(`Pedido registrado: ${acao} ${alvo}. Executa em até 1 minuto.`);
@@ -63,7 +63,8 @@ function cartao(p) {
 function abrir(p) {
   const d = $("detalhe"); d.replaceChildren();
   const a = p.analise || {};
-  const vscode = p.pasta ? "vscode://vscode-remote/ssh-remote+stack-agente" + encodeURI(p.pasta) : null;
+  const vscode = p.pasta ? "vscode://vscode-remote/ssh-remote+stack-agente" + p.pasta.split("/").map(encodeURIComponent).join("/") : null;
+  const github = typeof p.url === "string" && p.url.startsWith("https://github.com/") ? p.url : null;
   // append nativo escreve "null" para secao vazia: filtrar antes
   d.append(...[
     el("header", {}, el("div", {}, el("h2", {}, p.nome), el("div", { class: "sub" }, `${p.dono} · ${p.privado ? "privado" : "público"}`)),
@@ -89,8 +90,7 @@ function abrir(p) {
       el("ul", {}, p.wip.map((w) => el("li", {}, w))), el("p", { class: "nota" }, "Decida se vira PR ou se descarta a branch.")) : null,
     el("section", { class: "botoes" },
       vscode ? el("a", { class: "bt primario", href: vscode }, "Abrir no VS Code") : null,
-      p.url ? el("a", { class: "bt", href: p.url, target: "_blank", rel: "noopener" }, "Abrir no GitHub") : null,
-      el("button", { class: "bt", onclick: () => acao("reanalisar", p.id) }, "Reanalisar"),
+      github ? el("a", { class: "bt", href: github, target: "_blank", rel: "noopener" }, "Abrir no GitHub") : null,
       p.arquivado
         ? el("button", { class: "bt", onclick: () => acao("restaurar", p.id) }, "Restaurar")
         : el("button", { class: "bt perigo", onclick: () => descartar(p) }, "Descartar"))].filter(Boolean));
@@ -184,7 +184,9 @@ function render() {
 }
 
 async function carregar() {
-  const fonte = new URLSearchParams(location.search).get("dados") || "painel.json";
+  // so arquivo local (exemplo.json para demonstracao); nunca dado de outra origem
+  const pedido = new URLSearchParams(location.search).get("dados");
+  const fonte = pedido && /^[\w.-]+\.json$/.test(pedido) ? pedido : "painel.json";
   try {
     const r = await fetch(`${fonte}?t=${Date.now()}`);
     dados = await r.json();

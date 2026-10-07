@@ -18,9 +18,17 @@ class GitHub:
         req = urllib.request.Request(url, data=dados, method=metodo, headers={
             "Authorization": f"Bearer {self.token}", "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "stack-pmo"})
-        with self._abrir(req, timeout=30) as r:
-            txt = r.read()
-            return (json.loads(txt) if txt else None), (r.headers.get("Link") or "")
+        for tentativa in (1, 2):  # leitura tenta de novo uma vez em 5xx ou falha de rede; escrita nao
+            try:
+                with self._abrir(req, timeout=30) as r:
+                    txt = r.read()
+                    return (json.loads(txt) if txt else None), (r.headers.get("Link") or "")
+            except urllib.error.HTTPError as e:
+                if e.code < 500 or tentativa == 2 or metodo != "GET":
+                    raise
+            except urllib.error.URLError:
+                if tentativa == 2 or metodo != "GET":
+                    raise
 
     def get(self, caminho):
         return self._req(caminho)[0]

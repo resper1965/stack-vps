@@ -87,7 +87,7 @@ def main():
         anterior = None
     agora = datetime.now(timezone.utc)
     try:
-        regs = coletar(GitHub(token), donos, mapear_locais("/srv/dev/projetos"), agora)
+        regs = coletar(GitHub(token), donos, mapear_locais("/srv/dev/projetos"), agora, anterior)
     except Exception as e:  # noqa: BLE001 — qualquer falha da API mantem o painel anterior
         print(f"coleta incompleta: {e}", file=sys.stderr)
         regs = None

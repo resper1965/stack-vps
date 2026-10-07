@@ -70,6 +70,22 @@ class Coleta(unittest.TestCase):
         self.assertIsNone(a["estagio"]); self.assertEqual(a["estagio_sugerido"], "em revisão")
         self.assertIsNone(a["pasta"])
 
+    def test_falha_de_um_repo_reaproveita_o_anterior(self):
+        import urllib.error
+        rotas = self.rotas()
+        rotas["/repos/org1/a/pulls"] = urllib.error.HTTPError("u", 403, "sso", {}, None)
+        gh = GitHub("t", abrir=falso(rotas))
+        anterior = {"projetos": [{"id": "org1/a", "nome": "a", "dias": 1}], "arquivados": []}
+        regs = {r["id"]: r for r in coletar(gh, ["org1"], {}, AGORA, anterior)}
+        self.assertEqual(set(regs), {"org1/a", "org1/b"}, "o b continua sendo coletado")
+        self.assertEqual(regs["org1/a"]["dias"], 1, "o a fica com o registro anterior")
+
+    def test_falha_de_repo_sem_anterior_fica_de_fora(self):
+        rotas = self.rotas()
+        rotas["/repos/org1/a/branches"] = OSError("timeout")
+        gh = GitHub("t", abrir=falso(rotas))
+        self.assertEqual([r["id"] for r in coletar(gh, ["org1"], {}, AGORA)], ["org1/b"])
+
 
 class Locais(unittest.TestCase):
     def test_mapeia_origin(self):

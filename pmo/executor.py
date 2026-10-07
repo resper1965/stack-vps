@@ -1,18 +1,18 @@
-"""Executor das acoes do painel (roda como root, pelo timer de 1 minuto).
+"""Executor das acoes do painel (usuario pmo, timer de 1 minuto).
 
-Le os pedidos da fila, executa, registra no log e atualiza o painel.json. Protecoes:
-- excluir exige o nome do repositorio digitado; organizacao de cliente (nessenergy) nunca e excluida;
-- mesmo pedido repetido em 10 minutos executa uma vez;
-- "a destinar" so age dentro da raiz do laptop;
-- nunca roda git nas arvores do agente: so API do GitHub e mover/compactar pastas.
+Le os pedidos da fila (do pmo, 700), executa, registra no log e grava os ajustes que o servidor aplica
+ao painel. Protecoes:
+- roda sem privilegio; pastas do agente so sao mexidas COMO agente, pelo pmo-pasta (pmo/pasta.py);
+- dono precisa estar em donos.txt (do root); organizacao de cliente (nessenergy) nunca e excluida;
+- excluir exige o nome do repositorio digitado; mesmo pedido repetido em 10 minutos executa uma vez;
+- pedido que nao e arquivo comum do proprio pmo, ou com caractere de controle, e recusado.
 """
 import json
 import os
-import shutil
+import re
+import stat
 import subprocess
 import sys
-import tarfile
-import time
 from datetime import datetime, timezone
 
 from pmo.coleta import mapear_locais
@@ -20,134 +20,167 @@ from pmo.coleta import mapear_locais
 CLIENTES = {"nessenergy"}
 JANELA_DUPLICADO = 600
 DIAS_LIXEIRA = 30
+PASTA = "/usr/local/bin/pmo-pasta"
 
 
 class Recusado(Exception):
     pass
 
 
-def _dentro(base, caminho):
-    base, caminho = os.path.realpath(base), os.path.realpath(caminho)
-    return caminho == base or caminho.startswith(base + os.sep)
+def _pasta_como_agente(*args, entrada=None, saida=None):
+    r = subprocess.run(["sudo", "-n", "-u", "agente", PASTA, *args], stdin=entrada,
+                       stdout=saida or subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=1800)
+    msg = r.stderr.decode("utf-8", "replace").strip()
+    if r.returncode:
+        raise RuntimeError(msg[-300:] or f"pmo-pasta saiu com {r.returncode}")
+    return msg.splitlines()[-1] if msg else "OK"
 
 
-def _repo(alvo):
-    if alvo.startswith("destinar:") or alvo.count("/") != 1:
-        raise Recusado(f"alvo invalido para repositorio: {alvo}")
-    return alvo.split("/")
+def _ler_pedido(caminho):
+    """Abre sem seguir atalho e exige arquivo comum do proprio usuario."""
+    fd = os.open(caminho, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(fd, encoding="utf-8") as f:
+        st = os.fstat(f.fileno())
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid():
+            raise ValueError("pedido de outro dono")
+        return json.load(f)
 
 
-def _painel_mover(painel, alvo, de, para, item=None):
-    try:
-        d = json.load(open(painel, encoding="utf-8"))
-    except (OSError, ValueError):
-        return
-    achados = [x for x in d.get(de, []) if x["id"] == alvo]
-    d[de] = [x for x in d.get(de, []) if x["id"] != alvo]
-    if para:
-        for x in achados or ([item] if item else []):
-            x["arquivado"] = para == "arquivados"
-            d.setdefault(para, []).append(x)
-    tmp = painel + ".tmp"
-    json.dump(d, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    os.replace(tmp, painel)
+def aplicar_ajustes(painel, ajustes):
+    """Move no painel os itens que o executor ja tratou; coleta mais nova que a acao prevalece."""
+    gerado = painel.get("gerado_em") or ""
+    for alvo, a in ajustes.items():
+        if a["em"] <= gerado:
+            continue
+        achados = []
+        for de in [a["de"]] if a["de"] else ["projetos", "arquivados"]:  # de=None: sai de qualquer lista
+            achados += [x for x in painel.get(de, []) if x["id"] == alvo]
+            painel[de] = [x for x in painel.get(de, []) if x["id"] != alvo]
+        if a["para"]:
+            for x in achados:
+                x["arquivado"] = a["para"] == "arquivados"
+                painel.setdefault(a["para"], []).append(x)
+    return painel
 
 
-def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, painel, agora, trazer=None):
+def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora, donos, pasta=_pasta_como_agente):
     feitos = os.path.join(fila, "feitos")
     lixeira = os.path.join(arquivo, "excluidos")
     for d in (feitos, arquivo, lixeira):
-        os.makedirs(d, exist_ok=True)
+        os.makedirs(d, mode=0o700, exist_ok=True)
     data = agora.strftime("%Y%m%d-%H%M%S")
+    try:
+        ajustados = json.load(open(ajustes, encoding="utf-8"))
+    except (OSError, ValueError):
+        ajustados = {}
 
     def registrar(acao, alvo, resultado):
+        limpo = [re.sub(r"[\x00-\x1f\x7f]", "?", str(x)) for x in (acao, alvo, resultado)]
         with open(log, "a", encoding="utf-8") as f:
-            f.write(f"{agora.isoformat()}\t{acao}\t{alvo}\t{resultado}\n")
+            f.write(f"{agora.isoformat()}\t" + "\t".join(limpo) + "\n")
+
+    def ajustar(alvo, de, para):
+        ajustados[alvo] = {"de": de, "para": para, "em": agora.isoformat()}
 
     recentes = {}
     for nome in os.listdir(feitos):
         try:
             p = json.load(open(os.path.join(feitos, nome), encoding="utf-8"))
-            recentes[(p["acao"], p["alvo"])] = max(recentes.get((p["acao"], p["alvo"]), 0), p.get("pedido_em", 0))
+            if not str(p.get("resultado", "")).startswith("erro"):
+                recentes[(p["acao"], p["alvo"])] = max(recentes.get((p["acao"], p["alvo"]), 0), p.get("pedido_em", 0))
         except (OSError, ValueError, KeyError):
             pass
 
     for nome in sorted(n for n in os.listdir(fila) if n.endswith(".json") and not n.startswith(".")):
         caminho = os.path.join(fila, nome)
         try:
-            ped = json.load(open(caminho, encoding="utf-8"))
+            ped = _ler_pedido(caminho)
             acao, alvo, conf = ped["acao"], ped["alvo"], ped.get("confirmacao")
-        except (OSError, ValueError, KeyError):
-            os.replace(caminho, os.path.join(feitos, nome))
+            if not isinstance(acao, str) or not isinstance(alvo, str) or re.search(r"[\x00-\x1f\x7f]", acao + alvo):
+                raise ValueError("pedido com caractere de controle")
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            registrar("?", nome, f"recusado: pedido invalido ({e})")
+            os.remove(caminho)
             continue
         chave = (acao, alvo)
         if ped.get("pedido_em", 0) - recentes.get(chave, -1e18) < JANELA_DUPLICADO:
             resultado = "duplicado (ignorado)"
         else:
             try:
-                resultado = _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira, painel, data, trazer)
+                resultado = _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira,
+                                      data, donos, pasta, ajustar)
             except Recusado as e:
                 resultado = f"recusado: {e}"
             except Exception as e:  # noqa: BLE001 — falha de uma acao nao para a fila
                 resultado = f"erro: {e}"
-            recentes[chave] = ped.get("pedido_em", 0)
+            if not resultado.startswith("erro"):
+                recentes[chave] = ped.get("pedido_em", 0)
         registrar(acao, alvo, resultado)
         ped["resultado"] = resultado
         json.dump(ped, open(os.path.join(feitos, nome), "w", encoding="utf-8"), ensure_ascii=False)
         os.remove(caminho)
 
+    tmp = ajustes + ".tmp"
+    json.dump(ajustados, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
+    os.replace(tmp, ajustes)
+
     limite = agora.timestamp() - DIAS_LIXEIRA * 86400
     for n in os.listdir(lixeira):
         p = os.path.join(lixeira, n)
-        if os.path.getmtime(p) < limite:
-            shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
+        if os.path.isfile(p) and not os.path.islink(p) and os.path.getmtime(p) < limite:
+            os.remove(p)
 
 
-def _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira, painel, data, trazer):
-    if acao == "reanalisar":
-        d = os.path.join(os.path.dirname(painel), "reanalisar")
-        os.makedirs(d, exist_ok=True)
-        open(os.path.join(d, alvo.replace("/", "__")), "w").close()
-        return "OK: na fila da proxima analise"
+def _guardar(pasta, local, destino):
+    """Compacta a pasta (como agente) em destino, do pmo, e so entao remove a original."""
+    with open(destino, "wb") as f:
+        pasta("compactar", local, saida=f)
+    pasta("remover", local)
 
+
+def _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira, data, donos, pasta, ajustar):
     if acao in ("trazer", "descartar"):
         if not alvo.startswith("destinar:"):
             raise Recusado("so vale para itens a destinar")
-        pasta = os.path.join(raiz_laptop, alvo[len("destinar:"):])
-        if not _dentro(raiz_laptop, pasta) or not os.path.isdir(pasta):
-            raise Recusado(f"pasta fora do laptop ou inexistente: {alvo}")
+        rel = alvo[len("destinar:"):]
+        partes = rel.split("/")
+        if len(partes) < 2 or any(p in ("", ".", "..") for p in partes):
+            raise Recusado(f"pasta invalida (precisa estar dentro de uma pasta do laptop): {alvo}")
+        local = os.path.join(raiz_laptop, *partes)
         if acao == "trazer":
-            res = (trazer or _trazer)(pasta)
+            res = pasta("trazer", local)
             if res.startswith("OK"):
-                _painel_mover(painel, alvo, "a_destinar", None)
+                ajustar(alvo, "a_destinar", None)
             return res
-        shutil.move(pasta, os.path.join(lixeira, f"destinar-{os.path.basename(pasta)}-{data}"))
-        _painel_mover(painel, alvo, "a_destinar", None)
+        nome = re.sub(r"[^\w.-]", "_", partes[-1])
+        _guardar(pasta, local, os.path.join(lixeira, f"destinar-{nome}-{data}.tar.gz"))
+        ajustar(alvo, "a_destinar", None)
         return "OK: na lixeira por 30 dias"
 
-    dono, repo = _repo(alvo)
+    if alvo.count("/") != 1:
+        raise Recusado(f"alvo invalido para repositorio: {alvo}")
+    dono, repo = alvo.split("/")
+    if not re.fullmatch(r"[\w.-]+", dono) or not re.fullmatch(r"[\w.-]+", repo):
+        raise Recusado(f"alvo invalido para repositorio: {alvo}")
+    if dono.lower() not in {d.lower() for d in donos}:
+        raise Recusado(f"dono fora de donos.txt: {dono}")
     local = mapear_locais(raiz_projetos).get(alvo.lower())
 
     if acao == "arquivar":
         gh.arquivar(dono, repo, True)
         if local:
-            tgz = os.path.join(arquivo, f"{dono}__{repo}-{data}.tar.gz")
-            with tarfile.open(tgz, "w:gz") as t:
-                t.add(local, arcname=os.path.relpath(local, raiz_projetos))
-            shutil.rmtree(local)
-        _painel_mover(painel, alvo, "projetos", "arquivados")
+            _guardar(pasta, local, os.path.join(arquivo, f"{dono}__{repo}-{data}.tar.gz"))
+        ajustar(alvo, "projetos", "arquivados")
         return "OK: arquivado" + (" (pasta compactada)" if local else "")
 
     if acao == "restaurar":
         gh.arquivar(dono, repo, False)
-        copias = sorted(f for f in os.listdir(arquivo) if f.startswith(f"{dono}__{repo}-") and f.endswith(".tar.gz"))
+        padrao = re.compile(rf"{re.escape(dono)}__{re.escape(repo)}-\d{{8}}-\d{{6}}\.tar\.gz")
+        copias = sorted(f for f in os.listdir(arquivo) if padrao.fullmatch(f))
         if copias:
-            with tarfile.open(os.path.join(arquivo, copias[-1])) as t:
-                for m in t.getmembers():
-                    if not _dentro(raiz_projetos, os.path.join(raiz_projetos, m.name)):
-                        raise Recusado("arquivo compactado com caminho fora da raiz")
-                t.extractall(raiz_projetos, filter="tar")
-        _painel_mover(painel, alvo, "arquivados", "projetos")
+            with open(os.path.join(arquivo, copias[-1]), "rb") as f:
+                pasta("extrair", raiz_projetos, entrada=f)
+        ajustar(alvo, "arquivados", "projetos")
         return "OK: restaurado" + (" (pasta de volta)" if copias else "")
 
     if acao == "excluir":
@@ -157,36 +190,19 @@ def _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira
             raise Recusado("nome digitado nao confere")
         gh.excluir(dono, repo)
         if local:
-            shutil.move(local, os.path.join(lixeira, f"{dono}__{repo}-{data}"))
-        _painel_mover(painel, alvo, "projetos", None)
-        _painel_mover(painel, alvo, "arquivados", None)
+            _guardar(pasta, local, os.path.join(lixeira, f"{dono}__{repo}-{data}.tar.gz"))
+        ajustar(alvo, None, None)
         return "OK: excluido (GitHub guarda 90 dias; copia local 30 dias)"
 
     raise Recusado(f"acao desconhecida: {acao}")
 
 
-def _trazer(pasta):
-    """Vira repositorio privado em resper1965 pelo 20-laptop-github.sh, como agente (as mesmas travas)."""
-    nome = "".join(c if c.isalnum() or c in "-_." else "-" for c in os.path.basename(pasta)).strip("-").lower()
-    tsv = f"/tmp/pmo-trazer-{int(time.time())}.tsv"
-    with open(tsv, "w", encoding="utf-8") as f:
-        f.write("origem\tcaminho\tdono\trepo\tarvore\tacao\n")
-        f.write(f"vps\t{pasta}\tresper1965\t{nome}\tapps\tcriar\n")
-    os.chmod(tsv, 0o644)
-    r = subprocess.run(["sudo", "-u", "agente", "-H", "bash", "-c",
-                        f"cd ~ && set -a && . /srv/dev/secrets/agente.env && set +a && "
-                        f"bash /opt/stack-vps/scripts/20-laptop-github.sh {tsv}"],
-                       capture_output=True, text=True, timeout=1800)
-    linha = next((x for x in r.stdout.splitlines() if x.startswith(("OK", "PENDENTE"))), r.stderr.strip()[-200:])
-    return ("OK: " if linha.startswith("OK") else "erro: ") + linha
-
-
 def main():
     from pmo.github import GitHub
-    token = os.environ.get("GITHUB_TOKEN") or sys.exit("falta GITHUB_TOKEN")
-    processar("/srv/dev/state/pmo/fila", GitHub(token), "/srv/dev/projetos", "/srv/dev/laptop",
-              "/srv/dev/arquivo", "/srv/dev/state/pmo/acoes.log", "/srv/dev/state/pmo/painel.json",
-              datetime.now(timezone.utc))
+    token = open("/etc/pmo/token", encoding="utf-8").read().strip() or sys.exit("token vazio em /etc/pmo/token")
+    donos = open(os.path.join(os.path.dirname(__file__), "donos.txt"), encoding="utf-8").read().split()
+    processar("/var/lib/pmo/fila", GitHub(token), "/srv/dev/projetos", "/srv/dev/laptop", "/srv/dev/arquivo",
+              "/var/lib/pmo/acoes.log", "/var/lib/pmo/ajustes.json", datetime.now(timezone.utc), donos)
 
 
 if __name__ == "__main__":

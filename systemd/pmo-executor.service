@@ -2,7 +2,7 @@
 Description=Executor das acoes do painel do PMO
 [Service]
 Type=oneshot
+User=pmo
 Environment=PYTHONPATH=/opt
-EnvironmentFile=/srv/dev/secrets/admin.env
 ExecStart=/usr/bin/python3 -m pmo.executor
 TimeoutStartSec=40min

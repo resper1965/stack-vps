@@ -22,8 +22,8 @@ for d in "$@"; do
   n=$(git -C "$d" status --porcelain -- . "${FORA[@]}" | wc -l)
   if (( n == 0 )); then echo "SO DOCUMENTOS (ficam no laptop): $d"; continue; fi
   if (( SIMULAR )); then echo "SIMULA: $d -> $B ($n arquivo(s))"; continue; fi
-  idx=$(mktemp -u); orig="$(git -C "$d" rev-parse --absolute-git-dir)/index"
-  if [[ -f $orig ]]; then cp "$orig" "$idx"; fi
+  # indice do wip nasce do HEAD, nao do indice real: documento ja staged nao vaza pelo wip
+  idx=$(mktemp -u); GIT_INDEX_FILE=$idx git -C "$d" read-tree HEAD
   if GIT_INDEX_FILE=$idx git -C "$d" add -A -- . "${FORA[@]}" && tree=$(GIT_INDEX_FILE=$idx git -C "$d" write-tree) \
      && c=$(git -C "$d" commit-tree "$tree" -p HEAD -m "chore: trabalho em andamento salvo do laptop ($n arquivos)") \
      && git -C "$d" update-ref "refs/heads/$B" "$c"; then
