@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Confere o Postgres de teste descartavel (/srv/dev/bin/postgres.yml, instalado pelo 05).
-# Roda COMO agente. Idempotente. Regra de uso: CLAUDE.md/AGENTS.md §8.
+# Roda COMO agente. Idempotente. Regra de uso: docs/AGENTS.md, secao Ambiente.
 set -euo pipefail
 [[ $(id -un) == agente ]] || { echo "rode como agente: sudo -u agente -H $0"; exit 1; }
 DOCKER_HOST="unix:///run/user/$(id -u)/docker.sock"; export DOCKER_HOST

@@ -39,9 +39,9 @@ Desligar so nesta sessao: "/ponytail off".
 # <<< modos padrao
 EOF
 }
-# instrucoes globais (ambiente, jeito de responder, STATE.md): docs/agente-instrucoes.md
-INSTR=$(cd "$(dirname "$0")/.." && pwd)/docs/agente-instrucoes.md
-instrucoes() { echo '# >>> instrucoes do agente (29-skills.sh)'; cat "$INSTR"; echo '# <<< instrucoes do agente'; }
+# regras globais: docs/AGENTS.md para todos; o Claude recebe tambem o complemento docs/CLAUDE.md
+DOCS=$(cd "$(dirname "$0")/.." && pwd)/docs
+instrucoes() { echo '# >>> instrucoes do agente (29-skills.sh)'; cat "$DOCS/AGENTS.md" "${@/#/$DOCS/}"; echo '# <<< instrucoes do agente'; }
 # grava_bloco ARQUIVO MARCA CONTEUDO: troca o bloco marcado e preserva o resto do arquivo
 grava_bloco() {
   touch "$1"
@@ -55,11 +55,12 @@ open(f,'w',encoding='utf-8').write((t+'\n\n' if t else '')+b.rstrip('\n')+'\n')
 PY
 }
 grava_bloco ~/.codex/AGENTS.md "modos padrao" "$(bloco)"
-for f in ~/.codex/AGENTS.md ~/.claude/CLAUDE.md; do grava_bloco "$f" "instrucoes do agente" "$(instrucoes)"; done
+grava_bloco ~/.codex/AGENTS.md "instrucoes do agente" "$(instrucoes)"
+grava_bloco ~/.claude/CLAUDE.md "instrucoes do agente" "$(instrucoes CLAUDE.md)"
 # a conta ionic le o mesmo CLAUDE.md (o 28 so liga o que ja existia quando rodou)
 [[ -e ~/.claude-ionic/CLAUDE.md ]] || ln -s ~/.claude/CLAUDE.md ~/.claude-ionic/CLAUDE.md
 { printf -- '---\ntrigger: always_on\n---\n'; bloco; } > ~/.gemini/config/rules/modos-padrao.md
-{ printf -- '---\ntrigger: always_on\n---\n'; cat "$INSTR"; } > ~/.gemini/config/rules/instrucoes.md
+{ printf -- '---\ntrigger: always_on\n---\n'; cat "$DOCS/AGENTS.md"; } > ~/.gemini/config/rules/instrucoes.md
 
 # conferencia: nada do que foi pedido pode ter ficado de fora
 falta=()

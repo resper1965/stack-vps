@@ -35,7 +35,7 @@ for s in "$D"/skills/*/; do ln -sfn "$s" ~/.claude/skills/"$(basename "$s")"; do
 codex plugin marketplace add "$D" >/dev/null 2>&1 || true
 codex plugin add ness-skills@ness-skills >/dev/null 2>&1 || true
 
-# CLAUDE.md §2: escrita em /srv/dev/state (pareceres, inventario). Sessao aberta num repo
+# docs/AGENTS.md (Git e projetos): escrita em /srv/dev/state (pareceres, inventario). Sessao aberta num repo
 # so escreve no proprio repo; sem isto o revisor nao grava em state/reviews.
 C=~/.claude/settings.json; [[ -f $C ]] || echo '{}' > "$C"
 jq '.permissions.additionalDirectories = ((.permissions.additionalDirectories // []) + ["/srv/dev/state"] | unique)' "$C" > "$C.tmp" && mv "$C.tmp" "$C"

@@ -2,7 +2,7 @@
 
 O OpenRig faz dois agentes trabalharem como equipe num projeto: cada um numa sessão tmux,
 com endereço fixo e fila de tarefas. Aqui ele só **executa o processo que já existe**
-(`CLAUDE.md` §3): quem é principal e quem é revisor vem do `STATE.md`, o parecer vai para
+(`docs/AGENTS.md`, Git e projetos): quem é principal e quem é revisor vem do `STATE.md`, o parecer vai para
 `/srv/dev/state/reviews` e o painel semanal lê de lá.
 
 ## Peças
