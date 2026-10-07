@@ -9,7 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 # unattended-upgrades costuma segurar o lock logo apos o boot
 APT="apt-get -o DPkg::Lock::Timeout=600"
 $APT update -qq
-$APT install -y -qq git tmux ripgrep fd-find jq htop ncdu restic rclone curl unzip shellcheck uidmap slirp4netns direnv >/dev/null
+$APT install -y -qq git tmux ripgrep fd-find jq htop ncdu restic rclone curl unzip shellcheck uidmap slirp4netns direnv make >/dev/null
 ln -sf "$(command -v fdfind)" /usr/local/bin/fd
 
 # cloudflared: o tunnel de reserva depende dele e nenhuma imagem o traz
@@ -19,6 +19,13 @@ if ! command -v cloudflared >/dev/null; then
   echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' \
     > /etc/apt/sources.list.d/cloudflared.list
   $APT update -qq && $APT install -y -qq cloudflared >/dev/null
+fi
+
+# gcloud/bq (projetos em GCP, como o Alupdata): repositorio oficial do Google
+if ! command -v gcloud >/dev/null; then
+  curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor --yes -o /usr/share/keyrings/cloud.google.gpg
+  echo 'deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main'     > /etc/apt/sources.list.d/google-cloud-sdk.list
+  $APT update -qq && $APT install -y -qq google-cloud-cli >/dev/null
 fi
 
 # Docker: a imagem "com Docker" da Hostinger ja traz; a pura nao. Repositorio oficial, com rootless
