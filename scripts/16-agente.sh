@@ -71,6 +71,6 @@ sudo -u agente XDG_RUNTIME_DIR="/run/user/$U" DBUS_SESSION_BUS_ADDRESS="unix:pat
 sudo -u agente -H bash -c '
   command -v ~/.local/bin/mise >/dev/null || curl -fsSL https://mise.run | sh >/dev/null 2>&1
   grep -q "mise activate" ~/.bashrc || echo "eval \"\$(~/.local/bin/mise activate bash)\"" >> ~/.bashrc
-  ~/.local/bin/mise use -g node@24 uv@0.5.11 terraform@1.15.8 >/dev/null 2>&1'
+  ~/.local/bin/mise use -g node@24 uv@0.5.11 terraform@1.15.8 gitleaks@8 >/dev/null 2>&1'
 echo "agente: $(id agente)"
 echo "docker rootless: $(sudo -u agente XDG_RUNTIME_DIR="/run/user/$U" systemctl --user is-active docker)"

@@ -85,7 +85,8 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 - `STATE.md` na raiz de todo projeto ativo, atualizado no mesmo commit ao fim de cada trabalho:
   `**Tipo:**` app | documento | conhecimento | agente;
   `**Estágio:**` ideia | em andamento | em revisão | entregue | encerrado | parado;
-  `**Próximo passo:**` uma frase concreta. Repositórios `nessenergy` usam o `docs/status.md` deles.
+  `**Próximo passo:**` uma frase concreta. Os repositórios de cliente (`nessenergy/Alupdatalake` e
+  `nessenergy/sitealupar`) usam o `docs/status.md` deles.
 - Citação de norma, cláusula ou prazo vinda de skill de GRC é apoio: confira na fonte original e
   sinalize o que não foi verificado. Material de caso forense: custódia e apagamento em D+30 na VPS;
   faltou material, registre o que falta — não busque por outro meio.

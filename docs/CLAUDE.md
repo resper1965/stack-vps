@@ -30,6 +30,7 @@ As regras gerais estão no `AGENTS.md` (instalado logo acima deste trecho). Aqui
 
 - Duas contas: bekaa (padrão) e ionic (vertical ionic, escolhida sozinha pela pasta).
   `claude-bekaa`/`claude-ionic` forçam.
-- Trailer `Co-Authored-By` e "Generated with": só onde o projeto permitir. Repositórios
-  `nessenergy` proíbem em commit, PR, issue, comentário e nome de branch (`claude/*` incluso).
+- Trailer `Co-Authored-By` e "Generated with": só onde o projeto permitir. Os repositórios de cliente
+  (`nessenergy/Alupdatalake` e `nessenergy/sitealupar`) proíbem em commit, PR, issue, comentário
+  e nome de branch (`claude/*` incluso).
 - Memória: nunca guarde segredo, dado pessoal ou material de caso.
