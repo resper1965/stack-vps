@@ -23,6 +23,15 @@ add vercel-labs/agent-skills   --skill '*' "${AGENTES[@]}"
 add github/awesome-copilot     --skill github-issues --skill github-release \
                                --skill github-actions-hardening --skill github-actions-efficiency "${AGENTES[@]}"
 
+# skills proprias do stack-vps (ness-design, pentest): o repo de provisionamento e a fonte; link nas
+# tres ferramentas. O relatorio.py da skill pentest le os tokens em ../ness-design, entao ficam juntos.
+REPO29=$(cd "$(dirname "$0")/.." && pwd)
+mkdir -p ~/.claude/skills ~/.agents/skills
+for s in ness-design pentest; do
+  ln -sfn "$REPO29/skills/$s" ~/.claude/skills/"$s"
+  ln -sfn "$REPO29/skills/$s" ~/.agents/skills/"$s"
+done
+
 # agy le a propria raiz global; o skills cli nao conhece esse caminho, entao link a link
 for s in ~/.agents/skills/*/; do ln -sfn "${s%/}" ~/.gemini/config/skills/"$(basename "$s")"; done
 
@@ -88,6 +97,7 @@ for p in ponytail@ponytail; do
 done
 for f in ~/.claude/CLAUDE.md ~/.codex/AGENTS.md; do grep -q "^# >>> instrucoes do agente" "$f" || falta+=("instrucoes:$f"); done
 for s in cloudflare github-issues; do [[ -e ~/.gemini/config/skills/$s/SKILL.md ]] || falta+=("agy:$s"); done
+for s in ness-design pentest; do [[ -e ~/.claude/skills/$s/SKILL.md ]] || falta+=("skill-propria:$s"); done
 agy plugin list 2>/dev/null | grep -q '"name": "ponytail"' || falta+=("agy-plugin:ponytail")
 (( ${#falta[@]} == 0 )) || { echo "ERRO: faltou ${falta[*]}"; exit 1; }
 echo "skills em ~/.agents/skills: $(ls ~/.agents/skills | wc -l) | ponytail: full por padrao"

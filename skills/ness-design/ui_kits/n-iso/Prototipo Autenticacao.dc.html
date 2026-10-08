@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="_ds/industry-1314a8a2-4a2f-40d0-a1f6-6281a6969fab/styles.css">
+<script src="_ds/industry-1314a8a2-4a2f-40d0-a1f6-6281a6969fab/_ds_bundle.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--bd:#00ade8;--paper:#0b1326;--surf:#162244;--surf2:#1e2d52;--line:rgba(255,255,255,.10);--ink:#f1f5f9;--ink2:#cbd5e1;--ink3:#94a3b8;--ink4:#8fa0b6;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--h:"Montserrat",system-ui,sans-serif;--b:"Inter",system-ui,sans-serif;--m:"JetBrains Mono",ui-monospace,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--b)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--bd);outline-offset:2px}
+a{color:var(--bd);text-decoration:none}
+a:hover{color:#7fd6f6}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+@keyframes rise{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes shake{0%,100%{transform:none}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+</style></helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:18px">
+
+<sc-if value="{{ inApp }}" hint-placeholder-val="{{ false }}">
+<div style="width:min(760px,100%);display:flex;flex-direction:column;gap:16px;animation:rise 240ms cubic-bezier(.16,1,.3,1)">
+<div style="display:flex;align-items:center;gap:14px;padding:20px 24px;background:var(--surf);border-left:2px solid var(--ok)">
+<div style="flex:1;min-width:0">
+<div style="font:600 17px/1.2 var(--h);letter-spacing:-.01em">Autenticado em {{ tenantLabel }}</div>
+<div style="font:400 12.5px/1.6 var(--b);color:var(--ink2);margin-top:4px">{{ sessionNote }}</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:20px 24px;background:var(--surf)">
+<div style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">Trilha desta sessão</div>
+<sc-for list="{{ trail }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;gap:12px;padding:9px 0;border-top:1px solid var(--line)">
+<span style="flex:none;width:52px;font:400 10px/1.4 var(--m);color:var(--ink4)">{{ t.at }}</span>
+<span style="flex:1;min-width:0;font:400 12.5px/1.4 var(--b);color:var(--ink2)">{{ t.what }}</span>
+<span style="{{ t.tagStyle }}">{{ t.kind }}</span>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<button onClick="{{ expire }}" style="height:36px;padding:0 14px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">Simular expiração de sessão</button>
+<button onClick="{{ logout }}" style="height:36px;padding:0 14px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--bad)">{{ logoutLabel }}</button>
+<a href="Prototipo SoA.dc.html" style="height:36px;padding:0 14px;display:inline-flex;align-items:center;background:var(--bd);color:#04121c;font:500 12px/1 var(--b)">Abrir a SoA →</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showCard }}" hint-placeholder-val="{{ true }}">
+<div style="{{ cardStyle }}">
+<div style="display:flex;align-items:baseline;gap:10px">
+<span style="font:500 24px/1 var(--h);letter-spacing:-.015em">n<span style="color:var(--bd)">.</span>iso</span>
+<span style="font:400 11px/1 var(--m);color:var(--ink4);margin-left:auto">{{ stepLabel }}</span>
+</div>
+
+<sc-if value="{{ isEmail }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 17px/1.25 var(--h);letter-spacing:-.01em">Entrar no n.iso</div>
+<div style="font:400 12.5px/1.5 var(--b);color:var(--ink3)">Acesso apenas por convite. O domínio do seu e-mail define o caminho.</div>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px">
+<span style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">E-mail corporativo</span>
+<input ref="{{ emailRef }}" value="{{ email }}" onChange="{{ onEmail }}" onKeyDown="{{ onEmailKey }}" type="email" placeholder="voce@empresa.com" style="height:38px;padding:0 10px;border:1px solid var(--line);background:var(--paper);outline:none;font:400 13px var(--b)">
+</label>
+<sc-if value="{{ emailError }}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="padding:12px 14px;background:rgba(245,158,11,.10);border-left:2px solid var(--warn);font:400 12px/1.5 var(--b);color:var(--ink2);animation:shake 260ms ease-out">{{ emailError }}</div>
+</sc-if>
+<button onClick="{{ submitEmail }}" style="{{ primaryStyle }}">Continuar</button>
+</sc-if>
+
+<sc-if value="{{ isPassword }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 17px/1.25 var(--h);letter-spacing:-.01em">Sua senha</div>
+<button onClick="{{ backToEmail }}" style="font:400 12px/1.4 var(--b);color:var(--ink3)">{{ email }} · trocar</button>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px">
+<span style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Senha</span>
+<input ref="{{ pwdRef }}" value="{{ pwd }}" onChange="{{ onPwd }}" onKeyDown="{{ onPwdKey }}" type="password" style="{{ pwdStyle }}">
+</label>
+<sc-if value="{{ pwdError }}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="padding:12px 14px;background:rgba(239,68,68,.10);border-left:2px solid var(--bad);font:400 12px/1.5 var(--b);color:var(--ink2);animation:shake 260ms ease-out">{{ pwdError }}</div>
+</sc-if>
+<sc-if value="{{ needsChallenge }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ solveChallenge }}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);background:var(--surf2);animation:rise 180ms cubic-bezier(.16,1,.3,1);width:100%">
+<span style="{{ challengeBox }}">{{ challengeMark }}</span>
+<span style="flex:1;min-width:0;font:400 12.5px/1.3 var(--b)">{{ challengeLabel }}</span>
+</button>
+</sc-if>
+<div style="display:flex;align-items:center;gap:12px">
+<button style="flex:1;font:400 11.5px/1.4 var(--b);color:var(--ink3)">Esqueci minha senha</button>
+<button onClick="{{ submitPwd }}" style="{{ pwdBtnStyle }}">Entrar</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLocked }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:600 17px/1.25 var(--h);letter-spacing:-.01em">Acesso bloqueado temporariamente</div>
+<div style="font:400 12.5px/1.6 var(--b);color:var(--ink2)">Cinco tentativas falharam. Por segurança, o acesso a esta conta está suspenso por 15 minutos — e o evento entrou na trilha de auditoria do tenant.</div>
+<div style="padding:12px 14px;background:var(--surf2);font:400 10px/1.5 var(--m);color:var(--ink4)">evento: auth.lockout · conta: {{ email }} · ip 189.x.x.x</div>
+<div style="display:flex;gap:10px">
+<button onClick="{{ reset }}" style="flex:1;height:38px;border:1px solid var(--line);font:500 12.5px/1 var(--b);color:var(--ink2);display:flex;align-items:center;justify-content:center">Voltar ao início</button>
+<button style="flex:1;height:38px;background:var(--bd);color:#04121c;font:500 12.5px/1 var(--b);display:flex;align-items:center;justify-content:center">Falar com o suporte</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSso }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 17px/1.25 var(--h);letter-spacing:-.01em">{{ ssoTitle }}</div>
+<button onClick="{{ backToEmail }}" style="font:400 12px/1.4 var(--b);color:var(--ink3)">{{ email }} · trocar</button>
+</div>
+<div style="padding:14px;background:var(--surf2);display:flex;flex-direction:column;gap:6px">
+<div style="font:500 12.5px/1.4 var(--b)">{{ ssoNote }}</div>
+<div style="font:400 11.5px/1.5 var(--b);color:var(--ink3)">Senha e segundo fator ficam no provedor. O n.iso não guarda credencial deste tenant e recebe apenas os grupos que definem seu papel.</div>
+</div>
+<button onClick="{{ goSso }}" style="{{ primaryStyle }}">{{ ssoCta }}</button>
+<button onClick="{{ useLocal }}" style="font:400 11.5px/1.4 var(--b);color:var(--ink3)">Entrar com conta local (convidado)</button>
+</sc-if>
+
+<sc-if value="{{ isMfa }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 17px/1.25 var(--h);letter-spacing:-.01em">Código do autenticador</div>
+<div style="font:400 12.5px/1.5 var(--b);color:var(--ink3)">Segundo fator obrigatório — exigido pelo controle A.8.5 para todos os papéis.</div>
+</div>
+<input ref="{{ codeRef }}" value="{{ code }}" onChange="{{ onCode }}" onKeyDown="{{ onCodeKey }}" inputMode="numeric" aria-label="Código de seis dígitos" placeholder="000000" style="{{ codeStyle }}">
+<sc-if value="{{ mfaError }}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="padding:12px 14px;background:rgba(239,68,68,.10);border-left:2px solid var(--bad);font:400 12px/1.5 var(--b);color:var(--ink2);animation:shake 260ms ease-out">{{ mfaError }}</div>
+</sc-if>
+<div style="display:flex;align-items:center;gap:12px">
+<span style="{{ countdownStyle }}">{{ countdown }}</span>
+<button onClick="{{ useRecovery }}" style="font:400 11.5px/1.4 var(--b);color:var(--ink3)">Código de recuperação</button>
+<button onClick="{{ submitCode }}" style="{{ codeBtnStyle }}">Verificar</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTerms }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 17px/1.25 var(--h);letter-spacing:-.01em">Antes de entrar</div>
+<div style="font:400 12.5px/1.5 var(--b);color:var(--ink3)">O aceite fica registrado com versão, data e IP, e você pode baixar o comprovante depois.</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ docs }}" as="d" hint-placeholder-count="2">
+<button onClick="{{ d.toggle }}" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);width:100%">
+<span style="{{ d.box }}">{{ d.mark }}</span>
+<span style="flex:1;min-width:0;font:400 12.5px/1.3 var(--b)">Li e aceito {{ d.label }}<span style="color:var(--ink4);font-family:var(--m);font-size:10px"> {{ d.version }}</span></span>
+<span style="font:400 11px/1 var(--b);color:var(--bd)">abrir</span>
+</button>
+</sc-for>
+</div>
+<div style="display:flex;align-items:center;gap:12px">
+<span style="flex:1;font:400 10px/1.4 var(--m);color:var(--ink4)">{{ acceptStamp }}</span>
+<button onClick="{{ reset }}" style="height:36px;padding:0 12px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">Recusar e sair</button>
+<button onClick="{{ acceptTerms }}" style="{{ acceptStyle }}">Aceitar e entrar</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isReauth }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 17px/1.25 var(--h);letter-spacing:-.01em">Sua sessão expirou</div>
+<div style="font:400 12.5px/1.5 var(--b);color:var(--ink3)">Por inatividade. Nada do que você estava editando foi perdido.</div>
+</div>
+<div style="padding:12px 14px;background:var(--surf2);display:flex;flex-direction:column;gap:4px">
+<span style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Rascunho preservado</span>
+<span style="font:400 12px/1.5 var(--b);color:var(--ink2)">A.8.12 · 2 alterações não salvas — status, dono</span>
+</div>
+<sc-if value="{{ reauthLocal }}" hint-placeholder-val="{{ true }}">
+<label style="display:flex;flex-direction:column;gap:6px">
+<span style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Senha de {{ email }}</span>
+<input value="{{ pwd }}" onChange="{{ onPwd }}" onKeyDown="{{ onReauthKey }}" type="password" style="height:38px;padding:0 10px;border:1px solid var(--line);background:var(--paper);outline:none;font:400 13px var(--b)">
+</label>
+</sc-if>
+<sc-if value="{{ reauthSso }}" hint-placeholder-val="{{ false }}">
+<div style="padding:12px 14px;background:var(--surf2);font:400 11.5px/1.5 var(--b);color:var(--ink2)">Este tenant autentica no provedor da organização — o n.iso não tem senha para pedir. A reautenticação acontece lá e volta para este ponto.</div>
+</sc-if>
+<div style="display:flex;gap:10px">
+<button onClick="{{ logout }}" style="height:38px;padding:0 12px;border:1px solid var(--line);font:500 12.5px/1 var(--b);color:var(--ink2)">Sair da conta</button>
+<button onClick="{{ reauth }}" style="{{ reauthStyle }}">{{ reauthLabel }}</button>
+</div>
+</sc-if>
+
+<div style="display:flex;align-items:center;gap:8px;padding-top:14px;border-top:1px solid var(--line)">
+<span style="font:500 13px/1 var(--h);letter-spacing:-.01em;color:var(--ink2)">ness<span style="color:var(--bd)">.</span></span>
+<span style="margin-left:auto;font:400 10px/1 var(--m);color:var(--ink4)">{{ footNote }}</span>
+</div>
+
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+const PWD = "ness2026";
+const CODE = "123456";
+const DOMAINS = {
+  "ness.com.br": { kind: "local", label: "ness." },
+  "twyn.com":    { kind: "sso", label: "Twyn", idp: "provedor de identidade da Twyn" },
+  "forense.io":  { kind: "sso", label: "Forense", idp: "provedor de identidade da Forense" }
+};
+
+class Component extends DCLogic {
+  state = {
+    step: "email", email: "", pwd: "", code: "",
+    emailError: "", pwdError: "", mfaError: "",
+    fails: 0, challenge: false, challengeOk: false,
+    accepted: [], tenant: null, via: "local", secs: 30,
+    trail: []
+  };
+
+  emailRef = React.createRef();
+  pwdRef = React.createRef();
+  codeRef = React.createRef();
+
+  log(what, kind) {
+    const at = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    this.setState(s => ({ trail: [...s.trail, { at, what, kind }] }));
+  }
+
+  _lastStep = "email";
+
+  componentDidUpdate() {
+    if (this._lastStep !== this.state.step) {
+      this._lastStep = this.state.step;
+      clearInterval(this._tick);
+      if (this.state.step === "mfa") {
+        this.setState({ secs: 30 });
+        this._tick = setInterval(() => this.setState(s => ({ secs: s.secs > 0 ? s.secs - 1 : 30 })), 1000);
+        setTimeout(() => this.codeRef.current && this.codeRef.current.focus(), 60);
+      }
+      if (this.state.step === "password") setTimeout(() => this.pwdRef.current && this.pwdRef.current.focus(), 60);
+      if (this.state.step === "email") setTimeout(() => this.emailRef.current && this.emailRef.current.focus(), 60);
+    }
+  }
+
+  componentWillUnmount() { clearInterval(this._tick); }
+
+  submitEmail = () => {
+    const mail = this.state.email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(mail)) return this.setState({ emailError: "Informe um e-mail válido." });
+    const dom = mail.split("@")[1];
+    const cfg = DOMAINS[dom];
+    if (!cfg) {
+      return this.setState({ emailError: "Não há convite ativo para este e-mail. Peça acesso ao consultor responsável pelo projeto — não existe cadastro aberto." });
+    }
+    this.log(`e-mail reconhecido · domínio ${dom}`, "descoberta");
+    if (cfg.kind === "sso") return this.setState({ step: "sso", tenant: cfg, emailError: "", via: "sso" });
+    this.setState({ step: "password", tenant: cfg, emailError: "", via: "local" });
+  };
+
+  renderVals() {
+    const S = this.state;
+    const primary = "height:38px;padding:0 14px;background:var(--bd);color:#04121c;font:500 12.5px/1 var(--b);display:flex;align-items:center;justify-content:center";
+    const muted = "height:38px;padding:0 14px;border:1px solid var(--line);color:var(--ink4);font:500 12.5px/1 var(--b);display:flex;align-items:center;justify-content:center;cursor:not-allowed";
+    const box = (on) => `width:16px;height:16px;flex:none;display:flex;align-items:center;justify-content:center;font:500 10px/1 var(--b);border:1px solid ${on ? "var(--bd)" : "var(--ink4)"};background:${on ? "var(--bd)" : "transparent"};color:#04121c`;
+    const tag = (c) => `display:inline-block;font:500 9px/1.7 var(--m);letter-spacing:.08em;text-transform:uppercase;padding:1px 7px;color:${c};background:color-mix(in oklab,${c} 16%,transparent)`;
+    const pwdReady = S.pwd.length > 0 && (!S.challenge || S.challengeOk);
+    const bothAccepted = S.accepted.length === 2;
+
+    const enter = (fn) => (e) => { if (e.key === "Enter") { e.preventDefault(); fn(); } };
+    const finish = () => {
+      this.log(S.via === "sso" ? "sessão federada estabelecida" : "segundo fator validado", "auth");
+      this.setState({ step: "app" });
+    };
+
+    return {
+      // ——— passo e moldura
+      inApp: S.step === "app",
+      showCard: S.step !== "app",
+      cardStyle: "width:min(420px,100%);display:flex;flex-direction:column;gap:16px;padding:28px 32px 24px;background:var(--surf);border:1px solid var(--line);animation:rise 220ms cubic-bezier(.16,1,.3,1)",
+      stepLabel: { email: "1 de 2", password: "1 de 2", sso: "1 de 2", mfa: "2 de 2", terms: "aceite", reauth: "sessão", locked: "bloqueado" }[S.step] || "",
+      footNote: S.step === "terms" ? "aceite obrigatório · auditável" : "privacidade · termos · n.iso 4.2",
+      primaryStyle: primary,
+
+      isEmail: S.step === "email",
+      isPassword: S.step === "password",
+      isSso: S.step === "sso",
+      isMfa: S.step === "mfa",
+      isTerms: S.step === "terms",
+      isReauth: S.step === "reauth",
+      isLocked: S.step === "locked",
+
+      // ——— e-mail
+      email: S.email,
+      emailRef: this.emailRef,
+      onEmail: (e) => this.setState({ email: e.target.value, emailError: "" }),
+      onEmailKey: enter(this.submitEmail),
+      submitEmail: this.submitEmail,
+      emailError: S.emailError,
+      backToEmail: () => this.setState({ step: "email", pwd: "", pwdError: "", code: "", mfaError: "" }),
+
+      // ——— senha + turnstile
+      pwd: S.pwd,
+      pwdRef: this.pwdRef,
+      onPwd: (e) => this.setState({ pwd: e.target.value, pwdError: "" }),
+      onPwdKey: enter(() => this.renderVals().submitPwd()),
+      pwdStyle: `height:38px;padding:0 10px;border:1px solid ${S.pwdError ? "var(--bad)" : "var(--line)"};background:var(--paper);outline:none;font:400 13px var(--b)`,
+      pwdError: S.pwdError,
+      pwdBtnStyle: pwdReady ? primary : muted,
+      needsChallenge: S.challenge,
+      challengeOk: S.challengeOk,
+      challengeBox: box(S.challengeOk),
+      challengeMark: S.challengeOk ? "✓" : "",
+      challengeLabel: S.challengeOk ? "Verificado" : "Confirme que você é humano",
+      solveChallenge: () => { this.setState({ challengeOk: true }); this.log("verificação anti-abuso concluída", "anti-abuso"); },
+      submitPwd: () => {
+        if (!pwdReady) return;
+        if (S.pwd.length < 6) {
+          const fails = S.fails + 1;
+          this.log(`tentativa de senha falhou (${fails})`, "falha");
+          if (fails >= 5) return this.setState({ step: "locked", fails });
+          return this.setState({
+            fails, pwd: "", challenge: fails >= 2, challengeOk: false,
+            pwdError: `E-mail ou senha incorretos. Restam ${5 - fails} tentativa${5 - fails > 1 ? "s" : ""} antes do bloqueio temporário.`
+          });
+        }
+        this.log("senha validada", "auth");
+        this.setState({ step: "mfa", pwdError: "", pwd: "" });
+      },
+
+      // ——— SSO
+      ssoTitle: `${S.tenant ? S.tenant.label : ""} usa provedor próprio`,
+      ssoNote: `${S.email.split("@")[1] || ""} autentica pelo ${S.tenant && S.tenant.idp ? S.tenant.idp : "provedor da organização"}`,
+      ssoCta: `Continuar no ${S.tenant ? S.tenant.label : "provedor"}`,
+      goSso: () => {
+        this.log("redirecionado ao provedor de identidade e retornado autenticado", "federação");
+        this.log("MFA verificado no provedor · papel recebido do grupo twyn-compliance", "federação");
+        this.setState({ step: S.accepted.length === 2 ? "app" : "terms" });
+      },
+      useLocal: () => this.setState({ step: "password", via: "local", tenant: { kind: "local", label: "conta local" } }),
+
+      // ——— MFA
+      code: S.code,
+      codeRef: this.codeRef,
+      onCode: (e) => {
+        const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+        this.setState({ code: v, mfaError: "" });
+        if (v.length === 6 && v !== "000000") setTimeout(() => this.setState({ step: S.accepted.length === 2 ? "app" : "terms" }, () => this.log("segundo fator validado", "auth")), 160);
+      },
+      onCodeKey: enter(() => this.renderVals().submitCode()),
+      codeStyle: `height:52px;padding:0 14px;border:1px solid ${S.mfaError ? "var(--bad)" : "var(--line)"};background:var(--paper);outline:none;font:500 24px/1 var(--m);letter-spacing:.5em;text-align:center`,
+      mfaError: S.mfaError,
+      countdown: `expira em ${S.secs}s`,
+      countdownStyle: `flex:1;font:400 10px/1 var(--m);color:${S.secs <= 10 ? "var(--warn)" : "var(--ink4)"}`,
+      codeBtnStyle: S.code.length === 6 ? primary : muted,
+      submitCode: () => {
+        if (S.code.length !== 6) return;
+        if (S.code === "000000") { this.log("código de MFA inválido", "falha"); return this.setState({ mfaError: "Código inválido ou expirado. Gere um novo no aplicativo autenticador.", code: "" }); }
+        finish();
+      },
+      useRecovery: () => { this.setState({ code: "418902", mfaError: "" }); this.log("código de recuperação usado", "auth"); },
+
+      // ——— aceite
+      docs: [
+        { id: "termos", label: "os Termos de Uso", version: "v2.4" },
+        { id: "privacidade", label: "a Política de Privacidade", version: "v3.1" }
+      ].map(d => ({
+        ...d,
+        box: box(S.accepted.includes(d.id)),
+        mark: S.accepted.includes(d.id) ? "✓" : "",
+        toggle: () => this.setState(s => ({ accepted: s.accepted.includes(d.id) ? s.accepted.filter(x => x !== d.id) : [...s.accepted, d.id] }))
+      })),
+      acceptStamp: `registro: ${new Date().toLocaleDateString("pt-BR")} · 189.x.x.x`,
+      acceptStyle: bothAccepted ? primary : muted,
+      acceptTerms: () => {
+        if (!bothAccepted) return;
+        this.log("aceite registrado · termos v2.4 e privacidade v3.1", "legal");
+        this.setState({ step: "app" });
+      },
+
+      // ——— app e sessão
+      tenantLabel: S.tenant ? S.tenant.label : "conta local",
+      sessionNote: S.via === "sso"
+        ? "Sessão federada via OIDC. Encerrar aqui dispara logout no provedor (RP-initiated) — sem isso, sair não encerra nada."
+        : "Conta local com MFA próprio (TOTP, sem SMS). Papel consultor: 8 h de inatividade com revalidação diária — papel Cliente expira em 30 min. Rascunhos são preservados.",
+      trail: S.trail.map(t => ({
+        ...t,
+        tagStyle: tag(t.kind === "falha" ? "#ef4444" : t.kind === "legal" ? "#00ade8" : t.kind === "anti-abuso" ? "#f59e0b" : "#10b981")
+      })),
+      logoutLabel: S.via === "sso" ? "Encerrar sessão (federada)" : "Encerrar sessão",
+      logout: () => { clearInterval(this._tick); this.setState({ step: "email", email: "", pwd: "", code: "", fails: 0, challenge: false, challengeOk: false, accepted: [], trail: [], tenant: null }); },
+      expire: () => { this.log("sessão expirada por inatividade", "falha"); this.setState({ step: "reauth", pwd: "" }); },
+      onReauthKey: enter(() => this.renderVals().reauth()),
+      reauthLocal: S.via !== "sso",
+      reauthSso: S.via === "sso",
+      reauthLabel: S.via === "sso" ? `Reautenticar no ${S.tenant ? S.tenant.label : "provedor"}` : "Desbloquear e continuar",
+      reauthStyle: (S.via === "sso" || S.pwd.length) ? `${primary};flex:1` : `${muted};flex:1`,
+      reauth: () => {
+        if (S.via === "sso") {
+          this.log("reautenticado no provedor · rascunho de A.8.12 devolvido", "federação");
+          return this.setState({ step: "app", pwd: "" });
+        }
+        if (!S.pwd.length) return;
+        this.log("reautenticado · rascunho de A.8.12 devolvido", "auth");
+        this.setState({ step: "app", pwd: "" });
+      },
+      reset: () => this.setState({ step: "email", email: "", pwd: "", code: "", fails: 0, challenge: false, challengeOk: false, accepted: [], emailError: "" }),
+
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/industry-1314a8a2-4a2f-40d0-a1f6-6281a6969fab/styles.css">
+<script src="_ds/industry-1314a8a2-4a2f-40d0-a1f6-6281a6969fab/_ds_bundle.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Inter:wght@300;400;500;600&display=swap">
+<style>
+body{margin:0;background:#f2f2f3;--paper:#fff}
+.dv-card{--hdr-h:48px}
+.ness{--color-accent:#00ade8;--color-accent-100:#e6f7fe;--color-accent-200:#bfeafb;--color-accent-300:#7fd6f6;--color-accent-400:#33c0f0;--color-accent-500:#00ade8;--color-accent-600:#0091c4;--color-accent-700:#00729b;--color-accent-800:#005273;--color-accent-900:#08293c;--font-heading:"Montserrat",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;--color-text:#0f172a;--ness-bluedot:#00ade8}
+.ness{color:var(--color-text)}
+.ness .wf-h,.ness .dv-tname,.ness h3,.ness h4{letter-spacing:-.01em;font-weight:600}
+.ness-dark{--paper:#0b1326;--color-bg:#0b1326;--color-text:#f1f5f9;--color-divider:rgba(255,255,255,.10);
+--color-neutral-100:#162244;--color-neutral-200:#1e2d52;--color-neutral-300:#2b3c68;--color-neutral-400:#3e5183;--color-neutral-500:#64748b;--color-neutral-600:#94a3b8;--color-neutral-700:#cbd5e1;--color-neutral-800:#e2e8f0;--color-neutral-900:#f1f5f9;
+--color-accent-100:rgba(0,173,232,.14);--color-accent-200:rgba(0,173,232,.22);--color-accent-800:#7fd6f6;--color-accent-700:#33c0f0}
+.ness-dark .dv-card{background:#0b1326;border-color:rgba(255,255,255,.10)}
+.ness-dark .ph{background:repeating-linear-gradient(45deg,transparent 0 5px,rgba(255,255,255,.06) 5px 10px)}
+.ness-dark .t-ok{color:#10b981}.ness-dark .t-warn{color:#f59e0b}.ness-dark .t-bad{color:#ef4444}.ness-dark .t-info{color:#00ade8}.ness-dark .t-n{color:#94a3b8}
+.ness :focus-visible{outline:2px solid #00ade8;outline-offset:2px}
+.m1{background:var(--color-accent-200)}
+.m2{background:var(--color-accent-300)}
+.m3{background:var(--color-accent-500);color:#fff}
+.m4{background:var(--color-accent-700);color:#fff}
+.m5{background:var(--color-accent-900);color:#fff}
+.m3.sel{outline:2px solid var(--color-accent-900)}
+.ness .wf-btn.pri{color:#04121c}
+.ness-dark .m2{color:#04121c}
+.ness-dark .m3{color:#04121c}
+.ness-dark .m3.sel{outline-color:#f5f5f7}
+.ness-dark .m4{background:#0091c4;color:#04121c}
+.ness-dark .m5{background:#00729b}
+.ness-dark .mx b{border-color:#1a2338}
+.ness-dark .mx i{color:#5d5d60}
+.ness-dark .dv-tdesc{color:#5d5d60}
+.ness-dark .note{color:#00729b}
+.ness-dark .dv-card .note{color:#7fd6f6}
+.ness-dark .dv-olabel{color:#5d5d60}
+.dv-flag{font:500 8.5px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;padding:4px 7px;border:1px solid rgba(0,0,0,.18);color:#5d5d60}
+.dv-flag.on{border-color:#00ade8;color:#00729b;background:rgba(0,173,232,.10)}
+.dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(0,0,0,.09);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1d1f20;color:#fff;text-decoration:none}
+.dv-tname{font:600 15px/1.2 var(--font-heading);color:#1d1f20;text-transform:uppercase;letter-spacing:.04em}
+.dv-tdesc{font:400 11.5px/1.5 var(--font-body);color:var(--color-neutral-600);margin:0 0 22px;max-width:70ch}
+.dv-opts{display:flex;flex-wrap:wrap;gap:30px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:8px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1d1f20;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 var(--font-body);color:var(--color-neutral-700)}
+.dv-card{max-width:100%;background:var(--paper);border:1px solid var(--color-divider);box-shadow:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -2px rgba(0,0,0,.05);overflow:hidden}
+.dv-opt:target .dv-oid{background:var(--color-accent);color:#fff}
+.dv-next{margin:24px 0 0;font:12px/1.6 var(--font-body);color:var(--color-neutral-600)}
+.wf-top{height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--color-divider);background:var(--color-neutral-100)}
+.wf-dot{width:6px;height:6px;background:var(--color-neutral-400);border-radius:50%;flex:none}
+.wf-url{flex:1;height:16px;background:var(--color-neutral-200);font:400 8.5px/16px var(--font-mono,ui-monospace),monospace;color:var(--color-neutral-600);padding:0 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.wf-body{display:flex;align-items:stretch}
+.wf-side{width:138px;position:relative;display:flex;flex-direction:column;border-right:1px solid var(--color-divider);padding:0 0 12px;flex:none;background:var(--color-neutral-100)}
+.wf-foot{margin-top:auto;display:flex;align-items:center;gap:6px;padding:8px 12px 0;margin-left:12px;margin-right:12px;border-top:1px solid var(--color-divider)}
+.wf-foot b{width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-200);font:600 8px/1 ui-monospace,monospace;letter-spacing:.04em;color:var(--color-neutral-700)}
+.wf-foot span{display:flex;flex-direction:column;gap:2px;min-width:0;font:400 9.5px/1 var(--font-body);color:var(--color-neutral-800)}
+.wf-foot em{font:500 7px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-600);font-style:normal}
+.wf-foot i{margin-left:auto;font:400 10px/1 var(--font-body);color:var(--color-neutral-500);font-style:normal}
+.wf-brand{position:sticky;top:0;z-index:2;box-sizing:border-box;height:var(--hdr-h);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px;background:var(--color-neutral-100);border-bottom:1px solid var(--color-divider)}
+.wf-brand::after{content:"+";position:absolute;right:-6px;bottom:-7px;z-index:3;font:400 12px/1 ui-monospace,monospace;color:var(--color-accent)}
+.wf-brand em{display:none}
+.wf-brand span{display:none}
+.wf-sig{display:none}
+.acct-sig{display:flex;align-items:center;font:500 11px/1 var(--font-heading);letter-spacing:-.01em;color:var(--color-neutral-700)}
+.acct-sig i{color:#00ade8;font-style:normal}
+.acct-sig s{margin-left:auto;text-decoration:none;font:400 8px/1 ui-monospace,monospace;color:var(--color-neutral-500)}
+.wf-brand span i{color:#00ade8;font-style:normal}
+.wf-brand u{margin-left:auto;text-decoration:none;font:400 11px/1 var(--font-body);color:var(--color-neutral-500)}
+.blocker{display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(239,68,68,.10);border-left:2px solid #ef4444}
+.blocker > span:first-child{flex:1;font:400 9.5px/1.4 var(--font-body);color:var(--color-neutral-800)}
+.kbd{font:400 8px/1 ui-monospace,monospace;letter-spacing:.06em;color:var(--color-neutral-600);border:1px solid var(--color-divider);padding:3px 5px}
+.authsig{display:flex;align-items:center;gap:8px;margin-top:2px;padding-top:12px;border-top:1px solid var(--color-divider)}
+.authsig b{font:500 12px/1 var(--font-heading);letter-spacing:-.01em;color:var(--color-neutral-700);font-weight:500}
+.authsig b i{color:#00ade8;font-style:normal}
+.authsig s{margin-left:auto;text-decoration:none;font:400 8.5px/1 ui-monospace,monospace;color:var(--color-neutral-500)}
+.hint{font:400 8.5px/1.4 ui-monospace,monospace;letter-spacing:.06em;color:var(--color-neutral-600)}
+.bulkbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;background:var(--color-neutral-100);border:1px solid var(--color-divider);box-shadow:0 10px 15px -3px rgba(0,0,0,.25)}
+.savebar{display:flex;align-items:center;gap:10px;margin:4px -16px -20px;padding:12px 16px;border-top:1px solid var(--color-divider);background:var(--color-neutral-100)}
+.savebar > span{flex:1;font:400 9px/1.4 var(--font-body);color:var(--color-neutral-600)}
+.seg{display:flex;border:1px solid var(--color-neutral-300);flex:none}
+.seg b{font:500 9px/1 var(--font-body);padding:0 8px;height:22px;display:flex;align-items:center;color:var(--color-neutral-600)}
+.seg b.on{background:var(--color-accent);color:#04121c}
+.wf-brand b{font:500 17px/1 var(--font-heading);letter-spacing:-.015em;text-transform:lowercase;color:var(--color-neutral-900)}
+.wf-brand b i{color:#00ade8;font-style:normal}
+.wf-proj{margin:8px;padding:0 8px;height:28px;background:var(--color-neutral-200);display:flex;align-items:center;gap:7px}
+.wf-proj > span{font:500 10px/1 var(--b,var(--font-body));color:var(--color-neutral-900)}
+.wf-proj em{font:400 8.5px/1 ui-monospace,monospace;letter-spacing:.04em;color:var(--color-neutral-600);font-style:normal}
+.wf-proj em b{font-weight:400}
+.wf-proj em br{display:none}
+.wf-grp{font:500 7.5px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-500);padding:12px 12px 6px}
+.wf-hdr .wf-h{font-size:13.5px;display:inline;vertical-align:baseline}
+.wf-hdr > div:first-child{flex:1;min-width:0;overflow:hidden}
+.wf-hdr > div:first-child > div{display:none}
+.wf-meta{display:flex;align-items:center;gap:10px;font:500 7.5px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--color-neutral-600)}
+.wf-meta b{color:var(--color-neutral-800);font-weight:500}
+.wf-meta s{text-decoration:none;color:var(--color-accent-800)}
+.wf-proj > span i{margin-left:auto;font:400 9px/1 var(--font-body);color:var(--color-neutral-500);font-style:normal;order:3}
+.wf-proj{position:relative}
+.wf-proj > span{display:contents}
+.wf-proj > span:first-child{font:500 10px/1 var(--font-body)}
+.wf-hdr .wf-sub{display:none}
+.wf-side ~ .wf-main .wf-hdr .wf-user{display:none}
+[id="5b"] .wf-side ~ .wf-main .wf-hdr .wf-user{display:flex}
+[id="5b"] .wf-foot{display:none}
+.wf-hdr .wf-user span{display:none}
+.wf-hdr .wf-user{padding-left:8px}
+.wf-nav{display:flex;align-items:center;gap:8px;height:24px;padding:0 12px;font:400 10.5px/1 var(--font-body);color:var(--color-neutral-700);transition:color 150ms cubic-bezier(.16,1,.3,1)}
+.wf-nav.on{color:var(--color-neutral-900);font-weight:500;box-shadow:inset 2px 0 0 var(--color-accent)}
+.wf-svg{flex:none;opacity:.5}
+.wf-nav.on .wf-svg{opacity:1;color:var(--color-accent)}
+.wf-ic{width:8px;height:8px;border:1px solid currentColor;border-radius:50%;flex:none;opacity:.45}
+.wf-nav.on .wf-ic{border-color:var(--color-accent);opacity:1}
+.wf-nav.on .wf-ic{border-color:var(--color-accent);opacity:1}
+.wf-main{flex:1;padding:0 16px 20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.wf-hdr{position:sticky;top:0;z-index:2;box-sizing:border-box;height:var(--hdr-h);display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 16px;margin:0 -16px 4px;background:var(--paper);border-bottom:1px solid var(--color-divider)}
+.wf-h{font:600 15px/1.15 var(--font-heading);margin:0}
+.wf-sub{font:400 9.5px/1.35 var(--font-body);color:var(--color-neutral-600);margin:2px 0 0}
+.wf-acts{display:flex;gap:6px;flex:none;order:1}
+.wf-user{order:2;display:flex;align-items:center;gap:6px;flex:none;padding-left:10px;border-left:1px solid var(--color-divider)}
+.wf-user b{width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-200);font:600 8px/1 ui-monospace,monospace;letter-spacing:.04em;color:var(--color-neutral-700)}
+.wf-user span{display:flex;flex-direction:column;gap:2px;font:400 9.5px/1 var(--font-body);color:var(--color-neutral-800);white-space:nowrap}
+.wf-user em{font:500 7px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-600);font-style:normal}
+.wf-user em b{display:inline;width:auto;height:auto;border:0;color:#00ade8;font:inherit}
+.wf-out{height:20px;display:flex;align-items:center;padding:0 7px;margin-left:4px;border:1px solid var(--color-neutral-400);font:500 9px/1 var(--font-body);color:var(--color-neutral-700);white-space:nowrap}
+.wf-user i.cv{margin-left:2px;font:400 9px/1 var(--font-body);color:var(--color-neutral-500);font-style:normal}
+.wf-user.open{background:var(--color-neutral-200);margin-right:-6px;padding-right:6px}
+.acct{position:absolute;z-index:6;width:196px;background:var(--color-neutral-100);border:1px solid var(--color-neutral-300);box-shadow:0 10px 15px -3px rgba(0,0,0,.45),0 4px 6px -4px rgba(0,0,0,.3);padding:10px;display:flex;flex-direction:column;gap:10px}
+.acct hr{border:0;border-top:1px solid var(--color-divider);margin:0}
+.acct .who{display:flex;align-items:center;gap:8px}
+.acct .who b{width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--color-neutral-200);font:600 9px/1 ui-monospace,monospace;color:var(--color-neutral-800)}
+.acct .who span{display:flex;flex-direction:column;gap:2px;min-width:0;font:500 10px/1.2 var(--font-body);color:var(--color-neutral-900)}
+.acct .who em{font:400 8px/1 ui-monospace,monospace;color:var(--color-neutral-600);font-style:normal;overflow:hidden;text-overflow:ellipsis}
+.acct .lbl{font:500 7px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-600)}
+.acct .it{display:flex;align-items:center;gap:8px;font:400 10.5px/1 var(--font-body);color:var(--color-neutral-800);padding:4px 0}
+.acct .it u{width:11px;height:11px;flex:none;border:1px solid currentColor;opacity:.45;text-decoration:none}
+.acct .it svg{flex:none;opacity:.55}
+.acct .it.on svg,.acct .it.out svg{opacity:1}
+.acct .it s{margin-left:auto;text-decoration:none;font:400 8px/1 ui-monospace,monospace;color:var(--color-neutral-500)}
+.acct .it.on{color:#00ade8}
+.acct .it.out{color:#ef4444}
+.wf-foot .wf-out{margin:0}
+.wf-btn{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border:1px solid var(--color-neutral-300);font:500 9.5px/1 var(--font-body);color:var(--color-neutral-800);background:transparent;white-space:nowrap;transition:border-color 150ms cubic-bezier(.16,1,.3,1)}
+.wf-btn.pri{background:var(--color-accent);border-color:var(--color-accent);color:#04121c}
+.wf-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.wf-kpi{border:1px solid var(--color-divider);padding:8px 10px}
+.wf-kpi b{font:600 20px/1 var(--font-heading);letter-spacing:-.02em;display:block;margin-bottom:6px;color:var(--color-neutral-900)}
+.wf-kpi span{font:400 8px/1.25 var(--font-body);color:var(--color-neutral-600);display:block}
+.wf-tbl{width:100%;border-collapse:collapse;font:400 9.5px var(--font-body)}
+.wf-tbl th{font:500 7.5px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;text-align:left;color:var(--color-neutral-500);border-bottom:1px solid var(--color-neutral-300);padding:0 8px 7px}
+.wf-tbl td{border-bottom:1px solid var(--color-divider);padding:7px 8px;color:var(--color-neutral-800);vertical-align:middle}
+.wf-tbl tr:last-child td{border-bottom:0}
+.sk{display:block;height:6px;background:var(--color-neutral-200);margin-bottom:3px}
+.tag{display:inline-block;font:500 7.5px/1.6 ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;padding:1px 6px;border:0;background:color-mix(in oklab,currentColor 14%,transparent)}
+.t-ok{color:#2f7d4f}.t-warn{color:#8a6a00}.t-bad{color:#a3352c}.t-info{color:var(--color-accent-700)}.t-n{color:var(--color-neutral-600)}
+.ph{border:1px dashed var(--color-neutral-300);display:flex;align-items:center;justify-content:center;text-align:center;font:400 8.5px/1.5 ui-monospace,monospace;color:var(--color-neutral-500);padding:8px}
+.note{font:500 13px/1.1 Caveat,cursive;color:var(--color-accent-700)}
+.note.abs{position:absolute}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;height:22px;font:400 9px/1 var(--font-body);padding:0 8px;border:1px solid var(--color-neutral-300);color:var(--color-neutral-700);background:transparent}
+.chip.on{border-color:var(--color-accent);color:var(--color-accent-800);background:var(--color-accent-100)}
+.srch{flex:1;min-width:80px;height:22px;border:0;border-bottom:1px solid var(--color-neutral-300);background:transparent;font:400 9px/22px var(--font-body);color:var(--color-neutral-500);padding:0 2px}
+.wf-tabs{display:flex;gap:16px;border-bottom:1px solid var(--color-divider)}
+.wf-tab{font:500 10px/1 var(--font-body);color:var(--color-neutral-600);padding:0 0 8px}
+.wf-tab.on{color:var(--color-accent-800);box-shadow:inset 0 -2px 0 var(--color-accent)}
+.mx{display:grid;grid-template-columns:26px repeat(5,1fr);gap:2px;font:600 8px ui-monospace,monospace}
+.mx i{display:flex;align-items:center;justify-content:center;color:var(--color-neutral-500);font-style:normal}
+.mx b{display:flex;align-items:center;justify-content:center;height:26px;font-weight:600;color:var(--color-neutral-800);border:1px solid var(--color-neutral-200)}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font:500 7.5px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-600)}
+.fld .in{height:26px;border:1px solid var(--color-neutral-300);background:var(--paper)}
+.fld .in.ta{height:52px}
+.stepper{display:flex;align-items:center;gap:6px}
+.step{display:flex;align-items:center;gap:5px;font:400 9px var(--font-body);color:var(--color-neutral-500)}
+.step b{width:15px;height:15px;border:1px solid var(--color-neutral-400);display:flex;align-items:center;justify-content:center;font:600 8px ui-monospace,monospace}
+.step.on{color:var(--color-accent-800)}
+.step.on b{background:var(--color-accent);border-color:var(--color-accent);color:#fff}
+.rail{flex:1;height:1px;background:var(--color-neutral-300)}
+.drawer{position:absolute;top:30px;right:0;bottom:0;width:250px;background:var(--paper);border-left:1px solid var(--color-neutral-400);box-shadow:-6px 0 18px rgba(29,31,32,.10);padding:12px;display:flex;flex-direction:column;gap:9px}
+.veil{position:absolute;inset:30px 250px 0 0;background:rgba(29,31,32,.14)}
+</style></helmet>
+
+<section class="dv-turn" id="t8">
+<div class="dv-thd"><a class="dv-tid" href="#t8">8</a><span class="dv-tname">Privacidade, termos e aceite — o que o rodapé promete</span><span class="dv-flag on">vigente</span></div>
+<p class="dv-tdesc">Citar "privacidade · termos" no login obriga os documentos a existirem: públicos, sem login, versionados e com <b>aceite registrado</b>. Num produto que vende conformidade, documento legal quebrado é contradição — e o aceite sem trilha é o mesmo problema que a gente resolveu na SoA.</p>
+<div class="dv-opts ness ness-dark">
+
+<div class="dv-opt" id="8a"><div class="dv-olabel"><a class="dv-oid" href="#8a">8a</a>Documento legal — público, versionado, navegável</div>
+<div class="dv-card" style="width:620px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/legal/privacidade</span></div>
+<div class="wf-body">
+<div class="wf-side" style="width:164px">
+<div class="wf-brand"><b>n<i>.</i>iso</b></div>
+<div class="wf-grp">Documentos</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>Privacidade</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M9 13h6"></path></svg>Termos de uso</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path></svg>Subprocessadores</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>DPA e certificados</div>
+<div class="wf-grp">Nesta página</div>
+<div class="wf-nav"><span class="wf-ic"></span>Dados tratados</div>
+<div class="wf-nav"><span class="wf-ic"></span>Bases legais</div>
+<div class="wf-nav"><span class="wf-ic"></span>Retenção</div>
+<div class="wf-nav"><span class="wf-ic"></span>Direitos do titular</div>
+<div class="wf-nav"><span class="wf-ic"></span>Encarregado (DPO)</div>
+</div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Política de Privacidade</h3></div><div class="wf-acts"><span class="wf-btn">Histórico de versões</span><span class="wf-btn">Baixar PDF</span></div></div>
+<div class="wf-meta">Versão 3.1<b>vigente desde 12/08/2026</b><s>versão anterior 3.0 disponível</s></div>
+<div class="fld"><span class="sk" style="width:100%"></span><span class="sk" style="width:96%"></span><span class="sk" style="width:99%"></span><span class="sk" style="width:72%"></span></div>
+<div>
+<div class="wf-meta" style="margin-bottom:6px">Dados tratados e bases legais</div>
+<table class="wf-tbl">
+<thead><tr><th>Dado</th><th style="width:96px">Finalidade</th><th style="width:84px">Base legal</th><th style="width:56px">Retenção</th></tr></thead>
+<tbody>
+<tr><td>Nome e e-mail corporativo</td><td>Acesso e trilha</td><td>Contrato</td><td>5 anos</td></tr>
+<tr><td>Logs de acesso e ações</td><td>Auditoria (A.8.15)</td><td>Obrig. legal</td><td>5 anos</td></tr>
+<tr><td>Evidências enviadas</td><td>Conformidade</td><td>Contrato</td><td>Vig. + 5 anos</td></tr>
+<tr><td>IP e agente do navegador</td><td>Segurança</td><td>Legítimo int.</td><td>12 meses</td></tr>
+</tbody></table>
+</div>
+<div class="blueprint" style="padding:10px;display:flex;gap:10px;align-items:center"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="flex:1"><div style="font:500 10px/1.3 var(--font-body);color:var(--color-neutral-900)">Exercer direitos do titular</div><div class="wf-sub" style="margin:2px 0 0">Encarregado: dpo@ness.com.br · resposta em até 15 dias</div></div>
+<span class="wf-btn">Abrir solicitação</span></div>
+<div class="hint">formulário público com proteção anti-abuso — titular não faz login para exercer direito</div>
+<div class="authsig"><b>ness<i>.</i></b><s>documento público · sem login</s></div>
+<div class="note">tabela de dados por finalidade, não parágrafo jurídico: o cliente lê isto para aprovar o fornecedor</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="8b"><div class="dv-olabel"><a class="dv-oid" href="#8b">8b</a>Aceite registrado e nova versão publicada</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:420px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/entrar/aceite · primeiro acesso</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:26px 34px 30px;gap:16px;align-items:stretch">
+<div><h3 class="wf-h">Antes de entrar</h3><p class="wf-sub">Leia e aceite os documentos vigentes. O aceite fica registrado com data, versão e IP.</p></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="blueprint" style="padding:9px;display:flex;align-items:center;gap:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<span style="width:13px;height:13px;border:1px solid var(--color-accent);background:var(--color-accent);flex:none"></span>
+<span style="flex:1;font:400 9.5px/1.4 var(--font-body);color:var(--color-neutral-800)">Li os <a href="#8a">Termos de Uso</a> <span class="hint">v2.4</span></span><span class="wf-btn">Abrir</span></div>
+<div class="blueprint" style="padding:9px;display:flex;align-items:center;gap:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<span style="width:13px;height:13px;border:1px solid var(--color-neutral-400);flex:none"></span>
+<span style="flex:1;font:400 9.5px/1.4 var(--font-body);color:var(--color-neutral-800)">Li a <a href="#8a">Política de Privacidade</a> <span class="hint">v3.1</span></span><span class="wf-btn">Abrir</span></div>
+</div>
+<div class="chips"><span class="hint" style="flex:1">registro: 11/09/2026 · 189.x.x.x</span><span class="wf-btn">Recusar e sair</span><span class="wf-btn pri" style="opacity:.45">Aceitar e entrar</span></div>
+<div class="authsig"><b>ness<i>.</i></b><s>aceite obrigatório · auditável</s></div>
+<div class="note">aceitar é ação, não checkbox pré-marcado — e recusar precisa ter saída</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:420px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa · nova versão publicada</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:0 16px 16px">
+<div class="wf-hdr"><div><h3 class="wf-h">SoA</h3></div><div class="wf-acts"><span class="wf-btn pri">Exportar</span></div></div>
+<div class="blocker" style="border-left-color:#00ade8;background:rgba(0,173,232,.10);flex-direction:column;align-items:stretch;gap:6px">
+<span>A Política de Privacidade mudou para a <b style="font-weight:500">v3.2</b> em 09/09. Você aceitou a v3.1.</span>
+<div class="chips"><span class="hint" style="flex:1">classificação: <b style="font-weight:500">comum</b> · avisa sem interromper</span><span class="wf-btn">Ver diferenças</span><span class="wf-btn pri">Revisar e aceitar</span></div>
+<div class="hint">se a classificação fosse <b style="font-weight:500">material</b> (base legal ou retenção), o acesso ficaria bloqueado até o aceite</div>
+</div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:46px">A.8.12</td><td>Prevenção de vazamento de dados</td><td style="width:44px"><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td><span class="tag t-bad">gap</span></td></tr>
+</tbody></table>
+<div class="note">faixa, não modal: nova versão avisa sem interromper o trabalho — salvo mudança material</div>
+</div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="8c"><div class="dv-olabel"><a class="dv-oid" href="#8c">8c</a>Subprocessadores e meus aceites</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:460px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/legal/subprocessadores</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:0 16px 16px">
+<div class="wf-hdr"><div><h3 class="wf-h">Subprocessadores</h3></div><div class="wf-acts"><span class="wf-btn">Assinar avisos</span></div></div>
+<div class="wf-meta">Atualizado em 09/09/2026<b>aviso prévio de 30 dias</b></div>
+<table class="wf-tbl">
+<thead><tr><th>Fornecedor</th><th style="width:94px">Finalidade</th><th style="width:66px">País</th><th style="width:64px">Transf.</th></tr></thead>
+<tbody>
+<tr><td>Provedor de nuvem</td><td>Hospedagem</td><td>Brasil</td><td><span class="tag t-ok">não</span></td></tr>
+<tr><td>Serviço de e-mail transacional</td><td>Notificações</td><td>EUA</td><td><span class="tag t-warn">sim · SCC</span></td></tr>
+<tr><td>Provedor de LLM</td><td>Sugestão de evidência</td><td>EUA</td><td><span class="tag t-warn">sim · SCC</span></td></tr>
+<tr><td>Monitoramento de erros</td><td>Suporte</td><td>UE</td><td><span class="tag t-info">adequação</span></td></tr>
+</tbody></table>
+<div class="note">cliente de GRC audita seu fornecedor: esta tabela é pergunta de due diligence, não enfeite</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:460px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/conta/aceites</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:0 16px 16px">
+<div class="wf-hdr"><div><h3 class="wf-h">Meus aceites</h3></div><div class="wf-acts"><span class="wf-btn">Baixar comprovante</span></div></div>
+<table class="wf-tbl">
+<thead><tr><th>Documento</th><th style="width:54px">Versão</th><th style="width:96px">Quando</th><th style="width:70px">Origem</th></tr></thead>
+<tbody>
+<tr><td>Termos de Uso</td><td>2.4</td><td>11/09/2026 09:14</td><td><span class="tag t-n">189.x.x.x</span></td></tr>
+<tr><td>Política de Privacidade</td><td>3.1</td><td>11/09/2026 09:14</td><td><span class="tag t-n">189.x.x.x</span></td></tr>
+<tr><td>Política de Privacidade</td><td>3.2</td><td>—</td><td><span class="tag t-warn">pendente</span></td></tr>
+</tbody></table>
+<div class="note">o usuário precisa poder provar o que aceitou — mesma lógica da trilha de auditoria</div>
+</div></div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Decidido: aviso prévio de subprocessador de 30 dias; mudança comum avisa em faixa, mudança de base legal ou retenção bloqueia até o aceite.</p>
+</section>
+
+<section class="dv-turn" id="t7">
+<div class="dv-thd"><a class="dv-tid" href="#t7">7</a><span class="dv-tname">Autenticação — o que faltava antes da primeira tela</span><span class="dv-flag on">vigente</span></div>
+<p class="dv-tdesc">Sem chrome de app: aqui não há sidebar nem tenant, porque o tenant só é conhecido depois do e-mail. É a única parte do produto onde a assinatura <b>ness.</b> é obrigatória — no login o usuário precisa saber de quem é a plataforma antes de entregar credencial. Três decisões embutidas: <b>acesso é por convite</b> (não há "criar conta" num produto multi-tenant de consultoria), <b>MFA é obrigatório</b> por A.8.5 e não opcional, e <b>o cliente entra pelo mesmo login</b> — o papel decide o que ele vê, não o endereço.</p>
+<div class="dv-opts ness ness-dark">
+
+<div class="dv-opt" id="7a"><div class="dv-olabel"><a class="dv-oid" href="#7a">7a</a>Entrar — e-mail primeiro, SSO quando o domínio exige</div>
+<div class="dv-card" style="width:440px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/entrar</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:32px 40px 36px;gap:20px;align-items:stretch">
+<div style="display:flex;flex-direction:column;gap:4px">
+<div style="font:500 22px/1 var(--font-heading);letter-spacing:-.015em;color:var(--color-neutral-900)">n<span style="color:#00ade8">.</span>iso</div>
+<div class="wf-sub">Sistema de gestão de segurança da informação</div>
+</div>
+<div class="fld"><label>E-mail corporativo</label><span class="in"></span></div>
+<div class="fld"><label>Senha</label><span class="in"></span></div>
+<div class="chips"><span class="hint" style="flex:1">esqueci minha senha</span><span class="wf-btn pri">Entrar</span></div>
+<div style="display:flex;align-items:center;gap:10px"><span style="flex:1;height:1px;background:var(--color-divider)"></span><span class="hint">ou</span><span style="flex:1;height:1px;background:var(--color-divider)"></span></div>
+<div class="wf-btn" style="justify-content:center;height:32px">Entrar com SSO da minha organização</div>
+<div class="blueprint" style="padding:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div class="wf-sub" style="margin:0">Acesso apenas por convite. Se você é cliente e não recebeu o convite, peça ao consultor responsável pelo projeto.</div>
+</div>
+<div class="authsig"><b>ness<i>.</i></b><s>privacidade · termos · n.iso 4.2</s></div>
+<div class="note">o domínio do e-mail decide: senha, SSO obrigatório ou convite pendente</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="7b"><div class="dv-olabel"><a class="dv-oid" href="#7b">7b</a>MFA — segundo fator obrigatório (A.8.5)</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:400px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/entrar/mfa</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:28px 36px 32px;gap:18px;align-items:stretch">
+<div><div class="wf-meta" style="margin-bottom:8px">Passo 2 de 2<b>r.esper@ness.com.br</b></div><h3 class="wf-h">Código do aplicativo autenticador</h3></div>
+<div class="chips" style="gap:8px">
+<span class="in" style="width:38px;height:44px"></span><span class="in" style="width:38px;height:44px"></span><span class="in" style="width:38px;height:44px"></span>
+<span class="in" style="width:38px;height:44px"></span><span class="in" style="width:38px;height:44px"></span><span class="in" style="width:38px;height:44px"></span>
+</div>
+<div class="chips"><span class="hint" style="flex:1">expira em 24s</span><span class="wf-btn">Usar código de recuperação</span><span class="wf-btn pri">Verificar</span></div>
+<div class="authsig"><b>ness<i>.</i></b><s>suporte · n.iso 4.2</s></div>
+<div class="note">6 campos, colar funciona, avanço automático — ninguém digita isso com calma</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:400px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/entrar/mfa · primeiro acesso</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:24px 36px 28px;gap:16px;align-items:stretch">
+<div><h3 class="wf-h">Configure seu segundo fator</h3><p class="wf-sub">Obrigatório para todos os papéis — inclusive cliente e auditor externo.</p></div>
+<div style="display:flex;gap:14px;align-items:center">
+<div class="ph" style="width:92px;height:92px;flex:none">QR do<br>TOTP</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div class="wf-sub" style="margin:0">Escaneie com Authy, 1Password ou Google Authenticator.</div>
+<div class="hint">ou insira a chave: JBSW · Y3DP · EHPK · 3PXP</div>
+</div>
+</div>
+<div class="blocker" style="border-left-color:#f59e0b;background:rgba(245,158,11,.10)"><span>Guarde os 8 códigos de recuperação antes de continuar — eles não são exibidos de novo.</span><span class="wf-btn">Baixar</span></div>
+<div class="chips"><span class="wf-btn pri" style="flex:1;justify-content:center">Ativar MFA e entrar</span></div>
+<div class="authsig"><b>ness<i>.</i></b><s>suporte · n.iso 4.2</s></div>
+</div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="7d"><div class="dv-olabel"><a class="dv-oid" href="#7d">7d</a>SSO federado — descoberta por domínio e configuração por tenant</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:400px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/entrar · domínio com IdP</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:28px 36px 32px;gap:16px;align-items:stretch">
+<div style="font:500 20px/1 var(--font-heading);letter-spacing:-.015em;color:var(--color-neutral-900)">n<span style="color:#00ade8">.</span>iso</div>
+<div class="fld"><label>E-mail corporativo</label><span class="in" style="display:flex;align-items:center;padding:0 8px;font:400 9.5px/1 var(--font-body);color:var(--color-neutral-700)">m.barros@twyn.com</span></div>
+<div class="blueprint" style="padding:12px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:500 10px/1.4 var(--font-body);color:var(--color-neutral-900)">twyn.com autentica pelo provedor da organização</div>
+<div class="wf-sub" style="margin:4px 0 0">Senha e MFA ficam no provedor de identidade. O n.iso não guarda credencial deste tenant.</div>
+</div>
+<div class="wf-btn pri" style="justify-content:center;height:32px">Continuar no provedor da Twyn</div>
+<div class="hint">não é meu e-mail · entrar com conta local (convidado)</div>
+<div class="authsig"><b>ness<i>.</i></b><s>privacidade · termos · n.iso 4.2</s></div>
+<div class="note">com IdP configurado o campo de senha não aparece — pedir senha que não existe é erro clássico</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:620px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/config/sso</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Sistema</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>Usuários</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>SSO / SCIM</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">SSO e provisionamento</h3></div><div class="wf-acts"><span class="wf-btn">Testar conexão</span><span class="wf-btn pri">Salvar</span></div></div>
+<div class="wf-meta">Tenant Twyn<b>OIDC</b><s>provedor self-hosted do cliente</s></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div class="fld"><label>Issuer / discovery URL</label><span class="in" style="display:flex;align-items:center;padding:0 8px;font:400 8.5px/1 ui-monospace,monospace;color:var(--color-neutral-700)">https://id.twyn.com/application/o/niso/</span></div>
+<div class="fld"><label>Client ID</label><span class="in"></span></div>
+<div class="fld"><label>Client secret</label><span class="in"></span></div>
+<div class="fld"><label>Protocolo</label><div class="chips"><span class="chip on">OIDC</span><span class="chip">SAML 2.0</span></div></div>
+</div>
+<div>
+<div class="wf-meta" style="margin-bottom:6px">Mapeamento de grupos → papéis</div>
+<table class="wf-tbl">
+<thead><tr><th>Grupo no IdP</th><th style="width:96px">Papel no n.iso</th><th style="width:70px">Usuários</th></tr></thead>
+<tbody>
+<tr><td>niso-admins</td><td>Admin</td><td>2</td></tr>
+<tr><td>niso-editors</td><td>Editor</td><td>6</td></tr>
+<tr><td>twyn-compliance</td><td>Cliente</td><td>9</td></tr>
+<tr><td><span class="hint">+ adicionar mapeamento</span></td><td>—</td><td>—</td></tr>
+</tbody></table>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div class="blueprint" style="padding:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div class="wf-meta" style="margin-bottom:6px">Provisionamento SCIM</div>
+<div class="chips"><span class="chip on">Criar usuários</span><span class="chip on">Desativar ao sair</span><span class="chip">Sincronizar nomes</span></div>
+<div class="wf-sub" style="margin:6px 0 0">Desprovisionamento automático atende A.5.18.</div>
+</div>
+<div class="blueprint" style="padding:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div class="wf-meta" style="margin-bottom:6px">Sessão federada</div>
+<div class="chips"><span class="chip on">Logout federado (RP-initiated)</span></div>
+<div class="chips" style="margin-top:6px"><span class="chip on">MFA delegado ao IdP</span></div>
+<div class="wf-sub" style="margin:6px 0 0">Sem logout federado, "Encerrar sessão" não encerra nada.</div>
+</div>
+</div>
+<div class="note">tudo aqui é por tenant: um cliente com authentik, outro com conta local</div>
+</div></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="7c"><div class="dv-olabel"><a class="dv-oid" href="#7c">7c</a>Falha, bloqueio e sessão expirada</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:400px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/entrar</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:24px 36px 28px;gap:14px;align-items:stretch">
+<div class="fld"><label>E-mail corporativo</label><span class="in"></span></div>
+<div class="fld"><label style="color:#ef4444">Senha</label><span class="in" style="border-color:#ef4444"></span></div>
+<div class="blocker"><span>E-mail ou senha incorretos. Restam <b style="font-weight:500">2 tentativas</b> antes do bloqueio temporário.</span></div>
+<div class="blueprint" style="padding:10px;display:flex;align-items:center;gap:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<span style="width:15px;height:15px;border:1px solid var(--color-neutral-400);flex:none"></span>
+<span style="flex:1;font:400 9.5px/1.3 var(--font-body);color:var(--color-neutral-800)">Confirme que você é humano</span></div>
+<div class="note">verificação invisível no caminho normal; este passo só aparece a partir da 2ª falha</div>
+<div class="chips"><span class="hint" style="flex:1">esqueci minha senha</span><span class="wf-btn pri" style="opacity:.45">Entrar</span></div>
+<div class="authsig"><b>ness<i>.</i></b><s>privacidade · termos</s></div>
+<div class="note">não dizer qual dos dois errou — enumeração de usuário é achado de pentest</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:400px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa · sessão expirada</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:24px 36px 28px;gap:14px;align-items:stretch">
+<div><h3 class="wf-h">Sua sessão expirou</h3><p class="wf-sub">Por inatividade de 8 h (consultor · papel Cliente expira em 30 min). Nada do que você estava editando foi perdido.</p></div>
+<div class="blueprint" style="padding:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div class="wf-meta" style="margin-bottom:6px">Rascunho preservado<b>A.8.12</b></div>
+<div class="wf-sub" style="margin:0">2 alterações não salvas · status, dono</div>
+</div>
+<div class="fld"><label>Senha de r.esper@ness.com.br</label><span class="in"></span></div>
+<div class="chips"><span class="wf-btn">Sair da conta</span><span class="wf-btn pri" style="flex:1;justify-content:center">Desbloquear e continuar</span></div>
+<div class="authsig"><b>ness<i>.</i></b><s>n.iso 4.2</s></div>
+<div class="note">reautenticar na mesma tela, sem perder o contexto — expirar não pode custar trabalho</div>
+</div></div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Decidido: inatividade de 30 min (Cliente) e 8 h com revalidação diária (consultor); MFA por TOTP, sem SMS; SSO coexiste com senha — por tenant.</p>
+</section>
+
+<section class="dv-turn" id="t6">
+<div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">Decisões vigentes, índice e estados que faltavam</span><span class="dv-flag on">vigente</span></div>
+<p class="dv-tdesc">Este cartão é a regra do kit: o que já está decidido, onde cada tela está e os estados que o protótipo provou existir. Em caso de divergência com telas de turnos anteriores, <b>vale o que está aqui</b>.</p>
+<div class="dv-opts ness ness-dark" style="align-items:stretch">
+
+<div class="dv-opt" id="6a"><div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a>Registro de decisões + índice</div>
+<div class="dv-card" style="width:640px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">kit · n.iso · decisões e índice</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:16px 20px 20px;gap:14px">
+<div class="wf-meta" style="margin-bottom:2px">Decidido<b>não reabrir sem motivo</b></div>
+<table class="wf-tbl">
+<thead><tr><th style="width:106px">Tema</th><th>Regra vigente</th><th style="width:56px">Onde</th></tr></thead>
+<tbody>
+<tr><td>Sessão</td><td>Inatividade de 30 min para papel Cliente; 8 h com revalidação diária para consultor. Expirar reautentica na mesma tela preservando rascunho; sessão federada reautentica no provedor</td><td><a href="#7c">7c</a></td></tr>
+<tr><td>Versões legais</td><td>Nova versão avisa em faixa sem interromper; <b style="font-weight:500">bloqueia o acesso até o aceite</b> apenas quando altera base legal ou retenção — a classificação é campo do documento, não julgamento de quem publica. Aviso prévio de subprocessador: 30 dias</td><td><a href="#8b">8b</a></td></tr>
+<tr><td>MFA</td><td>TOTP e códigos de recuperação. <b style="font-weight:500">Sem SMS</b>; em tenant federado o segundo fator é do provedor</td><td><a href="#7b">7b</a></td></tr>
+<tr><td>Anti-abuso</td><td>Verificação invisível no login, convite e formulários públicos; desafio visível só após 2 falhas; nunca no MFA nem dentro do app (usuário autenticado não prova humanidade). Implementação: Turnstile — sem marca na interface</td><td><a href="#7c">7c</a></td></tr>
+<tr><td>Legal</td><td>Privacidade, termos e subprocessadores existem como página pública versionada; aceite registrado com versão, data e IP; nova versão avisa em faixa e fica listável em “Meus aceites”</td><td><a href="#8a">8a</a></td></tr>
+<tr><td>Autenticação</td><td>Acesso por convite (sem cadastro aberto), MFA obrigatório em todos os papéis, SSO por domínio; sessão expira em 30 min preservando rascunho</td><td><a href="#7a">7a</a></td></tr>
+<tr><td>Federação</td><td>IdP self-hosted por tenant (OIDC ou SAML, ex. authentik): senha e MFA no IdP, papéis vindos de grupos via SCIM, logout federado obrigatório</td><td><a href="#7d">7d</a></td></tr>
+<tr><td>Marca</td><td>Produto <b style="font-weight:500">n.iso</b> em caixa baixa, ponto interno em BlueDot; casa <b style="font-weight:500">ness.</b> obrigatória na autenticação (momento de confiança) e no menu de conta — nunca na área de trabalho</td><td><a href="#7a">7a</a></td></tr>
+<tr><td>Tema</td><td>ness. OLED — fundo #0b1326, cards #162244, accent único #00ade8</td><td><a href="#3b">3b</a></td></tr>
+<tr><td>Shell</td><td>Sidebar fixa (não rola) e recolhível 232→72px; leitura produto → tenant → navegação → conta</td><td><a href="#6b">6b</a></td></tr>
+<tr><td>Headers</td><td>Banda fixa de 48px na sidebar e no conteúdo, fechando na mesma hairline; só o nome da tela no título</td><td><a href="#4a">4a</a></td></tr>
+<tr><td>Tenant</td><td>Seletor de uma linha (nome · norma); fase e prazos ficam na Jornada e no dashboard</td><td><a href="#2c">2c</a></td></tr>
+<tr><td>Identidade</td><td>No rodapé da sidebar; sessão, troca de tenant, tema, trilha e <b style="font-weight:500">Encerrar sessão</b> no menu de conta</td><td><a href="#5a">5a</a></td></tr>
+<tr><td>Gravação</td><td>Imediato + Desfazer em lista e campo simples; rascunho com barra fixa só em documento longo (política, DPIA, questionário)</td><td><a href="#2d">2d</a></td></tr>
+<tr><td>Auditoria</td><td>Toda alteração vira entrada com autor, quando, campo e antes→depois; lote se identifica como lote</td><td><a href="#2d">2d</a></td></tr>
+<tr><td>N/A</td><td>Exige justificativa individual (mín. 40 caracteres); trava status, dono e CMMI; sem ela a SoA não exporta</td><td><a href="#2c">2c</a></td></tr>
+<tr><td>Teclado</td><td>⌘K busca · j/k navega · x seleciona · shift+clique intervalo · enter abre · esc fecha</td><td><a href="#2c">2c</a></td></tr>
+<tr><td>Ícones</td><td>Lucide, traço 1.5, 12–16px, na cor do texto (accent quando ativo); item de lista com estado usa ponto, não ícone</td><td><a href="#6b">6b</a></td></tr>
+</tbody></table>
+<div class="wf-meta" style="margin-top:4px">Índice das telas</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;font:400 9.5px/1.5 var(--font-body);color:var(--color-neutral-700)">
+<span><a href="#8a">8a</a> privacidade · <a href="#8b">8b</a> aceite · <a href="#8c">8c</a> subprocessadores</span>
+<span><a href="#7a">7a</a> login · <a href="#7b">7b</a> MFA · <a href="#7c">7c</a> falha e sessão · <a href="#7d">7d</a> SSO/SCIM</span>
+<span><a href="#6b">6b</a> sidebar recolhida · <a href="#6c">6c</a> menu de conta</span>
+<span><a href="#6d">6d</a> carregando · <a href="#6e">6e</a> sem permissão</span>
+<span><a href="#5a">5a</a> identidade no rodapé (vigente)</span>
+<span><a href="#5b">5b</a> identidade no header (descartada)</span>
+<span><a href="#4a">4a</a> jornada · <a href="#4b">4b</a> políticas</span>
+<span><a href="#4c">4c</a> ROPA · <a href="#4d">4d</a> DPIA · <a href="#4e">4e</a> visão do cliente</span>
+<span><a href="#2a">2a</a> onboarding · <a href="#2b">2b</a> dashboard</span>
+<span><a href="#2c">2c</a> SoA · <a href="#2d">2d</a> detalhe do controle</span>
+<span><a href="#2e">2e</a> novo risco · <a href="#2f">2f</a> matriz 5×5</span>
+<span><a href="#2g">2g</a> evidências · <a href="#2h">2h</a> papéis</span>
+<span><a href="#2i">2i</a> fila de notificações · <a href="#2j">2j</a> vazio/erro</span>
+<span><a href="#1a">1a</a>–<a href="#1d">1d</a> shells comparados (histórico)</span>
+</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="6b"><div class="dv-olabel"><a class="dv-oid" href="#6b">6b</a>Sidebar recolhida — trilha de 72px</div>
+<div class="dv-card" style="width:520px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa</span></div>
+<div class="wf-body">
+<div class="wf-side" style="width:72px">
+<div class="wf-brand" style="justify-content:center;padding:0"><b>n<i>.</i></b></div>
+<div class="wf-proj" style="justify-content:center;margin:8px 12px"><em>TW</em></div>
+<div class="wf-nav" style="justify-content:center;padding:0" title="Jornada"><svg class="wf-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg></div>
+<div class="wf-nav on" style="justify-content:center;padding:0" title="SoA"><svg class="wf-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg></div>
+<div class="wf-nav" style="justify-content:center;padding:0" title="Riscos"><svg class="wf-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></div>
+<div class="wf-nav" style="justify-content:center;padding:0" title="Evidências"><svg class="wf-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></div>
+<div class="wf-foot" style="justify-content:center;margin:0 12px"><b>RE</b></div>
+</div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Declaração de Aplicabilidade</h3></div><div class="wf-acts"><span class="wf-btn">»</span><span class="wf-btn pri">Exportar SoA</span></div></div>
+<div class="chips"><span class="srch">Buscar controle…</span><span class="kbd">⌘K</span><span class="chip on">Gap ×</span></div>
+<table class="wf-tbl"><thead><tr><th style="width:46px">Ctrl</th><th>Controle</th><th style="width:58px">Status</th><th style="width:60px">Dono</th></tr></thead><tbody>
+<tr><td>A.8.12</td><td>Prevenção de vazamento de dados</td><td><span class="tag t-bad">gap</span></td><td>—</td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td><span class="tag t-bad">gap</span></td><td>SecOps</td></tr>
+<tr><td>A.8.25</td><td>Desenvolvimento seguro</td><td><span class="tag t-bad">gap</span></td><td>Eng</td></tr>
+<tr><td>A.8.28</td><td>Codificação segura</td><td><span class="tag t-bad">gap</span></td><td>Eng</td></tr>
+</tbody></table>
+<div class="note">recolhida, a navegação é só ícone — por isso ícone precisa ser reconhecível, não decorativo</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="6c"><div class="dv-olabel"><a class="dv-oid" href="#6c">6c</a>Menu de conta aberto — tratamento vigente</div>
+<div class="dv-card" style="width:420px;overflow:visible">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-foot open"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div>
+<div class="acct" style="left:8px;bottom:52px">
+<div class="who"><b>RE</b><span>R. Esper<em>r.esper@ness.com.br</em></span></div>
+<hr>
+<div><div class="lbl" style="margin-bottom:6px">Tenant</div>
+<div class="it on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Twyn<s>27001</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path></svg>Forense<s>27001</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path></svg>ness. labs<s>27701</s></div></div>
+<hr>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3"></path></svg>Minha conta e MFA</div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9"></path></svg>Tema<s>escuro</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>Trilha da minha sessão</div>
+<hr>
+<div class="it out"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg>Encerrar sessão<s>⇧⌘Q</s></div>
+<hr>
+<div class="acct-sig">ness<i>.</i><s>n.iso 4.2</s></div>
+</div>
+</div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">SoA</h3></div></div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:46px">A.8.12</td><td>DLP</td><td style="width:44px"><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.8.16</td><td>Monitoramento</td><td><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.8.28</td><td>Codificação segura</td><td><span class="tag t-bad">gap</span></td></tr>
+</tbody></table>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="6d"><div class="dv-olabel"><a class="dv-oid" href="#6d">6d</a>Carregando — skeleton, não spinner</div>
+<div class="dv-card" style="width:460px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa</span></div>
+<div class="wf-body"><div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Declaração de Aplicabilidade</h3></div><div class="wf-acts"><span class="wf-btn" style="opacity:.45">Exportar SoA</span></div></div>
+<div class="chips"><span class="srch">Buscar controle…</span><span class="kbd">⌘K</span></div>
+<table class="wf-tbl">
+<thead><tr><th style="width:46px">Ctrl</th><th>Controle</th><th style="width:58px">Status</th><th style="width:60px">Dono</th></tr></thead>
+<tbody>
+<tr><td><span class="sk" style="width:30px"></span></td><td><span class="sk" style="width:76%"></span></td><td><span class="sk" style="width:34px"></span></td><td><span class="sk" style="width:28px"></span></td></tr>
+<tr><td><span class="sk" style="width:30px"></span></td><td><span class="sk" style="width:62%"></span></td><td><span class="sk" style="width:34px"></span></td><td><span class="sk" style="width:34px"></span></td></tr>
+<tr><td><span class="sk" style="width:30px"></span></td><td><span class="sk" style="width:84%"></span></td><td><span class="sk" style="width:34px"></span></td><td><span class="sk" style="width:22px"></span></td></tr>
+<tr><td><span class="sk" style="width:30px"></span></td><td><span class="sk" style="width:54%"></span></td><td><span class="sk" style="width:34px"></span></td><td><span class="sk" style="width:30px"></span></td></tr>
+<tr><td><span class="sk" style="width:30px"></span></td><td><span class="sk" style="width:70%"></span></td><td><span class="sk" style="width:34px"></span></td><td><span class="sk" style="width:26px"></span></td></tr>
+</tbody></table>
+<div class="note">as colunas já têm largura: a tabela não pode pular quando os dados chegam</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="6e"><div class="dv-olabel"><a class="dv-oid" href="#6e">6e</a>Sem permissão e erro — papel Cliente</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:420px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa · sessão: cliente@twyn.com</span></div>
+<div class="wf-body">
+<div class="wf-side" style="width:118px">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i></i></span><em>27001</em></div>
+<div class="wf-grp">Meu projeto</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>Andamento</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 5-2 6-2 6h18s-2-1-2-6a7 7 0 0 0-7-7"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>Pendências</div>
+<div class="wf-foot"><b>MB</b><span>M. Barros<em>cliente · twyn</em></span><i>▴</i></div>
+</div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">SoA</h3></div></div>
+<div class="blueprint" style="padding:12px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:600 11px var(--font-heading)">A SoA não faz parte do seu acesso</div>
+<p class="wf-sub" style="margin:4px 0 8px">Seu papel é <b>Cliente</b> neste projeto. Você vê andamento, pendências e documentos aprovados.</p>
+<div class="chips"><span class="wf-btn">Solicitar acesso</span><span class="wf-btn pri">Ir para Andamento</span></div>
+</div>
+<div class="note">a rota existe, o item nem aparece no menu — negar acesso não é esconder mal</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:420px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:0 16px 16px">
+<div class="wf-hdr"><div><h3 class="wf-h">Declaração de Aplicabilidade</h3></div></div>
+<div class="blocker" style="flex-direction:column;align-items:stretch;gap:8px">
+<span>Não foi possível carregar os controles. Seus filtros foram preservados.</span>
+<div class="chips"><span class="hint" style="flex:1">req 4f2a-91c · 16:38 BRT</span><span class="wf-btn">Copiar código</span><span class="wf-btn pri">Tentar de novo</span></div>
+</div>
+</div></div>
+</div>
+</div></div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Onde vive a identidade do usuário</span><span class="dv-flag on">decidido · 5a</span></div>
+<p class="dv-tdesc">Mesma tela de <a class="dv-oid" href="#2b">2b</a>, a mesma peça de identidade em dois lugares. <a class="dv-oid" href="#5a">5a</a> a leva para o rodapé da sidebar; <a class="dv-oid" href="#5b">5b</a> é o que está no kit hoje, na banda fixa do conteúdo. Diga qual fica e eu aplico nas 21 telas.</p>
+<div class="dv-opts ness ness-dark">
+
+<div class="dv-opt" id="5a"><div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Rodapé da sidebar — identidade junto da conta</div>
+<div class="dv-card" style="width:620px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/dashboard</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Visão geral</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>Dashboard</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>Projetos</div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-grp">Operacional</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>Evidências</div>
+<div class="wf-foot open"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div>
+<div class="acct" style="left:8px;bottom:52px">
+<div class="who"><b>RE</b><span>R. Esper<em>r.esper@ness.com.br</em></span></div>
+<hr>
+<div><div class="lbl" style="margin-bottom:6px">Tenant</div>
+<div class="it on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Twyn<s>27001</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path></svg>Forense<s>27001</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path></svg>ness. labs<s>27701</s></div></div>
+<hr>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3"></path></svg>Minha conta e MFA</div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9"></path></svg>Tema<s>escuro</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>Trilha da minha sessão</div>
+<hr>
+<div class="it out"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg>Encerrar sessão<s>⇧⌘Q</s></div>
+<hr>
+<div class="acct-sig">ness<i>.</i><s>n.iso 4.2</s></div>
+</div>
+</div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Dashboard</h3><p class="wf-sub">Auditoria externa em 47 dias · responsável: R. Esper</p></div><div class="wf-acts"><span class="wf-btn">Exportar</span><span class="wf-btn pri">+ Evidência</span></div></div>
+<div class="wf-kpis">
+<div class="wf-kpi"><b>78/93</b><span class="tag t-ok">83,8% controles</span></div>
+<div class="wf-kpi"><b>12</b><span class="tag t-warn">gaps abertos</span></div>
+<div class="wf-kpi"><b>2</b><span class="tag t-bad">riscos críticos</span></div>
+<div class="wf-kpi"><b>31</b><span class="tag t-info">a validar</span></div>
+</div>
+<div style="display:grid;grid-template-columns:1.35fr 1fr;gap:10px">
+<div>
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">Bloqueia a certificação</div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:44px">A.8.12</td><td>Prevenção de vazamento de dados</td><td style="width:56px"><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.5.30</td><td>Prontidão de TIC</td><td><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td><span class="tag t-warn">parcial</span></td></tr>
+<tr><td>A.6.3</td><td>Conscientização e treinamento</td><td><span class="tag t-warn">parcial</span></td></tr>
+</tbody></table>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600)">Burnup de gaps</div>
+<div class="ph" style="height:88px">gráfico de linha<br>gaps × semana</div>
+</div>
+</div>
+</div></div>
+</div>
+<div class="note">conta e sessão moram na coluna da conta; o header do conteúdo fica só para a tarefa</div>
+</div>
+
+<div class="dv-opt" id="5b"><div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Banda do conteúdo — identidade junto das ações</div>
+<div class="dv-card" style="width:620px;overflow:visible">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/dashboard</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Visão geral</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>Dashboard</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>Projetos</div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-grp">Operacional</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>Evidências</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Dashboard</h3><p class="wf-sub">Auditoria externa em 47 dias · responsável: R. Esper</p></div><div class="wf-user open"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Exportar</span><span class="wf-btn pri">+ Evidência</span></div>
+<div class="acct" style="right:8px;top:calc(100% + 6px)">
+<div class="who"><b>RE</b><span>R. Esper<em>r.esper@ness.com.br</em></span></div>
+<hr>
+<div><div class="lbl" style="margin-bottom:6px">Tenant</div>
+<div class="it on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Twyn<s>27001</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path></svg>Forense<s>27001</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path></svg>ness. labs<s>27701</s></div></div>
+<hr>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3"></path></svg>Minha conta e MFA</div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9"></path></svg>Tema<s>escuro</s></div>
+<div class="it"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>Trilha da minha sessão</div>
+<hr>
+<div class="it out"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg>Encerrar sessão<s>⇧⌘Q</s></div>
+<hr>
+<div class="acct-sig">ness<i>.</i><s>n.iso 4.2</s></div>
+</div></div>
+<div class="wf-kpis">
+<div class="wf-kpi"><b>78/93</b><span class="tag t-ok">83,8% controles</span></div>
+<div class="wf-kpi"><b>12</b><span class="tag t-warn">gaps abertos</span></div>
+<div class="wf-kpi"><b>2</b><span class="tag t-bad">riscos críticos</span></div>
+<div class="wf-kpi"><b>31</b><span class="tag t-info">a validar</span></div>
+</div>
+<table class="wf-tbl"><thead><tr><th style="width:44px">Ctrl</th><th>Bloqueia a certificação</th><th style="width:56px">Status</th><th style="width:52px">Dono</th></tr></thead><tbody>
+<tr><td>A.8.12</td><td>Prevenção de vazamento de dados</td><td><span class="tag t-bad">gap</span></td><td>—</td></tr>
+<tr><td>A.5.30</td><td>Prontidão de TIC</td><td><span class="tag t-bad">gap</span></td><td>TI</td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td><span class="tag t-warn">parcial</span></td><td>SecOps</td></tr>
+<tr><td>A.6.3</td><td>Conscientização e treinamento</td><td><span class="tag t-warn">parcial</span></td><td>RH</td></tr>
+<tr><td>A.5.19</td><td>Segurança em fornecedores</td><td><span class="tag t-warn">parcial</span></td><td>Jur</td></tr>
+<tr><td>A.8.28</td><td>Codificação segura</td><td><span class="tag t-bad">gap</span></td><td>Eng</td></tr>
+<tr><td>A.8.2</td><td>Direitos de acesso privilegiado</td><td><span class="tag t-warn">parcial</span></td><td>TI</td></tr>
+</tbody></table>
+</div></div>
+</div>
+<div class="note">a sessão fica à vista, mas o menu abre sobre o conteúdo da tarefa</div>
+
+</div>
+<p class="dv-next">Peça a seguir: “fico com <a class="dv-oid" href="#5a">5a</a>, aplique nas 21 telas” · “mostre o menu aberto da conta (trocar tenant, tema, sair)” · “estado de impersonação com trilha de auditoria”</p>
+</section>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">As telas que faltavam — no tema <a class="dv-oid" href="#3b">3b</a></span><span class="dv-flag">telas · regras no turno 6</span></div>
+<p class="dv-tdesc">Jornada de implementação, gestão de políticas, ROPA e DPIA (privacidade) e a visão reduzida do papel Cliente. Mesmo shell denso de <a class="dv-oid" href="#1a">1a</a>, mesmos tokens ness. OLED do resto do kit.</p>
+<div class="dv-opts ness ness-dark">
+
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Jornada — fase aberta, itens e upload</div>
+<div class="dv-card" style="width:620px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/jornada/fase-14</span></div>
+<div class="wf-body">
+<div class="wf-side" style="width:152px">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Bloco 3 · Riscos</div>
+<div class="wf-nav"><span class="wf-ic" style="background:var(--color-accent-500)"></span>12 Inventário de ativos</div>
+<div class="wf-nav"><span class="wf-ic" style="background:var(--color-accent-500)"></span>13 Valoração C-I-D</div>
+<div class="wf-nav on"><span class="wf-ic"></span>14 Análise de riscos</div>
+<div class="wf-nav"><span class="wf-ic"></span>15 Plano de tratamento</div>
+<div class="wf-grp">Bloco 4 · Controles</div>
+<div class="wf-nav"><span class="wf-ic"></span>16 SoA</div>
+<div class="wf-nav"><span class="wf-ic"></span>17 Políticas</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.1em;color:var(--color-neutral-600)">FASE 14 DE 41 · BLOCO 3</div><h3 class="wf-h">Análise de riscos</h3><p class="wf-sub">6 de 9 itens concluídos · M. Santos · prazo 26/09</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Interpretação IA</span><span class="wf-btn pri">Concluir fase</span></div></div>
+<div class="wf-meta">Bloco 3 · Riscos<b>Fase 14 de 41</b></div>
+<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:4px;background:var(--color-neutral-200);display:block"><span style="display:block;width:67%;height:5px;background:var(--color-accent)"></span></span><span style="font:600 9px ui-monospace,monospace;color:var(--color-neutral-700)">67%</span></div>
+<table class="wf-tbl">
+<thead><tr><th style="width:52px">Tipo</th><th>Item da fase</th><th style="width:74px">Responsável</th><th style="width:62px">Situação</th></tr></thead>
+<tbody>
+<tr><td><span class="tag t-n">tarefa</span></td><td>Definir critérios de aceitação de risco</td><td>M. Santos</td><td><span class="tag t-ok">feito</span></td></tr>
+<tr><td><span class="tag t-n">doc</span></td><td>Metodologia de análise de riscos</td><td>M. Santos</td><td><span class="tag t-ok">feito</span></td></tr>
+<tr><td><span class="tag t-n">tarefa</span></td><td>Levantar riscos por ativo (38 de 52)</td><td>Cliente</td><td><span class="tag t-warn">em curso</span></td></tr>
+<tr><td><span class="tag t-n">evid.</span></td><td>Ata do workshop de riscos</td><td>Cliente</td><td><span class="tag t-bad">falta</span></td></tr>
+<tr><td><span class="tag t-n">doc</span></td><td>Relatório de avaliação de riscos</td><td>R. Esper</td><td><span class="tag t-bad">falta</span></td></tr>
+</tbody></table>
+<div class="blueprint" style="padding:9px;display:flex;gap:10px;align-items:center"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div class="ph" style="flex:1;height:38px">arrastar aqui a ata do workshop</div>
+<div style="width:150px"><div style="font:600 9.5px var(--font-heading)">Ata do workshop</div><div class="wf-sub">exigida pela fase · vai para Evidências com hash</div></div></div>
+<div class="note">a fase é a lista de pendências do cliente — não um relatório de progresso</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Políticas — 10 templates ISO + geração assistida</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/politicas</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Operacional</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>Políticas</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"></path><path d="m22 10-7.5 7.5L13 16"></path></svg>Ciência de políticas</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>Auditorias</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>CAPA</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Gestão de políticas</h3><p class="wf-sub">10 templates · 6 publicadas · 1 em revisão</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Importar .docx</span><span class="wf-btn pri">Gerar com IA</span></div></div>
+<div class="chips"><span class="chip on">Publicadas 6</span><span class="chip">Rascunho 2</span><span class="chip">Vencendo 1</span><span class="chip">Não iniciadas 1</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div class="blueprint" style="padding:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="tag t-ok">publicada v3</span><div style="font:600 10.5px var(--font-heading);margin-top:5px">ISP · Segurança da informação</div><div class="wf-sub">ciência: 118 de 124 · revisar em 4 meses</div></div>
+<div class="blueprint" style="padding:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="tag t-warn">vence em 21 dias</span><div style="font:600 10.5px var(--font-heading);margin-top:5px">ACP · Controle de acesso</div><div class="wf-sub">ciência: 91 de 124 · revisão anual</div></div>
+<div class="blueprint" style="padding:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="tag t-info">rascunho IA</span><div style="font:600 10.5px var(--font-heading);margin-top:5px">IRP · Resposta a incidentes</div><div class="wf-sub">gerada do escopo · aguarda revisão do DPO</div></div>
+<div class="blueprint" style="padding:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="tag t-n">não iniciada</span><div style="font:600 10.5px var(--font-heading);margin-top:5px">SDP · Desenvolvimento seguro</div><div class="wf-sub">exigida por A.8.25 · sem dono</div></div>
+</div>
+<table class="wf-tbl">
+<thead><tr><th>Demais templates</th><th style="width:60px">Controles</th><th style="width:70px">Situação</th></tr></thead>
+<tbody>
+<tr><td>AUP · Uso aceitável</td><td>A.5.10</td><td><span class="tag t-ok">publicada</span></td></tr>
+<tr><td>BCP · Continuidade</td><td>A.5.30</td><td><span class="tag t-bad">gap</span></td></tr>
+<tr><td>DPP · Proteção de dados</td><td>A.5.34</td><td><span class="tag t-ok">publicada</span></td></tr>
+</tbody></table>
+<div class="note">política que ninguém deu ciência não é controle — mostrar o número junto</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="4c"><div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>ROPA — registro de tratamento (LGPD / 27701)</div>
+<div class="dv-card" style="width:640px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/ropa</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27701</em></div>
+<div class="wf-grp">Privacidade</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path></svg>ROPA</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>DPIA / RIPD</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"></path></svg>Titulares</div>
+<div class="wf-grp">Filtros salvos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>Dados sensíveis</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>Retenção vencida</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Registro de operações de tratamento</h3><p class="wf-sub">24 operações · 5 com base legal a confirmar · 2 aprovações pendentes</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Exportar ANPD</span><span class="wf-btn pri">+ Operação</span></div></div>
+<div class="chips"><span class="srch">Buscar por processo, sistema ou titular…</span><span class="chip on">Sensível ×</span><span class="chip">+ Base legal</span><span class="chip">+ Transferência internacional</span></div>
+<table class="wf-tbl">
+<thead><tr><th>Operação</th><th style="width:70px">Titulares</th><th style="width:84px">Base legal</th><th style="width:56px">Retenção</th><th style="width:64px">Aprovação</th></tr></thead>
+<tbody>
+<tr><td>Folha de pagamento</td><td>Colaboradores</td><td>Obrig. legal</td><td>5 anos</td><td><span class="tag t-ok">aprovada</span></td></tr>
+<tr><td>Recrutamento e seleção</td><td>Candidatos</td><td>Legítimo int.</td><td>6 meses</td><td><span class="tag t-warn">revisar</span></td></tr>
+<tr><td>Atestados de saúde ocupacional</td><td>Colaboradores</td><td>Obrig. legal</td><td>20 anos</td><td><span class="tag t-info">no DPO</span></td></tr>
+<tr><td>Analytics do site</td><td>Visitantes</td><td>Consentim.</td><td>13 meses</td><td><span class="tag t-bad">sem base</span></td></tr>
+<tr><td>Suporte via chat (fornecedor US)</td><td>Clientes</td><td>Contrato</td><td>2 anos</td><td><span class="tag t-warn">transf. int.</span></td></tr>
+</tbody></table>
+<div class="blueprint" style="padding:9px;display:flex;gap:10px;align-items:center"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="flex:1"><div style="font:600 9.5px var(--font-heading)">Analytics do site — consentimento sem registro de coleta</div><div class="wf-sub">Bloqueia o relatório ANPD. Anexar prova do banner ou trocar a base legal.</div></div>
+<span class="wf-btn">Trocar base</span><span class="wf-btn pri">Anexar prova</span></div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="4d"><div class="dv-olabel"><a class="dv-oid" href="#4d">4d</a>DPIA / RIPD — parecer estruturado do DPO</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/dpia/03</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27701</em></div>
+<div class="wf-grp">Privacidade</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path></svg>ROPA</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>DPIA / RIPD</div>
+<div class="wf-grp">Relatórios</div>
+<div class="wf-nav"><span class="wf-ic"></span>01 Biometria portaria</div>
+<div class="wf-nav"><span class="wf-ic"></span>02 Monitoramento de e-mail</div>
+<div class="wf-nav on" style="box-shadow:inset 2px 0 0 var(--color-accent)"><span class="wf-ic"></span>03 Chat com IA</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.1em;color:var(--color-neutral-600)">RIPD 03 · ALTO RISCO</div><h3 class="wf-h">Atendimento com assistente de IA</h3><p class="wf-sub">Titulares: clientes · dados: identificação, histórico de compras</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Gerar PDF</span><span class="wf-btn pri">Enviar ao DPO</span></div></div>
+<div class="wf-meta">RIPD 03<b>Alto risco</b><s>titulares: clientes</s></div>
+<div class="wf-tabs"><span class="wf-tab">Necessidade</span><span class="wf-tab">Riscos ao titular</span><span class="wf-tab on">Parecer do DPO</span><span class="wf-tab">Medidas</span></div>
+<div style="display:grid;grid-template-columns:1fr 176px;gap:12px">
+<div style="display:flex;flex-direction:column;gap:9px">
+<div class="fld"><label>Conclusão do DPO</label><div class="chips"><span class="chip on">Aprovar com medidas</span><span class="chip">Aprovar</span><span class="chip">Reprovar</span></div></div>
+<div class="fld"><label>Fundamentação</label><span class="sk" style="width:100%"></span><span class="sk" style="width:96%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:52%"></span></div>
+<div><div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:4px">Medidas exigidas antes do go-live</div>
+<table class="wf-tbl"><tbody>
+<tr><td>Retenção de transcrições reduzida a 90 dias</td><td style="width:56px"><span class="tag t-warn">em curso</span></td></tr>
+<tr><td>Aviso de IA no início do atendimento</td><td><span class="tag t-ok">feito</span></td></tr>
+<tr><td>Rota humana em 1 clique</td><td><span class="tag t-bad">falta</span></td></tr>
+</tbody></table></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="blueprint" style="padding:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">Risco residual</div>
+<div style="font:600 20px/1 var(--font-body);margin-bottom:3px">Médio</div>
+<div class="wf-sub">era Alto antes das medidas</div></div>
+<div class="blueprint" style="padding:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">Vínculos</div>
+<div class="wf-sub">ROPA: Suporte via chat<br>Riscos: R-041<br>Controles: A.5.34, A.8.11</div></div>
+<div class="note">o parecer só fecha quando as medidas fecham</div>
+</div>
+</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="4e"><div class="dv-olabel"><a class="dv-oid" href="#4e">4e</a>Visão do cliente — papel Cliente, mesmo app</div>
+<div class="dv-card" style="width:560px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/  ·  sessão: cliente@twyn.com</span></div>
+<div class="wf-body">
+<div class="wf-side" style="width:124px">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i></i></span><em>27001</em></div>
+<div class="wf-grp">Meu projeto</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>Andamento</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="6" rx="1"></rect><path d="m3 17 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>Minhas pendências</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m17 8-5-5-5 5"></path><path d="M12 3v12"></path></svg>Enviar evidência</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg>Documentos</div>
+<div class="wf-foot"><b>MB</b><span>M. Barros<em>cliente · twyn</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Andamento</h3><p class="wf-sub">Fase 14 de 41 · auditoria externa prevista para 27/10</p></div><div class="wf-user"><b>MB</b><span>M. Barros<em>cliente · twyn</em></span></div></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+<div class="wf-kpi"><b>34%</b><span>da jornada concluída</span></div>
+<div class="wf-kpi"><b>4</b><span class="tag t-warn">pendências suas</span></div>
+<div class="wf-kpi"><b>12</b><span>documentos prontos</span></div>
+</div>
+<div><div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">O que precisamos de você</div>
+<table class="wf-tbl"><tbody>
+<tr><td>Ata do workshop de riscos</td><td style="width:64px"><span class="tag t-bad">vence 3d</span></td><td style="width:54px"><span class="wf-btn">Enviar</span></td></tr>
+<tr><td>Bloco 5 do questionário (12 perguntas)</td><td><span class="tag t-warn">em curso</span></td><td><span class="wf-btn">Abrir</span></td></tr>
+<tr><td>Confirmar donos dos ativos de TI</td><td><span class="tag t-info">aguarda</span></td><td><span class="wf-btn">Abrir</span></td></tr>
+<tr><td>Ciência da política de acesso (33 pessoas)</td><td><span class="tag t-info">aguarda</span></td><td><span class="wf-btn">Ver</span></td></tr>
+</tbody></table></div>
+<div class="ph" style="height:44px">linha do tempo simplificada das 41 fases</div>
+<div class="note">sem SoA, sem risco bruto, sem proposta — só o que o cliente precisa fazer</div>
+</div></div>
+</div></div>
+
+</div>
+<p class="dv-next">Peça a seguir: “versão mobile de <a class="dv-oid" href="#4e">4e</a>” · “tela de CAPA e auditorias” · “subir a fidelidade de <a class="dv-oid" href="#4c">4c</a> para protótipo clicável”</p>
+</section>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Industry retunado para a marca ness.</span><span class="dv-flag on">decidido · 3b</span></div>
+<p class="dv-tdesc">Mesma estrutura de <a class="dv-oid" href="#2b">2b</a> e <a class="dv-oid" href="#2c">2c</a>, só com os tokens trocados: accent único <b>#00ADE8</b>, Montserrat nos títulos sobre Inter na interface, tinta #0E1116, wordmark em caixa baixa com o ponto ciano. Sem gradiente e sem sombra, como manda o guia. <a class="dv-oid" href="#3a">3a</a> mantém o fundo claro técnico; <a class="dv-oid" href="#3b">3b</a> usa o canvas OLED #070b14 do nISO. O esqueleto blueprint (moldura de canto, grade, tabela densa) continua sendo o do Industry.</p>
+<div class="dv-opts">
+
+<div class="dv-opt ness" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>ness. claro — fundo técnico, accent ciano</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:620px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/dashboard</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Visão geral</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>Dashboard</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>Projetos</div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-grp">Operacional</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>Evidências</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Dashboard</h3><p class="wf-sub">Auditoria externa em 47 dias · responsável: R. Esper</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Exportar</span><span class="wf-btn pri">+ Evidência</span></div></div>
+<div class="wf-kpis">
+<div class="wf-kpi"><b>78/93</b><span class="tag t-ok">83,8% controles</span></div>
+<div class="wf-kpi"><b>12</b><span class="tag t-warn">gaps abertos</span></div>
+<div class="wf-kpi"><b>2</b><span class="tag t-bad">riscos críticos</span></div>
+<div class="wf-kpi"><b>31</b><span class="tag t-info">a validar</span></div>
+</div>
+<div style="display:grid;grid-template-columns:1.35fr 1fr;gap:10px">
+<div>
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">Bloqueia a certificação</div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:44px">A.8.12</td><td>Prevenção de vazamento de dados</td><td style="width:56px"><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.5.30</td><td>Prontidão de TIC</td><td><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td><span class="tag t-warn">parcial</span></td></tr>
+<tr><td>A.6.3</td><td>Conscientização e treinamento</td><td><span class="tag t-warn">parcial</span></td></tr>
+</tbody></table>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600)">Burnup de gaps</div>
+<div class="ph" style="height:88px">gráfico de linha<br>gaps × semana</div>
+</div>
+</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:620px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa?dominio=A.8&amp;status=gap</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-8h6v8"></path></svg>Governança</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Declaração de Aplicabilidade</h3><p class="wf-sub">93 controles · 14 com os filtros atuais</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Colunas</span><span class="wf-btn pri">Exportar SoA</span></div></div>
+<div class="chips"><span class="srch">Buscar controle, dono ou justificativa…</span><span class="kbd">⌘K</span><span class="chip on">A.8 ×</span><span class="chip on">Gap ×</span><span class="chip">+ CMMI</span></div>
+<table class="wf-tbl">
+<thead><tr><th style="width:46px">Ctrl</th><th>Controle</th><th style="width:56px">CMMI</th><th style="width:58px">Status</th><th style="width:62px">Dono</th></tr></thead>
+<tbody>
+<tr><td>A.8.2</td><td>Direitos de acesso privilegiado</td><td>2</td><td><span class="tag t-warn">parcial</span></td><td>TI</td></tr>
+<tr><td>A.8.8</td><td>Gestão de vulnerabilidades</td><td>2</td><td><span class="tag t-warn">parcial</span></td><td>SecOps</td></tr>
+<tr><td>A.8.12</td><td>Prevenção de vazamento de dados</td><td>0</td><td><span class="tag t-bad">gap</span></td><td>—</td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td>1</td><td><span class="tag t-bad">gap</span></td><td>SecOps</td></tr>
+<tr><td>A.8.28</td><td>Codificação segura</td><td>1</td><td><span class="tag t-bad">gap</span></td><td>Eng</td></tr>
+</tbody></table>
+</div></div>
+</div>
+<div class="note">um accent só: ciano marca o que é interativo, o resto é tinta e hairline</div>
+</div></div>
+
+<div class="dv-opt ness ness-dark" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>ness. OLED — canvas #070b14 do nISO</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:620px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/dashboard</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Visão geral</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>Dashboard</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>Projetos</div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-grp">Operacional</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>Evidências</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Dashboard</h3><p class="wf-sub">Auditoria externa em 47 dias · responsável: R. Esper</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Exportar</span><span class="wf-btn pri">+ Evidência</span></div></div>
+<div class="wf-kpis">
+<div class="wf-kpi"><b>78/93</b><span class="tag t-ok">83,8% controles</span></div>
+<div class="wf-kpi"><b>12</b><span class="tag t-warn">gaps abertos</span></div>
+<div class="wf-kpi"><b>2</b><span class="tag t-bad">riscos críticos</span></div>
+<div class="wf-kpi"><b>31</b><span class="tag t-info">a validar</span></div>
+</div>
+<div style="display:grid;grid-template-columns:1.35fr 1fr;gap:10px">
+<div>
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">Bloqueia a certificação</div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:44px">A.8.12</td><td>Prevenção de vazamento de dados</td><td style="width:56px"><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.5.30</td><td>Prontidão de TIC</td><td><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td><span class="tag t-warn">parcial</span></td></tr>
+<tr><td>A.6.3</td><td>Conscientização e treinamento</td><td><span class="tag t-warn">parcial</span></td></tr>
+</tbody></table>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600)">Burnup de gaps</div>
+<div class="ph" style="height:88px">gráfico de linha<br>gaps × semana</div>
+</div>
+</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:620px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa?dominio=A.8&amp;status=gap</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-8h6v8"></path></svg>Governança</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Declaração de Aplicabilidade</h3><p class="wf-sub">93 controles · 14 com os filtros atuais</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Colunas</span><span class="wf-btn pri">Exportar SoA</span></div></div>
+<div class="chips"><span class="srch">Buscar controle, dono ou justificativa…</span><span class="kbd">⌘K</span><span class="chip on">A.8 ×</span><span class="chip on">Gap ×</span><span class="chip">+ CMMI</span></div>
+<table class="wf-tbl">
+<thead><tr><th style="width:46px">Ctrl</th><th>Controle</th><th style="width:56px">CMMI</th><th style="width:58px">Status</th><th style="width:62px">Dono</th></tr></thead>
+<tbody>
+<tr><td>A.8.2</td><td>Direitos de acesso privilegiado</td><td>2</td><td><span class="tag t-warn">parcial</span></td><td>TI</td></tr>
+<tr><td>A.8.8</td><td>Gestão de vulnerabilidades</td><td>2</td><td><span class="tag t-warn">parcial</span></td><td>SecOps</td></tr>
+<tr><td>A.8.12</td><td>Prevenção de vazamento de dados</td><td>0</td><td><span class="tag t-bad">gap</span></td><td>—</td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td>1</td><td><span class="tag t-bad">gap</span></td><td>SecOps</td></tr>
+<tr><td>A.8.28</td><td>Codificação segura</td><td>1</td><td><span class="tag t-bad">gap</span></td><td>Eng</td></tr>
+</tbody></table>
+</div></div>
+</div>
+<div class="note">as cores de status do nISO (verde/amarelo/vermelho) só rendem contraste no escuro</div>
+</div></div>
+
+</div>
+<p class="dv-next">Peça a seguir: “fico com <a class="dv-oid" href="#3b">3b</a>, reaplique em todas as telas do turno <a class="dv-tid" href="#t2">2</a>” · “gere o CSS de tokens ness. como arquivo do kit” · “ver <a class="dv-oid" href="#3a">3a</a> com a tabela mais densa”</p>
+</section>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Telas do fluxo — sobre o shell <a class="dv-oid" href="#1a">1a</a></span><span class="dv-flag">telas · regras no turno 6</span></div>
+<p class="dv-tdesc">As telas pedidas, desenhadas no shell denso (<a class="dv-oid" href="#1a">1a</a>): onboarding, dashboard, lista, detalhe, criação, busca, notificações, equipe, configurações e estados vazios. Nav e nomenclatura vêm das 28 rotinas do nISO. Trocar de shell redesenha só a moldura — o miolo das telas continua valendo. Tema aplicado: <a class="dv-oid" href="#3b">3b</a> (ness. OLED).</p>
+<div class="dv-opts ness ness-dark">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Onboarding — escopo do tenant em 4 passos</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/onboarding/escopo</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:18px 22px 22px;gap:14px">
+<div class="stepper"><div class="step"><b>✓</b>Organização</div><span class="rail"></span><div class="step on"><b>2</b>Escopo &amp; norma</div><span class="rail"></span><div class="step"><b>3</b>Equipe</div><span class="rail"></span><div class="step"><b>4</b>Primeiro projeto</div></div>
+<div><h3 class="wf-h">Qual norma vamos operar?</h3><p class="wf-sub">Isso define o catálogo de controles, as fases da jornada e os relatórios disponíveis.</p></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+<div class="blueprint" style="padding:10px;border-color:var(--color-accent);background:var(--color-accent-100)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div style="font:600 11px var(--font-heading)">ISO/IEC 27001:2022</div><div class="wf-sub">93 controles do Anexo A · 4 domínios</div></div>
+<div class="blueprint" style="padding:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div style="font:600 11px var(--font-heading)">ISO/IEC 27701 + LGPD</div><div class="wf-sub">Privacidade: ROPA, DPIA, titulares</div></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div class="fld"><label>Escopo declarado</label><span class="in ta"></span></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="fld"><label>Setor</label><span class="in"></span></div>
+<div class="fld"><label>Nº de colaboradores</label><span class="in"></span></div>
+</div>
+</div>
+<div class="chips"><span class="note" style="flex:1">o escopo aparece depois em todo relatório — pedir aqui, uma vez</span><span class="wf-btn">Voltar</span><span class="wf-btn pri">Continuar</span></div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Dashboard — KPI + o que trava a certificação</div>
+<div class="dv-card" style="width:640px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/dashboard</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Visão geral</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>Dashboard</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>Projetos</div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-grp">Operacional</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>Evidências</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>Políticas</div>
+<div class="wf-grp">Sistema</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>Usuários</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Dashboard</h3><p class="wf-sub">Auditoria externa em 47 dias · responsável: R. Esper</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Exportar</span><span class="wf-btn pri">+ Evidência</span></div></div>
+<div class="wf-kpis">
+<div class="wf-kpi"><b>78/93</b><span class="tag t-ok">83,8% controles</span></div>
+<div class="wf-kpi"><b>12</b><span class="tag t-warn">gaps abertos</span></div>
+<div class="wf-kpi"><b>2</b><span class="tag t-bad">riscos críticos</span></div>
+<div class="wf-kpi"><b>31</b><span class="tag t-info">evidências a validar</span></div>
+</div>
+<div style="display:grid;grid-template-columns:1.35fr 1fr;gap:10px">
+<div>
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">Bloqueia a certificação</div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:44px">A.8.12</td><td>Prevenção de vazamento de dados</td><td style="width:56px"><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.5.30</td><td>Prontidão de TIC para continuidade</td><td><span class="tag t-bad">gap</span></td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td><span class="tag t-warn">parcial</span></td></tr>
+<tr><td>A.6.3</td><td>Conscientização e treinamento</td><td><span class="tag t-warn">parcial</span></td></tr>
+<tr><td>A.5.19</td><td>Segurança em fornecedores</td><td><span class="tag t-warn">parcial</span></td></tr>
+</tbody></table>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600)">Burnup de gaps</div>
+<div class="ph" style="height:98px">gráfico de linha<br>gaps abertos × semana</div>
+<div class="note">um número, um gráfico, uma lista de ações — nada de mural de widgets</div>
+</div>
+</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Lista — SoA com filtros facetados</div>
+<div class="dv-card" style="width:640px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa?dominio=A.8&amp;status=gap</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-8h6v8"></path></svg>Governança</div>
+<div class="wf-grp">Filtros salvos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>Meus controles</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>Gaps A.8</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>Sem evidência</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Declaração de Aplicabilidade</h3><p class="wf-sub">93 controles · 14 exibidos com os filtros atuais</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Colunas</span><span class="wf-btn">Exportar SoA</span></div></div>
+<div class="chips"><span class="srch">Buscar controle, dono ou justificativa…</span><span class="kbd">⌘K</span><span class="chip on">A.8 Tecnológico ×</span><span class="chip on">Gap ×</span><span class="chip">+ Maturidade</span><span class="chip">+ Dono</span></div>
+<table class="wf-tbl">
+<thead><tr><th style="width:46px">Ctrl</th><th>Controle</th><th style="width:64px">Aplic.</th><th style="width:60px">CMMI</th><th style="width:58px">Status</th><th style="width:66px">Dono</th></tr></thead>
+<tbody>
+<tr><td>A.8.1</td><td>Dispositivos de endpoint</td><td>Sim</td><td>3</td><td><span class="tag t-ok">ok</span></td><td>TI</td></tr>
+<tr><td>A.8.2</td><td>Direitos de acesso privilegiado</td><td>Sim</td><td>2</td><td><span class="tag t-warn">parcial</span></td><td>TI</td></tr>
+<tr><td>A.8.8</td><td>Gestão de vulnerabilidades técnicas</td><td>Sim</td><td>2</td><td><span class="tag t-warn">parcial</span></td><td>SecOps</td></tr>
+<tr><td>A.8.12</td><td>Prevenção de vazamento de dados</td><td>Sim</td><td>0</td><td><span class="tag t-bad">gap</span></td><td>—</td></tr>
+<tr><td>A.8.16</td><td>Atividades de monitoramento</td><td>Sim</td><td>1</td><td><span class="tag t-bad">gap</span></td><td>SecOps</td></tr>
+<tr><td>A.8.23</td><td>Filtragem web</td><td>Não</td><td>—</td><td><span class="tag t-n">n/a</span></td><td>—</td></tr>
+<tr><td>A.8.28</td><td>Codificação segura</td><td>Sim</td><td>1</td><td><span class="tag t-bad">gap</span></td><td>Eng</td></tr>
+</tbody></table>
+<div class="blocker"><span>1 controle N/A sem justificativa de exclusão — a SoA não pode ser exportada</span><span class="wf-btn">Ver controles</span></div>
+<div class="hint">j/k navega · x seleciona · shift+clique intervalo · enter abre · esc fecha</div>
+<div class="bulkbar"><span style="font:500 9.5px/1 var(--font-body);flex:1">3 selecionados</span><span class="wf-btn">Atribuir dono</span><span class="wf-btn pri">Marcar implementado</span><span class="wf-btn" style="opacity:.45">Marcar N/A</span><span style="color:var(--color-neutral-500);flex:none">✕</span></div>
+<div class="note">N/A fica de fora do lote: justificativa de exclusão é individual</div>
+<div class="note">ação em lote sempre com Desfazer de 4s — errar 20 linhas não pode ser definitivo</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="2d"><div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Detalhe — controle com evidências e riscos ligados</div>
+<div class="dv-card" style="width:640px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/soa/A.8.12</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-grp">Controles A.8</div>
+<div class="wf-nav"><span class="wf-ic"></span>A.8.8 Vulnerab.</div>
+<div class="wf-nav on" style="box-shadow:inset 2px 0 0 var(--color-accent)"><span class="wf-ic"></span>A.8.12 DLP</div>
+<div class="wf-nav"><span class="wf-ic"></span>A.8.16 Monitor.</div>
+<div class="wf-nav"><span class="wf-ic"></span>A.8.28 Cód. seguro</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.1em;color:var(--color-neutral-600)">A.8.12 · TECNOLÓGICO</div><h3 class="wf-h">Prevenção de vazamento de dados</h3><p class="wf-sub">Aplicável · sem dono · maturidade CMMI 0 · atualizado há 12 dias</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="seg"><b class="on">Imediato</b><b>Rascunho</b></span><span class="wf-btn">Histórico</span></div></div>
+<div class="wf-meta">A.8.12 · Tecnológico<b>Aplicável</b><s>CMMI 0 · sem dono</s></div>
+<div class="wf-tabs"><span class="wf-tab on">Implementação</span><span class="wf-tab">Evidências · 0</span><span class="wf-tab">Riscos · 3</span><span class="wf-tab">Políticas · 2</span><span class="wf-tab">Auditoria</span></div>
+<div style="display:grid;grid-template-columns:1fr 190px;gap:12px">
+<div style="display:flex;flex-direction:column;gap:9px">
+<div class="fld"><label>Aplicabilidade</label><div class="chips"><span class="chip on">Aplicável</span><span class="chip">N/A · exige justificativa</span></div></div>
+<div class="blocker" style="flex-direction:column;align-items:stretch;gap:6px"><span>Marcar N/A abre a justificativa de exclusão, obrigatória e individual (mín. 40 caracteres)</span><span class="in ta" style="background:var(--paper)"></span><div class="chips"><span class="hint" style="flex:1">0/40 caracteres mínimos</span><span class="wf-btn">Cancelar</span><span class="wf-btn pri" style="opacity:.45">Confirmar N/A</span></div></div>
+<div class="fld"><label>Justificativa de aplicabilidade</label><span class="sk" style="width:100%"></span><span class="sk" style="width:92%"></span><span class="sk" style="width:64%"></span></div>
+<div class="fld"><label>Como está implementado hoje</label><span class="in ta"></span></div>
+<div><div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:4px">Riscos que dependem deste controle</div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:38px">R-014</td><td>Exfiltração via e-mail pessoal</td><td style="width:44px"><span class="tag t-bad">20</span></td></tr>
+<tr><td>R-021</td><td>Cópia de base para dispositivo removível</td><td><span class="tag t-warn">12</span></td></tr>
+</tbody></table></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div class="blueprint" style="padding:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">Situação</div>
+<div class="fld" style="margin-bottom:6px"><label>Status</label><span class="chip on" style="text-align:center">Gap</span></div>
+<div class="fld" style="margin-bottom:6px"><label>Dono</label><span class="chip">atribuir…</span></div>
+<div class="fld"><label>Prazo</label><span class="chip">definir…</span></div>
+</div>
+<div class="ph" style="height:56px">painel do agente:<br>sugestão de evidência</div>
+<div class="note">o detalhe é a tela de trabalho — status, dono e prazo sempre visíveis à direita</div>
+</div>
+</div>
+<div class="savebar"><span>Gravação imediata · toda alteração entra na trilha de auditoria</span><span class="wf-btn">Fechar</span></div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="2e"><div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Criação — novo risco em drawer, sem sair da lista</div>
+<div class="dv-card" style="width:600px;position:relative">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/riscos?novo=1</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Operacional</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><path d="M6 6h.01"></path><path d="M6 18h.01"></path></svg>Ativos</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>Evidências</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Registro de riscos</h3><p class="wf-sub">38 riscos · 2 críticos</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span></div></div>
+<table class="wf-tbl"><thead><tr><th style="width:40px">ID</th><th>Risco</th><th style="width:40px">P×I</th></tr></thead><tbody>
+<tr><td>R-014</td><td>Exfiltração via e-mail pessoal</td><td>20</td></tr>
+<tr><td>R-021</td><td>Cópia de base para removível</td><td>12</td></tr>
+<tr><td>R-022</td><td>Fornecedor sem DPA assinado</td><td>9</td></tr>
+<tr><td>R-023</td><td>Acesso privilegiado órfão</td><td>16</td></tr>
+</tbody></table>
+</div>
+</div>
+<div class="veil"></div>
+<div class="drawer">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><h4 style="font:600 13px var(--font-heading);margin:0">Novo risco</h4><span style="font:400 11px var(--font-body);color:var(--color-neutral-500)">✕</span></div>
+<div class="fld"><label>Descrição do risco</label><span class="in ta"></span></div>
+<div class="fld"><label>Ativo afetado</label><span class="in"></span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div class="fld"><label>Probabilidade</label><div class="chips"><span class="chip">1</span><span class="chip">2</span><span class="chip on">3</span><span class="chip">4</span><span class="chip">5</span></div></div>
+<div class="fld"><label>Impacto</label><div class="chips"><span class="chip">1</span><span class="chip">2</span><span class="chip">3</span><span class="chip on">4</span><span class="chip">5</span></div></div>
+</div>
+<div class="blueprint" style="padding:7px;display:flex;justify-content:space-between;align-items:center"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span style="font:400 9.5px var(--font-body);color:var(--color-neutral-700)">Risco inerente</span><span class="tag t-bad">12 · ALTO</span></div>
+<div class="fld"><label>Tratamento</label><div class="chips"><span class="chip on">Mitigar</span><span class="chip">Aceitar</span><span class="chip">Transferir</span><span class="chip">Evitar</span></div></div>
+<div class="fld"><label>Controles vinculados</label><div class="chips"><span class="chip on">A.8.12 ×</span><span class="chip">+ vincular</span></div></div>
+<div class="note">o placar recalcula ao clicar — sem tela de “resultado”</div>
+<div style="display:flex;gap:6px;margin-top:auto"><span class="wf-btn" style="flex:1;justify-content:center">Cancelar</span><span class="wf-btn pri" style="flex:1;justify-content:center">Criar risco</span></div>
+</div>
+</div></div>
+
+<div class="dv-opt" id="2f"><div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a>Visualização — matriz 5×5 como filtro, não enfeite</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/riscos/matriz</span></div>
+<div class="wf-body"><div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Matriz de risco 5×5</h3><p class="wf-sub">Clique numa célula para filtrar a tabela abaixo</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="chip on">Inerente</span><span class="chip">Residual</span></div></div>
+<div style="display:grid;grid-template-columns:1.05fr 1fr;gap:12px">
+<div>
+<div class="mx">
+<i></i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i>
+<i>5</i><b>1</b><b class="m1">2</b><b class="m2">—</b><b class="m3">1</b><b class="m5">1</b>
+<i>4</i><b>—</b><b>1</b><b class="m1">3</b><b class="m3 sel">4</b><b class="m4">1</b>
+<i>3</i><b>2</b><b>3</b><b class="m1">5</b><b class="m2">2</b><b class="m3">—</b>
+<i>2</i><b>4</b><b>2</b><b>1</b><b class="m1">2</b><b class="m2">1</b>
+<i>1</i><b>1</b><b>—</b><b>1</b><b>—</b><b class="m1">—</b>
+</div>
+<div style="display:flex;justify-content:space-between;font:400 8px ui-monospace,monospace;color:var(--color-neutral-500);margin-top:4px"><span>← impacto</span><span>probabilidade ↑</span></div>
+</div>
+<div>
+<div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:5px">Célula P4 × I4 · 4 riscos</div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:38px">R-014</td><td>Exfiltração por e-mail</td><td style="width:52px"><span class="tag t-warn">mitigar</span></td></tr>
+<tr><td>R-023</td><td>Acesso privilegiado órfão</td><td><span class="tag t-warn">mitigar</span></td></tr>
+<tr><td>R-031</td><td>Backup sem teste de restore</td><td><span class="tag t-info">plano</span></td></tr>
+<tr><td>R-036</td><td>Segregação de ambientes</td><td><span class="tag t-n">aceito</span></td></tr>
+</tbody></table>
+<div class="note" style="margin-top:8px">gráfico que não é clicável vira slide — aqui ele é o filtro</div>
+</div>
+</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="2g"><div class="dv-olabel"><a class="dv-oid" href="#2g">2g</a>Evidências — upload, hash e aprovação</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/evidencias</span></div>
+<div class="wf-body"><div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Central de evidências</h3><p class="wf-sub">142 artefatos · 31 aguardando validação</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn pri">+ Enviar arquivo</span></div></div>
+<div class="ph" style="height:52px">arrastar arquivos aqui · PDF, PNG, CSV, log<br>hash SHA-256 calculado no envio</div>
+<div class="chips"><span class="srch">Buscar por controle, arquivo ou responsável…</span><span class="chip on">Aguardando validação ×</span></div>
+<table class="wf-tbl">
+<thead><tr><th>Arquivo</th><th style="width:50px">Controle</th><th style="width:104px">Hash</th><th style="width:70px">Status</th></tr></thead>
+<tbody>
+<tr><td>politica-acesso-v3.pdf</td><td>A.5.15</td><td style="font-family:ui-monospace,monospace;font-size:8px">9f2c…a71d</td><td><span class="tag t-ok">aprovada</span></td></tr>
+<tr><td>log-revisao-acessos-q3.csv</td><td>A.8.2</td><td style="font-family:ui-monospace,monospace;font-size:8px">41be…0c93</td><td><span class="tag t-info">em análise</span></td></tr>
+<tr><td>print-mfa-console.png</td><td>A.8.5</td><td style="font-family:ui-monospace,monospace;font-size:8px">c7d0…5e8a</td><td><span class="tag t-warn">revisar</span></td></tr>
+<tr><td>ata-analise-critica.pdf</td><td>9.3</td><td style="font-family:ui-monospace,monospace;font-size:8px">2a55…bb14</td><td><span class="tag t-bad">rejeitada</span></td></tr>
+</tbody></table>
+<div class="blueprint" style="padding:9px;display:flex;gap:10px;align-items:center"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="flex:1"><div style="font:600 10px var(--font-heading)">log-revisao-acessos-q3.csv → A.8.2</div><div class="wf-sub">Enviado por M. Santos · 12/09 · avaliação automática: cobre 2 de 3 requisitos</div></div>
+<span class="wf-btn">Rejeitar</span><span class="wf-btn pri">Aprovar</span></div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="2h"><div class="dv-olabel"><a class="dv-oid" href="#2h">2h</a>Equipe &amp; permissões — cliente vê menos</div>
+<div class="dv-card" style="width:560px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/config/usuarios</span></div>
+<div class="wf-body"><div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Usuários e papéis</h3><p class="wf-sub">14 usuários · 3 convites pendentes</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn pri">+ Convidar</span></div></div>
+<div class="wf-tabs"><span class="wf-tab on">Usuários</span><span class="wf-tab">Papéis</span><span class="wf-tab">SSO / SCIM</span><span class="wf-tab">Chaves de API</span></div>
+<table class="wf-tbl">
+<thead><tr><th>Pessoa</th><th style="width:92px">Papel</th><th style="width:66px">Origem</th><th style="width:62px">MFA</th></tr></thead>
+<tbody>
+<tr><td>R. Esper · consultor</td><td>Admin</td><td><span class="tag t-n">local</span></td><td><span class="tag t-ok">ativo</span></td></tr>
+<tr><td>M. Santos · consultor</td><td>Editor</td><td><span class="tag t-n">local</span></td><td><span class="tag t-ok">ativo</span></td></tr>
+<tr><td>m.barros@twyn.com</td><td>Cliente 🔒</td><td><span class="tag t-info">idp</span></td><td><span class="tag t-info">no idp</span></td></tr>
+<tr><td>j.lima@twyn.com</td><td>Cliente 🔒</td><td><span class="tag t-info">idp</span></td><td><span class="tag t-info">no idp</span></td></tr>
+<tr><td>auditor@externo.com</td><td>Leitor</td><td><span class="tag t-n">local</span></td><td><span class="tag t-ok">ativo</span></td></tr>
+</tbody></table>
+<div class="blocker" style="border-left-color:#00ade8;background:rgba(0,173,232,.10)"><span>Papéis marcados 🔒 vêm de grupos do IdP e não podem ser editados aqui — o próximo sync sobrescreveria. Ajuste em <a href="#7d">7d</a>.</span><span class="wf-btn">Abrir SSO / SCIM</span></div>
+<div class="blueprint" style="padding:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:600 10px var(--font-heading);margin-bottom:6px">Papel “Cliente” — o que ele vê</div>
+<table class="wf-tbl"><tbody>
+<tr><td>Dashboard, Jornada, Evidências do próprio projeto</td><td style="width:56px"><span class="tag t-ok">ver</span></td></tr>
+<tr><td>Enviar evidência, responder questionário</td><td><span class="tag t-info">editar</span></td></tr>
+<tr><td>SoA, riscos, propostas, outros clientes</td><td><span class="tag t-n">oculto</span></td></tr>
+</tbody></table>
+<div class="note" style="margin-top:6px">mesmo app, menos permissões — a matriz precisa ser legível pelo cliente também</div>
+</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="2i"><div class="dv-olabel"><a class="dv-oid" href="#2i">2i</a>Notificações — fila de trabalho, não sino</div>
+<div class="dv-card" style="width:420px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/notificacoes</span></div>
+<div class="wf-body"><div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Minha fila</h3><p class="wf-sub">7 itens exigem ação sua</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn">Marcar lidas</span></div></div>
+<div class="chips"><span class="chip on">Ação necessária</span><span class="chip">Menções</span><span class="chip">Sistema</span></div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:56px"><span class="tag t-bad">prazo</span></td><td>A.8.12 vence em 3 dias e está sem dono<div class="sk" style="width:40%;margin-top:3px"></div></td><td style="width:52px"><span class="wf-btn">Abrir</span></td></tr>
+<tr><td><span class="tag t-info">aprovar</span></td><td>3 evidências aguardam sua validação</td><td><span class="wf-btn">Abrir</span></td></tr>
+<tr><td><span class="tag t-warn">cliente</span></td><td>Twyn respondeu o bloco 4 do questionário</td><td><span class="wf-btn">Abrir</span></td></tr>
+<tr><td><span class="tag t-n">sistema</span></td><td>Exportação da SoA concluída</td><td><span class="wf-btn">Baixar</span></td></tr>
+</tbody></table>
+<div class="note">agrupar por “o que preciso fazer”, não por hora do evento</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="2j"><div class="dv-olabel"><a class="dv-oid" href="#2j">2j</a>Estados vazios, erro e sem permissão</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div class="dv-card" style="width:360px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">/riscos</span></div>
+<div class="wf-body"><div class="wf-main" style="align-items:center;text-align:center;padding:22px 18px">
+<div class="ph" style="width:52px;height:52px">—</div>
+<div><h4 style="font:600 13px var(--font-heading);margin:0">Nenhum risco registrado</h4><p class="wf-sub" style="max-width:36ch;margin:3px auto 0">Importe do assessment ou crie o primeiro risco a partir de um ativo.</p></div>
+<div class="chips" style="justify-content:center"><span class="wf-btn">Importar do assessment</span><span class="wf-btn pri">+ Novo risco</span></div>
+<div class="note">vazio útil = próxima ação, não desenho triste</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:360px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">/soa</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:16px 18px">
+<div class="blueprint" style="padding:10px;border-color:#a3352c"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="font:600 11px var(--font-heading);color:#a3352c">Não foi possível carregar a SoA</div>
+<p class="wf-sub" style="margin:3px 0 8px">O serviço respondeu com erro. Seus filtros foram preservados.</p>
+<div class="chips"><span class="wf-btn">Tentar de novo</span><span class="wf-btn">Copiar código do erro</span></div>
+<div style="font:400 8px ui-monospace,monospace;color:var(--color-neutral-500);margin-top:6px">req 4f2a-91c…  ·  16:38 BRT</div>
+</div>
+</div></div>
+</div>
+<div class="dv-card" style="width:360px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-url">/propostas</span></div>
+<div class="wf-body"><div class="wf-main" style="padding:16px 18px">
+<div style="font:600 11px var(--font-heading)">Você não tem acesso a Propostas</div>
+<p class="wf-sub">Seu papel é <b>Cliente</b> neste projeto. Peça acesso ao administrador da conta.</p>
+<div class="chips"><span class="wf-btn">Solicitar acesso</span><span class="wf-btn">Voltar ao dashboard</span></div>
+</div></div>
+</div>
+</div></div>
+
+</div>
+<p class="dv-next">Peça a seguir: “detalhar <a class="dv-oid" href="#2c">2c</a> com edição em lote” · “refazer as telas sobre o shell <a class="dv-oid" href="#1c">1c</a>” · “adicionar as telas de jornada, políticas e ROPA” · “versão do cliente (papel Cliente) das telas”</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Quatro shells para o mesmo produto</span><span class="dv-flag">histórico · decidido 1a</span></div>
+<p class="dv-tdesc">A mesma informação — projeto Twyn em certificação ISO 27001 — em quatro estruturas de navegação e densidade diferentes. Escolha o shell e as telas do turno <a class="dv-tid" href="#t2">2</a> passam a viver dentro dele. Tema aplicado: <a class="dv-oid" href="#3b">3b</a> (ness. OLED).</p>
+<div class="dv-opts ness ness-dark">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Denso · sidebar por grupos, tabela primeiro</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/dashboard</span></div>
+<div class="wf-body">
+<div class="wf-side">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Visão geral</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>Dashboard</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>Projetos</div>
+<div class="wf-grp">Implementação</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>Jornada</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>SoA</div>
+<div class="wf-grp">Operacional</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>Evidências</div>
+<div class="wf-grp">Privacidade</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14a9 3 0 0 0 18 0V5"></path><path d="M3 12a9 3 0 0 0 18 0"></path></svg>ROPA</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Dashboard</h3><p class="wf-sub">Twyn · fase 2 · auditoria em 47 dias</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn pri">+ Evidência</span></div></div>
+<div class="wf-kpis"><div class="wf-kpi"><b>78/93</b><span>controles</span></div><div class="wf-kpi"><b>12</b><span>gaps</span></div><div class="wf-kpi"><b>2</b><span>críticos</span></div><div class="wf-kpi"><b>31</b><span>a validar</span></div></div>
+<table class="wf-tbl"><thead><tr><th style="width:42px">Ctrl</th><th>Pendência</th><th style="width:54px">Status</th><th style="width:52px">Dono</th></tr></thead><tbody>
+<tr><td>A.8.12</td><td>Prevenção de vazamento de dados</td><td><span class="tag t-bad">gap</span></td><td>—</td></tr>
+<tr><td>A.5.30</td><td>Prontidão de TIC</td><td><span class="tag t-bad">gap</span></td><td>TI</td></tr>
+<tr><td>A.8.16</td><td>Monitoramento</td><td><span class="tag t-warn">parcial</span></td><td>SecOps</td></tr>
+<tr><td>A.6.3</td><td>Conscientização</td><td><span class="tag t-warn">parcial</span></td><td>RH</td></tr>
+<tr><td>A.5.19</td><td>Fornecedores</td><td><span class="tag t-warn">parcial</span></td><td>Jur</td></tr>
+</tbody></table>
+<div class="note">para quem passa o dia no produto: muita linha por tela, nav sempre visível</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Foco · topo enxuto + paleta de comandos</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/</span></div>
+<div style="display:flex;align-items:center;gap:16px;height:48px;box-sizing:border-box;padding:0 16px;border-bottom:1px solid var(--color-divider)">
+<span style="font:500 15px var(--font-heading);letter-spacing:-.01em">n<span style="color:#00ade8">.</span>iso</span>
+<span class="chip on">Twyn ▾</span>
+<span style="flex:1;display:flex;align-items:center;gap:6px;height:22px;border:1px solid var(--color-neutral-400);padding:0 8px;font:400 9.5px/22px var(--font-body);color:var(--color-neutral-500)">Ir para, buscar ou executar… <b style="margin-left:auto;font:400 8px ui-monospace,monospace">⌘K</b></span>
+<span class="wf-ic" style="width:13px;height:13px"></span><span class="wf-user" style="border:0;padding:0"><b>RE</b><span>R. Esper<em>admin · ness.</em></span></span>
+</div>
+<div class="wf-body"><div class="wf-main" style="padding:16px 18px;gap:12px">
+<div><h3 class="wf-h" style="font-size:19px">Bom dia, Ricardo</h3><p class="wf-sub">3 coisas travam a certificação da Twyn hoje</p></div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
+<div class="blueprint" style="padding:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="tag t-bad">sem dono</span><div style="font:600 10.5px var(--font-heading);margin-top:5px">A.8.12 DLP</div><div class="wf-sub">atribuir responsável</div></div>
+<div class="blueprint" style="padding:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="tag t-info">31 itens</span><div style="font:600 10.5px var(--font-heading);margin-top:5px">Validar evidências</div><div class="wf-sub">fila de aprovação</div></div>
+<div class="blueprint" style="padding:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="tag t-warn">47 dias</span><div style="font:600 10.5px var(--font-heading);margin-top:5px">Auditoria fase 2</div><div class="wf-sub">ver cronograma</div></div>
+</div>
+<div class="blueprint" style="padding:0;margin-top:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="padding:7px 9px;border-bottom:1px solid var(--color-neutral-200);font:400 9.5px var(--font-body);color:var(--color-neutral-500)">soa gap ▍</div>
+<table class="wf-tbl"><tbody>
+<tr><td style="width:20px">↳</td><td>Abrir SoA filtrada por gaps</td><td style="width:60px;font:400 8px ui-monospace,monospace">⏎</td></tr>
+<tr><td>↳</td><td>A.8.12 — Prevenção de vazamento</td><td style="font:400 8px ui-monospace,monospace">controle</td></tr>
+<tr><td>↳</td><td>Criar risco a partir de gap…</td><td style="font:400 8px ui-monospace,monospace">ação</td></tr>
+</tbody></table></div>
+<div class="note">nav profunda escondida no ⌘K: bom para consultor veterano, ruim para cliente eventual</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Jornada · fases guiam tudo</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/jornada/fase-14</span></div>
+<div class="wf-body">
+<div class="wf-side" style="width:158px">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-proj"><span>Twyn<i>▾</i></span><em>27001</em></div>
+<div class="wf-grp">Bloco 3 · Riscos</div>
+<div class="wf-nav"><span class="wf-ic" style="background:var(--color-accent-500)"></span>12 Inventário de ativos</div>
+<div class="wf-nav"><span class="wf-ic" style="background:var(--color-accent-500)"></span>13 Valoração C-I-D</div>
+<div class="wf-nav on"><span class="wf-ic"></span>14 Análise de riscos</div>
+<div class="wf-nav"><span class="wf-ic"></span>15 Plano de tratamento</div>
+<div class="wf-grp">Bloco 4 · Controles</div>
+<div class="wf-nav"><span class="wf-ic"></span>16 SoA</div>
+<div class="wf-nav"><span class="wf-ic"></span>17 Políticas</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><div style="font:600 7.5px ui-monospace,monospace;letter-spacing:.1em;color:var(--color-neutral-600)">FASE 14 DE 41 · BLOCO 3</div><h3 class="wf-h">Análise de riscos</h3><p class="wf-sub">6 de 9 itens concluídos · responsável: M. Santos</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="wf-btn pri">Concluir fase</span></div></div>
+<div class="wf-meta">Bloco 3 · Riscos<b>Fase 14 de 41</b></div>
+<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:4px;background:var(--color-neutral-200);display:block"><span style="display:block;width:67%;height:5px;background:var(--color-accent)"></span></span><span style="font:600 9px ui-monospace,monospace;color:var(--color-neutral-700)">67%</span></div>
+<table class="wf-tbl"><thead><tr><th style="width:56px">Tipo</th><th>Item da fase</th><th style="width:66px">Situação</th></tr></thead><tbody>
+<tr><td><span class="tag t-n">tarefa</span></td><td>Definir critérios de aceitação de risco</td><td><span class="tag t-ok">feito</span></td></tr>
+<tr><td><span class="tag t-n">doc</span></td><td>Metodologia de análise de riscos</td><td><span class="tag t-ok">feito</span></td></tr>
+<tr><td><span class="tag t-n">tarefa</span></td><td>Levantar riscos por ativo (38)</td><td><span class="tag t-warn">em curso</span></td></tr>
+<tr><td><span class="tag t-n">evid.</span></td><td>Ata do workshop de riscos</td><td><span class="tag t-bad">falta</span></td></tr>
+<tr><td><span class="tag t-n">doc</span></td><td>Relatório de avaliação de riscos</td><td><span class="tag t-bad">falta</span></td></tr>
+</tbody></table>
+<div class="note">o cliente entende “fase 14 de 41” muito melhor que “SoA”</div>
+</div></div>
+</div></div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Painel executivo · gráfico antes de lista</div>
+<div class="dv-card" style="width:600px">
+<div class="wf-top"><span class="wf-dot"></span><span class="wf-dot"></span><span class="wf-url">niso.ness.io/portfolio</span></div>
+<div class="wf-body">
+<div class="wf-side" style="width:112px">
+<div class="wf-brand"><b>n<i>.</i>iso</b><u>«</u></div>
+<div class="wf-grp">Portfólio</div>
+<div class="wf-nav on"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>Visão geral</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M8 11h.01"></path><path d="M16 11h.01"></path></svg>Por cliente</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V4a2 2 0 0 1 2-2h13v18H6.5A2.5 2.5 0 0 0 4 20.5z"></path><path d="M9 7h6"></path></svg>Por norma</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Riscos</div>
+<div class="wf-nav"><svg class="wf-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><rect x="7" y="12" width="3" height="5"></rect><rect x="13" y="8" width="3" height="9"></rect></svg>Relatórios</div>
+<div class="wf-foot"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i>▴</i></div></div>
+<div class="wf-main">
+<div class="wf-hdr"><div><h3 class="wf-h">Portfólio</h3><p class="wf-sub">6 clientes · 9 projetos ativos</p></div><div class="wf-user"><b>RE</b><span>R. Esper<em>admin · ness.</em></span><i class="cv">▾</i></div><div class="wf-acts"><span class="chip on">Trimestre</span><span class="chip">Ano</span></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+<div class="ph" style="height:96px">barras empilhadas<br>conformidade por cliente</div>
+<div class="ph" style="height:96px">heatmap 5×5<br>risco agregado</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+<div class="wf-kpi"><b>81%</b><span>conformidade média</span></div>
+<div class="wf-kpi"><b>7</b><span>riscos críticos</span></div>
+<div class="wf-kpi"><b>3</b><span>auditorias no mês</span></div>
+</div>
+<table class="wf-tbl"><thead><tr><th>Cliente</th><th style="width:74px">Norma</th><th style="width:74px">Conform.</th><th style="width:52px">Aud.</th></tr></thead><tbody>
+<tr><td>Twyn</td><td>27001</td><td>84%</td><td>47d</td></tr>
+<tr><td>ness. labs</td><td>27701</td><td>92%</td><td>—</td></tr>
+<tr><td>Forense.io</td><td>27001</td><td>63%</td><td>112d</td></tr>
+</tbody></table>
+<div class="note">ótimo para dono do negócio; quem executa vai reclamar de cliques</div>
+</div></div>
+</div></div>
+
+</div>
+<p class="dv-next">Peça a seguir: “fico com <a class="dv-oid" href="#1a">1a</a>, aplique nas telas” · “misture <a class="dv-oid" href="#1a">1a</a> com o ⌘K de <a class="dv-oid" href="#1b">1b</a>” · “mais uma direção, com abas no topo”</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1024}}"></script>
+</body>
+</html>

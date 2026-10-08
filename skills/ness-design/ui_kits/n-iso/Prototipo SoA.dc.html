@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="_ds/industry-1314a8a2-4a2f-40d0-a1f6-6281a6969fab/styles.css">
+<script src="_ds/industry-1314a8a2-4a2f-40d0-a1f6-6281a6969fab/_ds_bundle.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--bd:#00ade8;--paper:#0b1326;--surf:#162244;--surf2:#1e2d52;--line:rgba(255,255,255,.10);--ink:#f1f5f9;--ink2:#cbd5e1;--ink3:#94a3b8;--ink4:#8fa0b6;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--h:"Montserrat",system-ui,sans-serif;--b:"Inter",system-ui,sans-serif;--m:"JetBrains Mono",ui-monospace,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--b)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--bd);outline-offset:2px}
+a{color:var(--bd);text-decoration:none}
+a:hover{color:#7fd6f6}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+@keyframes slidein{from{transform:translateX(16px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+</style></helmet>
+
+<div style="display:flex;min-height:100vh;align-items:stretch;font-family:var(--b)">
+
+<aside style="{{ asideStyle }}">
+<div style="{{ brandRow }}">
+<span style="font:500 22px/1 var(--h);letter-spacing:-.015em;white-space:nowrap">n<span style="color:var(--bd)">.</span><span style="{{ labelStyle }}">iso</span></span>
+<button onClick="{{ toggleRail }}" aria-label="Recolher menu" style="{{ railBtn }}">{{ railIcon }}</button>
+</div>
+<button style="{{ tenantBox }}"><span style="font:500 12.5px/1 var(--b);color:var(--ink)">Twyn</span><span style="font:400 10px/1 var(--m);color:var(--ink3)">27001</span><span style="margin-left:auto;color:var(--ink4);font-size:10px">▾</span></button>
+<div style="{{ tenantRail }}">TW</div>
+<nav style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:4px 0">
+<div style="{{ grpStyle }}">Implementação</div>
+<button style="{{ navItem }}" title="Jornada"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg><span style="{{ labelStyle }}">Jornada</span></button>
+<button style="{{ navItemOn }}" title="SoA"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--bd)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 17l2 2 4-4"></path><path d="M3 7l2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg><span style="{{ labelStyle }}">SoA</span></button>
+<button style="{{ navItem }}" title="Riscos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg><span style="{{ labelStyle }}">Riscos</span></button>
+<button style="{{ navItem }}" title="Evidências"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg><span style="{{ labelStyle }}">Evidências</span></button>
+<div style="{{ grpStyle2 }}">Filtros salvos</div>
+<sc-for list="{{ savedViews }}" as="v" hint-placeholder-count="3">
+<button onClick="{{ v.apply }}" style="{{ v.style }}" title="{{ v.label }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="{{ v.dot }}"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg><span style="{{ v.labelStyle }}">{{ v.label }}</span><span style="{{ v.countStyle }}">{{ v.count }}</span></button>
+</sc-for>
+</nav>
+<button onClick="{{ toggleAcct }}" aria-label="Menu da conta" style="{{ footStyle }}">
+<span style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--surf2);font:500 10px/1 var(--m);letter-spacing:.04em;color:var(--ink2)">RE</span>
+<span style="{{ footId }}"><span style="font:400 12px/1 var(--b)">R. Esper</span><span style="font:500 9px/1 var(--m);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)">{{ roleLabel }}</span></span>
+<span style="{{ footCaret }}">▴</span>
+</button>
+<sc-if value="{{ acctOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:11">
+<button onClick="{{ closeAcct }}" aria-label="Fechar menu" style="position:absolute;inset:0;cursor:default"></button>
+<div style="position:absolute;left:12px;bottom:74px;width:236px;background:var(--surf);border:1px solid var(--line);box-shadow:0 10px 15px -3px rgba(0,0,0,.5);padding:12px;display:flex;flex-direction:column;gap:12px;animation:rise 180ms cubic-bezier(.16,1,.3,1)">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--surf2);font:500 10px/1 var(--m);color:var(--ink2)">RE</span>
+<span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font:500 12.5px/1 var(--b)">R. Esper</span><span style="font:400 10px/1 var(--m);color:var(--ink4);overflow:hidden;text-overflow:ellipsis">r.esper@ness.com.br</span></span>
+</div>
+<div style="height:1px;background:var(--line)"></div>
+<div style="display:flex;flex-direction:column;gap:2px">
+<span style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px">Tenant</span>
+<sc-for list="{{ tenants }}" as="t" hint-placeholder-count="3">
+<button onClick="{{ t.pick }}" style="{{ t.style }}">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="{{ t.checkStyle }}"><path d="M20 6 9 17l-5-5"></path></svg>
+{{ t.label }}<span style="margin-left:auto;font:400 10px/1 var(--m);color:var(--ink4)">{{ t.norm }}</span>
+</button>
+</sc-for>
+</div>
+<div style="height:1px;background:var(--line)"></div>
+<button onClick="{{ viewAsClient }}" style="display:flex;align-items:center;gap:8px;padding:6px 0;font:400 12px/1 var(--b);color:var(--ink2)">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.6"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"></path></svg>Ver como cliente</button>
+<button onClick="{{ simulateError }}" style="display:flex;align-items:center;gap:8px;padding:6px 0;font:400 12px/1 var(--b);color:var(--ink2)">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.6"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>Simular falha de carga</button>
+<div style="height:1px;background:var(--line)"></div>
+<button onClick="{{ closeAcct }}" style="display:flex;align-items:center;gap:8px;padding:6px 0;font:400 12px/1 var(--b);color:var(--bad)">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg>Encerrar sessão<span style="margin-left:auto;font:400 10px/1 var(--m);color:var(--ink4)">⇧⌘Q</span></button>
+<div style="height:1px;background:var(--line)"></div>
+<div style="display:flex;align-items:center;font:500 12px/1 var(--h);letter-spacing:-.01em;color:var(--ink2)">ness<span style="color:var(--bd)">.</span><span style="margin-left:auto;font:400 10px/1 var(--m);color:var(--ink4)">n.iso 4.2</span></div>
+</div>
+</div>
+</sc-if>
+</aside>
+
+<main style="flex:1;min-width:0;display:flex;flex-direction:column">
+<header style="position:sticky;top:0;z-index:4;height:64px;flex:none;display:flex;align-items:center;gap:16px;padding:0 28px;background:var(--paper);border-bottom:1px solid var(--line)">
+<h1 style="margin:0;font:600 20px/1 var(--h);letter-spacing:-.02em;flex:1;min-width:0">Declaração de Aplicabilidade</h1>
+<div style="display:flex;align-items:center;border:1px solid var(--line)">
+<sc-for list="{{ modes }}" as="m" hint-placeholder-count="2">
+<button onClick="{{ m.pick }}" style="{{ m.style }}" title="{{ m.hint }}">{{ m.label }}</button>
+</sc-for>
+</div>
+<button onClick="{{ toggleDensity }}" style="height:34px;padding:0 14px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">{{ densityLabel }}</button>
+<button style="{{ exportStyle }}" title="{{ exportTitle }}">Exportar SoA</button>
+</header>
+
+<div style="padding:20px 28px 8px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<label style="flex:1;min-width:220px;display:flex;align-items:center;gap:8px;height:34px;border-bottom:1px solid var(--line)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--ink4)"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<input ref="{{ searchRef }}" value="{{ query }}" onChange="{{ onQuery }}" aria-label="Buscar controle" placeholder="Buscar controle, dono ou justificativa…" style="flex:1;min-width:0;height:34px;padding:0;border:0;background:none;color:var(--ink);font:400 13px var(--b);outline:none">
+<span style="flex:none;font:400 10px/1 var(--m);color:var(--ink4);border:1px solid var(--line);padding:4px 6px">⌘K</span>
+</label>
+<sc-for list="{{ facets }}" as="f" hint-placeholder-count="4">
+<button onClick="{{ f.toggle }}" style="{{ f.style }}">{{ f.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ naMissingCount }}" hint-placeholder-val="{{ 0 }}">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(239,68,68,.10);border-left:2px solid var(--bad)">
+<span style="flex:1;font:400 12.5px/1.4 var(--b);color:var(--ink2)">{{ naMissingLabel }}</span>
+<button onClick="{{ showNaMissing }}" style="height:30px;padding:0 12px;border:1px solid var(--line);font:500 11.5px/1 var(--b);color:var(--ink2)">Ver controles</button>
+</div>
+</sc-if>
+<div style="display:flex;align-items:baseline;gap:14px;font:500 10px/1 var(--m);letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)">
+<span>{{ countLabel }}</span>
+<span style="color:var(--ink3);letter-spacing:.1em;text-transform:none;font:400 10px/1 var(--m)">j/k navega · x seleciona · shift+clique intervalo · enter abre · esc fecha</span>
+<sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearAll }}" style="font:inherit;color:var(--bd);letter-spacing:.14em">limpar filtros</button></sc-if>
+</div>
+</div>
+
+<div style="padding:0 28px 28px;flex:1">
+<sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+<table style="width:100%;border-collapse:collapse;font:400 13px var(--b)">
+<tbody>
+<sc-for list="{{ skeletonRows }}" as="s" hint-placeholder-count="8">
+<tr>
+<td style="{{ s.tdSel }}"><span style="display:block;width:14px;height:14px;background:var(--surf2)"></span></td>
+<td style="{{ s.td }}"><span style="{{ skStyle }}"></span></td>
+<td style="{{ s.td }}"><span style="{{ skStyle }}"></span></td>
+<td style="{{ s.td }}"><span style="{{ skStyle }}"></span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<div style="padding:16px 0;font:400 11px/1 var(--m);letter-spacing:.12em;text-transform:uppercase;color:var(--ink4)">carregando controles de {{ tenant }}…</div>
+</sc-if>
+<sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px;padding:20px;background:rgba(239,68,68,.10);border-left:2px solid var(--bad);animation:fadein 180ms ease-out">
+<div style="font:600 15px/1.2 var(--h);letter-spacing:-.01em">Não foi possível carregar os controles</div>
+<div style="font:400 12.5px/1.6 var(--b);color:var(--ink2);max-width:56ch">O serviço respondeu com erro. Seus filtros e sua seleção foram preservados — nada foi gravado.</div>
+<div style="display:flex;align-items:center;gap:10px">
+<span style="flex:1;font:400 10px/1 var(--m);color:var(--ink4)">req 4f2a-91c · 16:38 BRT</span>
+<button style="height:34px;padding:0 12px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">Copiar código</button>
+<button onClick="{{ retry }}" style="height:34px;padding:0 14px;background:var(--bd);color:#04121c;font:500 12px/1 var(--b)">Tentar de novo</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ isDenied }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px;padding:20px;background:var(--surf);border-left:2px solid var(--ink4);animation:fadein 180ms ease-out">
+<div style="font:600 15px/1.2 var(--h);letter-spacing:-.01em">A SoA não faz parte do seu acesso</div>
+<div style="font:400 12.5px/1.6 var(--b);color:var(--ink2);max-width:56ch">Seu papel é <b style="font-weight:500">Cliente</b> neste projeto: você vê andamento, pendências e documentos aprovados. A rota existe, mas o item não aparece no seu menu.</div>
+<div style="display:flex;gap:10px">
+<button style="height:34px;padding:0 12px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">Solicitar acesso</button>
+<button onClick="{{ backToAdmin }}" style="height:34px;padding:0 14px;background:var(--bd);color:#04121c;font:500 12px/1 var(--b)">Voltar como admin</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}">
+<table style="width:100%;border-collapse:collapse;font:400 13px var(--b)">
+<thead><tr>
+<th style="{{ thSel }}"><button onClick="{{ toggleAll }}" aria-label="Selecionar todos" style="width:14px;height:14px;border:1px solid var(--ink4);display:block;background:{{ allBg }}"></button></th>
+<sc-for list="{{ columns }}" as="c" hint-placeholder-count="6">
+<th style="{{ c.style }}" aria-sort="{{ c.ariaSort }}"><button onClick="{{ c.sort }}" style="font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit">{{ c.label }}{{ c.arrow }}</button></th>
+</sc-for>
+</tr></thead>
+<tbody>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="10">
+<tr style="{{ r.trStyle }}" onClick="{{ r.click }}">
+<td style="{{ r.tdSel }}"><button onClick="{{ r.toggle }}" aria-label="Selecionar" style="width:14px;height:14px;border:1px solid {{ r.boxBorder }};display:block;background:{{ r.boxBg }}"></button></td>
+<td style="{{ r.tdCode }}"><button onClick="{{ r.open }}" style="font:inherit;color:inherit">{{ r.code }}</button></td>
+<td style="{{ r.td }}"><button onClick="{{ r.open }}" style="font:inherit;color:inherit">{{ r.name }}</button></td>
+<td style="{{ r.td }}">{{ r.domain }}</td>
+<td style="{{ r.tdMid }}">{{ r.applic }}</td>
+<td style="{{ r.tdMid }}">{{ r.cmmi }}</td>
+<td style="{{ r.td }}"><span style="{{ r.tagStyle }}">{{ r.statusLabel }}</span></td>
+<td style="{{ r.td }}">{{ r.owner }}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:56px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;animation:fadein 200ms cubic-bezier(.16,1,.3,1)">
+<div style="width:48px;height:48px;border:1px dashed var(--ink4)"></div>
+<div style="font:600 15px/1 var(--h);letter-spacing:-.01em">Nenhum controle com esses filtros</div>
+<div style="font:400 13px/1.5 var(--b);color:var(--ink3);max-width:42ch">Tente remover uma faceta ou buscar pelo código do controle, como A.8.12.</div>
+<button onClick="{{ clearAll }}" style="height:34px;padding:0 14px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">Limpar filtros</button>
+</div>
+</sc-if>
+<sc-if value="{{ hasMore }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:12px;padding:18px 0 0">
+<span style="flex:1;height:1px;background:var(--line)"></span>
+<button onClick="{{ loadMore }}" style="height:34px;padding:0 14px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">{{ moreLabel }}</button>
+<span style="flex:1;height:1px;background:var(--line)"></span>
+</div>
+</sc-if>
+</sc-if>
+</div>
+</main>
+
+<sc-if value="{{ selectedCount }}" hint-placeholder-val="{{ 0 }}">
+<div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--surf);border:1px solid var(--line);box-shadow:0 10px 15px -3px rgba(0,0,0,.4);animation:rise 200ms cubic-bezier(.16,1,.3,1)">
+<span style="font:500 12px/1 var(--b)">{{ selectedLabel }}</span>
+<span style="width:1px;height:20px;background:var(--line)"></span>
+<sc-for list="{{ bulkOwners }}" as="o" hint-placeholder-count="3">
+<button onClick="{{ o.assign }}" style="height:30px;padding:0 12px;border:1px solid var(--line);font:500 11.5px/1 var(--b);color:var(--ink2)">{{ o.label }}</button>
+</sc-for>
+<button onClick="{{ bulkImplemented }}" style="height:30px;padding:0 12px;background:var(--bd);color:#04121c;font:500 11.5px/1 var(--b)">Marcar implementado</button>
+<span title="Aplicabilidade exige justificativa individual — não pode ser alterada em lote" style="height:30px;padding:0 12px;display:flex;align-items:center;border:1px solid var(--line);font:500 11.5px/1 var(--b);color:var(--ink4);cursor:not-allowed">Marcar N/A</span>
+<button onClick="{{ clearSel }}" style="color:var(--ink3);font:400 16px/1 var(--b);padding:0 4px">✕</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ detail }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:9;display:flex;justify-content:flex-end;animation:fadein 160ms ease-out">
+<button onClick="{{ closeDetail }}" aria-label="Fechar" style="position:absolute;inset:0;background:rgba(3,7,18,.55);cursor:default"></button>
+<section style="position:relative;width:min(460px,92vw);background:var(--surf);border-left:1px solid var(--line);display:flex;flex-direction:column;animation:slidein 220ms cubic-bezier(.16,1,.3,1);overflow:auto">
+<div style="position:sticky;top:0;background:var(--surf);padding:20px 24px 16px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px">
+<div style="flex:1;min-width:0">
+<div style="font:500 10px/1 var(--m);letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">{{ detail.code }} · {{ detail.domain }}</div>
+<h2 style="margin:0;font:600 17px/1.2 var(--h);letter-spacing:-.01em">{{ detail.name }}</h2>
+</div>
+<button onClick="{{ closeDetail }}" style="color:var(--ink3);font-size:18px;line-height:1;padding:2px 4px">✕</button>
+</div>
+<div style="padding:20px 24px 28px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Aplicabilidade</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<sc-for list="{{ applicOptions }}" as="a" hint-placeholder-count="2">
+<button onClick="{{ a.pick }}" style="{{ a.style }}">{{ a.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ naPending }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:10px;padding:14px;background:rgba(245,158,11,.08);border-left:2px solid var(--warn);animation:rise 180ms cubic-bezier(.16,1,.3,1)">
+<div style="font:400 12px/1.5 var(--b);color:var(--ink2)">A norma exige justificativa registrada para cada controle excluído do escopo. Sem ela, este controle bloqueia a exportação da SoA.</div>
+<textarea value="{{ naText }}" onChange="{{ onNaText }}" aria-label="Justificativa de exclusão" placeholder="Por que este controle não se aplica ao escopo declarado?" style="min-height:76px;padding:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:400 12.5px/1.5 var(--b);resize:vertical;outline:none"></textarea>
+<div style="display:flex;align-items:center;gap:10px">
+<span style="{{ naCounterStyle }}">{{ naCounter }}</span>
+<button onClick="{{ naCancel }}" style="margin-left:auto;height:34px;padding:0 12px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">Cancelar</button>
+<button onClick="{{ naConfirm }}" style="{{ naConfirmStyle }}">Confirmar N/A</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ naWhyMissing }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(239,68,68,.10);border-left:2px solid var(--bad)">
+<span style="flex:1;font:400 12px/1.4 var(--b);color:var(--ink2)">N/A sem justificativa registrada — bloqueia a exportação.</span>
+<button onClick="{{ naFix }}" style="height:30px;padding:0 12px;border:1px solid var(--line);font:500 11.5px/1 var(--b);color:var(--ink2)">Justificar</button>
+</div>
+</sc-if>
+<sc-if value="{{ naWhyText }}" hint-placeholder-val="{{ false }}">
+<div style="padding:12px 14px;background:var(--surf2);font:400 12px/1.6 var(--b);color:var(--ink2)"><span style="display:block;font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">Justificativa de exclusão</span>{{ naWhyText }}</div>
+</sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Status de implementação</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<sc-for list="{{ statusOptions }}" as="s" hint-placeholder-count="4">
+<button onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.label }}</button>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Responsável<sc-if value="{{ naLock }}" hint-placeholder-val="{{ false }}"><span style="text-transform:none;letter-spacing:0;color:var(--ink4);font:400 10px/1 var(--m)"> · travado em controle N/A</span></sc-if></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<sc-for list="{{ ownerOptions }}" as="o" hint-placeholder-count="4">
+<button onClick="{{ o.pick }}" style="{{ o.style }}">{{ o.label }}</button>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Maturidade CMMI<sc-if value="{{ naLock }}" hint-placeholder-val="{{ false }}"><span style="text-transform:none;letter-spacing:0;color:var(--ink4);font:400 10px/1 var(--m)"> · não se aplica a controle excluído</span></sc-if></div>
+<div style="display:flex;align-items:center;gap:10px">
+<sc-for list="{{ cmmiOptions }}" as="c" hint-placeholder-count="6">
+<button onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.label }}</button>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Justificativa de aplicabilidade</div>
+<div style="font:400 13px/1.6 var(--b);color:var(--ink2)">{{ detail.rationale }}</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Evidências · {{ detail.evidenceCount }}</div>
+<sc-for list="{{ detailEvidence }}" as="e" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)">
+<span style="flex:1;min-width:0;font:400 12.5px/1.4 var(--b)">{{ e.file }}<br><span style="font:400 10px var(--m);color:var(--ink4)">{{ e.hash }}</span></span>
+<span style="{{ e.tagStyle }}">{{ e.status }}</span>
+</div>
+</sc-for>
+<sc-if value="{{ detailNoEvidence }}" hint-placeholder-val="{{ false }}">
+<div style="padding:16px;border:1px dashed var(--ink4);font:400 12.5px/1.5 var(--b);color:var(--ink3);text-align:center">Sem evidência anexada. Este controle não passa na auditoria sem prova.</div>
+</sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px"><span style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Histórico · {{ historyCount }}</span><span style="font:400 10px/1 var(--m);color:var(--ink4)">imutável · exportável no relatório de auditoria</span></div>
+<sc-for list="{{ history }}" as="h" hint-placeholder-count="3">
+<div style="display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)">
+<span style="flex:none;width:3px;background:var(--bd);opacity:.5"></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+<span style="font:400 12.5px/1.3 var(--b);color:var(--ink)">{{ h.change }}</span>
+<span style="font:400 10px/1 var(--m);color:var(--ink4)">{{ h.meta }}</span>
+</span>
+</div>
+</sc-for>
+<sc-if value="{{ historyEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:14px 0;border-top:1px solid var(--line);font:400 12px/1.5 var(--b);color:var(--ink3)">Nenhuma alteração registrada neste controle.</div>
+</sc-if>
+</div>
+</div>
+<div style="{{ barStyle }}">
+<span style="flex:1;min-width:0;font:400 11.5px/1.4 var(--b);color:var(--ink3)">{{ barNote }}</span>
+<sc-if value="{{ barDiscard }}" hint-placeholder-val="{{ false }}"><button onClick="{{ discard }}" style="height:34px;padding:0 12px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">{{ discardLabel }}</button></sc-if>
+<button onClick="{{ barPrimary }}" style="{{ barPrimaryStyle }}">{{ barPrimaryLabel }}</button>
+</div>
+</section>
+</div>
+</sc-if>
+
+<div role="status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap">{{ toast }}</div>
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;left:28px;bottom:28px;z-index:10;display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surf2);border-left:2px solid var(--bd);animation:rise 200ms cubic-bezier(.16,1,.3,1);font:400 12.5px/1 var(--b)">{{ toast }}<button onClick="{{ undo }}" style="font:500 12.5px/1 var(--b);color:var(--bd)">Desfazer</button></div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const DATA = [
+  ["A.5.1","Políticas de segurança da informação","Organizacional",1,3,"ok","Jurídico",2],
+  ["A.5.7","Inteligência de ameaças","Organizacional",1,1,"partial","SecOps",1],
+  ["A.5.15","Controle de acesso","Organizacional",1,3,"ok","TI",3],
+  ["A.5.19","Segurança da informação em fornecedores","Organizacional",1,2,"partial","Jurídico",1],
+  ["A.5.30","Prontidão de TIC para continuidade","Organizacional",1,0,"gap","TI",0],
+  ["A.5.34","Privacidade e proteção de dados pessoais","Organizacional",1,2,"partial","DPO",2],
+  ["A.6.3","Conscientização e treinamento","Pessoas",1,1,"partial","RH",1],
+  ["A.6.4","Processo disciplinar","Pessoas",1,3,"ok","RH",1],
+  ["A.6.7","Trabalho remoto","Pessoas",1,2,"partial","RH",0],
+  ["A.7.2","Entrada física","Físico",1,3,"ok","Facilities",2],
+  ["A.7.4","Monitoramento de segurança física","Físico",0,null,"na","—",0],
+  ["A.7.10","Mídia de armazenamento","Físico",1,2,"partial","TI",1],
+  ["A.8.1","Dispositivos de endpoint","Tecnológico",1,3,"ok","TI",4],
+  ["A.8.2","Direitos de acesso privilegiado","Tecnológico",1,2,"partial","TI",2],
+  ["A.8.5","Autenticação segura","Tecnológico",1,3,"ok","TI",3],
+  ["A.8.8","Gestão de vulnerabilidades técnicas","Tecnológico",1,2,"partial","SecOps",2],
+  ["A.8.11","Mascaramento de dados","Tecnológico",1,1,"partial","Eng",0],
+  ["A.8.12","Prevenção de vazamento de dados","Tecnológico",1,0,"gap","—",0],
+  ["A.8.16","Atividades de monitoramento","Tecnológico",1,1,"gap","SecOps",1],
+  ["A.8.23","Filtragem web","Tecnológico",0,null,"na","—",0],
+  ["A.8.25","Ciclo de vida de desenvolvimento seguro","Tecnológico",1,1,"gap","Eng",0],
+  ["A.8.28","Codificação segura","Tecnológico",1,1,"gap","Eng",1],
+  ["A.8.32","Gestão de mudanças","Tecnológico",1,3,"ok","Eng",2],
+  ["A.8.34","Proteção de sistemas durante auditoria","Tecnológico",1,2,"partial","TI",1],
+  ["A.5.2","Papéis e responsabilidades","Organizacional",1,3,"ok","Jurídico",1],
+  ["A.5.3","Segregação de funções","Organizacional",1,2,"partial","RH",0],
+  ["A.5.9","Inventário de informações e ativos","Organizacional",1,2,"partial","TI",2],
+  ["A.5.10","Uso aceitável de informações e ativos","Organizacional",1,3,"ok","Jurídico",1],
+  ["A.5.12","Classificação da informação","Organizacional",1,1,"partial","DPO",0],
+  ["A.5.14","Transferência de informações","Organizacional",1,2,"partial","TI",1],
+  ["A.5.17","Informação de autenticação","Organizacional",1,3,"ok","TI",2],
+  ["A.5.23","Segurança no uso de serviços em nuvem","Organizacional",1,1,"gap","TI",0],
+  ["A.5.24","Planejamento de resposta a incidentes","Organizacional",1,1,"gap","SecOps",0],
+  ["A.5.29","Segurança durante disrupção","Organizacional",1,0,"gap","TI",0],
+  ["A.5.31","Requisitos legais e contratuais","Organizacional",1,3,"ok","Jurídico",2],
+  ["A.5.35","Análise crítica independente","Organizacional",1,1,"partial","Jurídico",1],
+  ["A.6.1","Triagem de candidatos","Pessoas",1,2,"partial","RH",1],
+  ["A.6.2","Termos e condições de contratação","Pessoas",1,3,"ok","RH",2],
+  ["A.6.5","Responsabilidades após encerramento","Pessoas",1,2,"partial","RH",1],
+  ["A.6.6","Acordos de confidencialidade","Pessoas",1,3,"ok","Jurídico",2],
+  ["A.6.8","Relato de eventos de segurança","Pessoas",1,1,"gap","SecOps",0],
+  ["A.7.1","Perímetros de segurança física","Físico",0,null,"na","—",0],
+  ["A.7.3","Segurança de escritórios e salas","Físico",1,2,"partial","Facilities",1],
+  ["A.7.7","Mesa e tela limpas","Físico",1,1,"partial","RH",0],
+  ["A.7.9","Segurança de ativos fora das instalações","Físico",1,2,"partial","TI",1],
+  ["A.8.3","Restrição de acesso à informação","Tecnológico",1,2,"partial","TI",2],
+  ["A.8.4","Acesso ao código-fonte","Tecnológico",1,2,"partial","Eng",1],
+  ["A.8.6","Gestão de capacidade","Tecnológico",1,2,"partial","TI",1],
+  ["A.8.7","Proteção contra malware","Tecnológico",1,3,"ok","TI",2],
+  ["A.8.9","Gestão de configuração","Tecnológico",1,1,"gap","TI",0],
+  ["A.8.10","Exclusão de informações","Tecnológico",1,1,"gap","DPO",0],
+  ["A.8.13","Backup das informações","Tecnológico",1,3,"ok","TI",3],
+  ["A.8.15","Registro de eventos (logs)","Tecnológico",1,2,"partial","SecOps",1],
+  ["A.8.20","Segurança de redes","Tecnológico",1,2,"partial","TI",1],
+  ["A.8.24","Uso de criptografia","Tecnológico",1,2,"partial","Eng",1],
+  ["A.8.31","Separação de ambientes","Tecnológico",1,2,"partial","Eng",1],
+  ["A.8.33","Informação de teste","Tecnológico",1,1,"gap","Eng",0]
+];
+
+const STATUS = {
+  ok:      {label:"Implementado", color:"#10b981"},
+  partial: {label:"Parcial",      color:"#f59e0b"},
+  gap:     {label:"Gap",          color:"#ef4444"},
+  na:      {label:"N/A",          color:"#94a3b8"}
+};
+const OWNERS = ["TI","SecOps","Eng","Jurídico","RH","DPO","Facilities","—"];
+// Justificativa de exclusão: exigida pela norma para todo controle marcado N/A.
+const NA_WHY = { "A.7.4": "Não há perímetro físico próprio: operação 100% em nuvem e escritórios em coworking, monitoramento sob responsabilidade do locador (contrato em anexo)." };
+const NA_MIN = 40;
+const EVIDENCE = {
+  "A.8.2":[{file:"log-revisao-acessos-q3.csv",hash:"41be…0c93",status:"em análise"},{file:"politica-acesso-v3.pdf",hash:"9f2c…a71d",status:"aprovada"}],
+  "A.8.5":[{file:"print-mfa-console.png",hash:"c7d0…5e8a",status:"aprovada"}],
+  "A.8.16":[{file:"dashboard-siem-set.pdf",hash:"77aa…31fe",status:"revisar"}]
+};
+
+class Component extends DCLogic {
+  state = {
+    ctrls: DATA.map(d => ({code:d[0], name:d[1], domain:d[2], applic:d[3], cmmi:d[4], status:d[5], owner:d[6], ev:d[7], naWhy: NA_WHY[d[0]] || ""})),
+    naPending: null, naText: "",
+    acct: false, tenant: "Twyn", role: "admin", phase: "ready", page: 25,
+    query: "", domains: [], statuses: [], sort: "code", dir: 1,
+    sel: [], detail: null, dense: false, toast: null, undo: null, rail: false,
+    mode: "instant", draft: {}, confirmClose: false, cursor: -1,
+    log: [
+      { id: "s3", code: "A.8.12", at: new Date(Date.now() - 12 * 864e5), field: "justificativa", from: "—", to: "texto revisado", author: "M. Santos", batch: 0 },
+      { id: "s2", code: "A.8.12", at: new Date(Date.now() - 34 * 864e5), field: "aplicabilidade", from: "Não", to: "Sim", author: "R. Esper", batch: 0 },
+      { id: "s1", code: "A.8.2", at: new Date(Date.now() - 6 * 864e5), field: "maturidade", from: "CMMI 1", to: "CMMI 2", author: "M. Santos", batch: 0 }
+    ]
+  };
+
+  searchRef = React.createRef();
+  lastClicked = null;
+
+  componentDidMount() {
+    this._key = (e) => {
+      const tag = (e.target.tagName || "").toLowerCase();
+      const typing = tag === "input" || tag === "textarea";
+      if (e.key === "Escape") {
+        if (typing) { e.target.blur(); return; }
+        if (this.state.acct) return this.setState({ acct: false });
+        if (this.state.detail) return this.renderVals().closeDetail();
+        if (this.state.sel.length) return this.setState({ sel: [] });
+        return;
+      }
+      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing)) {
+        e.preventDefault();
+        this.searchRef.current && this.searchRef.current.focus();
+        return;
+      }
+      if (typing || e.metaKey || e.ctrlKey || this.state.detail) return;
+      const rows = this.visible();
+      if (!rows.length) return;
+      const cur = this.state.cursor;
+      if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); this.setState({ cursor: Math.min(cur + 1, rows.length - 1) }); }
+      else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); this.setState({ cursor: Math.max(cur - 1, 0) }); }
+      else if (e.key === "Enter" && cur >= 0) { e.preventDefault(); this.setState({ detail: rows[cur].code, draft: {} }); }
+      else if (e.key === "x" && cur >= 0) {
+        e.preventDefault();
+        const code = rows[cur].code;
+        this.setState(s => ({ sel: s.sel.includes(code) ? s.sel.filter(c => c !== code) : [...s.sel, code] }));
+      }
+      else if (e.key === "a") { e.preventDefault(); this.setState(s => ({ sel: s.sel.length === rows.length ? [] : rows.map(r => r.code) })); }
+    };
+    document.addEventListener("keydown", this._key);
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener("keydown", this._key);
+    clearTimeout(this._t);
+  }
+
+  // ——— derived
+  visible() {
+    const { ctrls, query, domains, statuses, sort, dir } = this.state;
+    const q = query.trim().toLowerCase();
+    const out = ctrls.filter(c =>
+      (!domains.length || domains.includes(c.domain)) &&
+      (!statuses.length || statuses.includes(c.status)) &&
+      (!q || (c.code + " " + c.name + " " + c.owner).toLowerCase().includes(q))
+    );
+    const key = { code:"code", name:"name", domain:"domain", applic:"applic", cmmi:"cmmi", status:"status", owner:"owner" }[sort];
+    const seg = (code) => code.split(/[.\s]/).map(p => (p === "" || isNaN(p)) ? p : +p);
+    const natural = (a, b) => {
+      const x = seg(a), y = seg(b);
+      for (let i = 0; i < Math.max(x.length, y.length); i++) {
+        const p = x[i], q = y[i];
+        if (p === undefined) return -1;
+        if (q === undefined) return 1;
+        if (p === q) continue;
+        if (typeof p === "number" && typeof q === "number") return p - q;
+        return String(p) > String(q) ? 1 : -1;
+      }
+      return 0;
+    };
+    return out.sort((a, b) => {
+      if (key === "code") return natural(a.code, b.code) * dir;
+      const x = a[key] ?? -1, y = b[key] ?? -1;
+      const cmp = x > y ? 1 : x < y ? -1 : 0;
+      return (cmp || natural(a.code, b.code)) * dir;
+    });
+  }
+
+  flash(msg, undo) {
+    clearTimeout(this._t);
+    this.setState({ toast: msg, undo: undo || null });
+    this._t = setTimeout(() => this.setState({ toast: null, undo: null }), 4200);
+  }
+
+  patch(codes, fields, label) {
+    const before = this.state.ctrls.map(c => ({ ...c }));
+    const beforeLog = this.state.log;
+    const FIELD_PT = { status: "status", owner: "dono", cmmi: "maturidade", applic: "aplicabilidade", naWhy: "justificativa de exclusão" };
+    const show = (k, v) => k === "status" ? STATUS[v].label
+      : k === "cmmi" ? (v === null || v === undefined ? "—" : `CMMI ${v}`)
+      : k === "applic" ? (v ? "Aplicável" : "N/A")
+      : k === "naWhy" ? (v ? "registrada" : "—")
+      : String(v);
+    const stamp = new Date();
+    const entries = [];
+    codes.forEach(code => {
+      const prev = before.find(c => c.code === code);
+      Object.keys(fields).forEach(k => {
+        if (prev[k] === fields[k]) return;
+        entries.push({
+          id: `${stamp.getTime()}-${code}-${k}`, code, at: stamp,
+          field: FIELD_PT[k] || k, from: show(k, prev[k]), to: show(k, fields[k]),
+          author: "R. Esper", batch: codes.length > 1 ? codes.length : 0
+        });
+      });
+    });
+    this.setState(s => ({
+      ctrls: s.ctrls.map(c => codes.includes(c.code) ? { ...c, ...fields } : c),
+      log: [...entries, ...s.log]
+    }));
+    this.flash(label, () => this.setState({ ctrls: before, log: beforeLog, toast: null, undo: null }));
+  }
+
+  chip(active) {
+    return `display:inline-flex;align-items:center;height:30px;padding:0 12px;font:400 12px/1 var(--b);white-space:nowrap;transition:border-color 150ms cubic-bezier(.16,1,.3,1);border:1px solid ${active ? "var(--bd)" : "var(--line)"};color:${active ? "#7fd6f6" : "var(--ink3)"};background:${active ? "rgba(0,173,232,.12)" : "transparent"}`;
+  }
+
+  tag(status) {
+    const s = STATUS[status];
+    return `display:inline-block;font:500 10px/1.7 var(--m);letter-spacing:.08em;text-transform:uppercase;padding:1px 8px;color:${s.color};background:color-mix(in oklab,${s.color} 16%,transparent)`;
+  }
+
+  renderVals() {
+    const S = this.state;
+    const rows = this.visible();
+    const pad = S.dense ? "7px 10px" : "12px 10px";
+    const td = `padding:${pad};border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:middle`;
+    const th = "position:sticky;top:64px;z-index:3;background:var(--paper);font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;text-align:left;color:var(--ink4);padding:14px 10px 10px;border-bottom:1px solid var(--line)";
+    const allOn = rows.length > 0 && rows.every(r => S.sel.includes(r.code));
+
+    const sortCol = (id) => () => this.setState(s => ({ sort: id, dir: s.sort === id ? -s.dir : 1 }));
+    const arrow = (id) => S.sort === id ? (S.dir > 0 ? " ↑" : " ↓") : "";
+
+    const base = S.detail ? S.ctrls.find(c => c.code === S.detail) : null;
+    const draftMode = S.mode === "draft";
+    const dirtyKeys = base ? Object.keys(S.draft).filter(k => S.draft[k] !== base[k]) : [];
+    const det = base ? { ...base, ...S.draft } : null;
+    const ev = det ? (EVIDENCE[det.code] || []) : [];
+
+    const setField = (fields, label) => {
+      if (!draftMode) return this.patch([base.code], fields, label);
+      this.setState(s => ({ draft: { ...s.draft, ...fields }, confirmClose: false }));
+    };
+    const leave = () => this.setState({ detail: null, draft: {}, confirmClose: false });
+    const FIELD_PT = { status: "status", owner: "dono", cmmi: "maturidade" };
+    const n = dirtyKeys.length;
+    const alt = n > 1 ? "alterações" : "alteração";
+    const salvas = n > 1 ? "não salvas" : "não salva";
+    const dirtyPT = dirtyKeys.map(k => FIELD_PT[k] || k).join(", ");
+
+    const rail = S.rail;
+    const hide = rail ? "display:none" : "display:inline";
+    const navBase = `display:flex;align-items:center;gap:10px;height:32px;padding:0 ${rail ? "24px" : "20px"};font:400 13px/1 var(--b);transition:color 150ms cubic-bezier(.16,1,.3,1)`;
+
+    return {
+      asideStyle: `flex:0 0 ${rail ? 72 : 232}px;width:${rail ? 72 : 232}px;position:sticky;top:0;height:100vh;overflow:hidden;display:flex;flex-direction:column;background:var(--surf);border-right:1px solid var(--line);transition:flex-basis 200ms cubic-bezier(.16,1,.3,1),width 200ms cubic-bezier(.16,1,.3,1)`,
+      brandRow: `height:64px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 ${rail ? 18 : 20}px;border-bottom:1px solid var(--line)`,
+      labelStyle: hide,
+      toggleRail: () => this.setState(s => ({ rail: !s.rail })),
+      railIcon: rail ? "»" : "«",
+      railBtn: `flex:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:var(--ink4);font:400 14px/1 var(--b)`,
+      tenantBox: `margin:12px;padding:0 10px;height:34px;background:var(--surf2);display:${rail ? "none" : "flex"};align-items:center;gap:8px;width:calc(100% - 24px)`,
+      tenantRail: `margin:12px 18px;height:36px;display:${rail ? "flex" : "none"};align-items:center;justify-content:center;background:var(--surf2);font:500 10px/1 var(--m);letter-spacing:.06em;color:var(--ink2)`,
+      grpStyle: `font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink4);padding:14px 20px 8px;display:${rail ? "none" : "block"}`,
+      grpStyle2: `font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink4);padding:18px 20px 8px;display:${rail ? "none" : "block"}`,
+      navItem: `${navBase};color:var(--ink3)`,
+      navItemOn: `${navBase};color:var(--ink);font-weight:500;box-shadow:inset 2px 0 0 var(--bd)`,
+      footRow: `margin-top:auto;margin-left:${rail ? 18 : 20}px;margin-right:${rail ? 18 : 20}px;padding:14px 0 18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px`,
+      footId: `display:${rail ? "none" : "flex"};flex-direction:column;gap:3px;min-width:0`,
+      footCaret: `margin-left:auto;color:var(--ink4);font-size:11px;display:${rail ? "none" : "block"}`,
+      densityLabel: S.dense ? "Densidade confortável" : "Densidade compacta",
+      toggleDensity: () => this.setState(s => ({ dense: !s.dense })),
+      query: S.query,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      countLabel: rows.length > S.page
+        ? `${Math.min(S.page, rows.length)} de ${rows.length} exibidos · ${S.ctrls.length} controles`
+        : `${rows.length} de ${S.ctrls.length} controles`,
+      hasFilters: !!(S.query || S.domains.length || S.statuses.length),
+      clearAll: () => this.setState({ query: "", domains: [], statuses: [] }),
+      isEmpty: rows.length === 0,
+
+      savedViews: [
+        { label: "Meus controles", count: 9, apply: () => this.setState({ query: "TI", domains: [], statuses: [] }) },
+        { label: "Gaps A.8", count: 4, apply: () => this.setState({ query: "", domains: ["Tecnológico"], statuses: ["gap"] }) },
+        { label: "Sem evidência", count: 8, apply: () => this.setState({ query: "—", domains: [], statuses: [] }) }
+      ].map(v => ({
+        ...v,
+        style: `display:flex;align-items:center;gap:10px;height:30px;padding:0 ${rail ? "24px" : "20px"};font:400 12.5px/1 var(--b);color:var(--ink3)`,
+        dot: `flex:none;opacity:.6;display:${rail ? "block" : "none"}`,
+        labelStyle: `${hide};flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`,
+        countStyle: `display:${rail ? "none" : "block"};font:400 10px var(--m);color:var(--ink4)`
+      })),
+
+      facets: [
+        ...["Organizacional", "Pessoas", "Físico", "Tecnológico"].map(d => ({
+          label: d, style: this.chip(S.domains.includes(d)),
+          toggle: () => this.setState(s => ({ domains: s.domains.includes(d) ? s.domains.filter(x => x !== d) : [...s.domains, d] }))
+        })),
+        ...["gap", "partial"].map(k => ({
+          label: STATUS[k].label, style: this.chip(S.statuses.includes(k)),
+          toggle: () => this.setState(s => ({ statuses: s.statuses.includes(k) ? s.statuses.filter(x => x !== k) : [...s.statuses, k] }))
+        }))
+      ],
+
+      columns: [
+        { id: "code", label: "Ctrl", w: "74px" }, { id: "name", label: "Controle", w: "auto" },
+        { id: "domain", label: "Domínio", w: "116px" }, { id: "applic", label: "Aplic.", w: "66px" },
+        { id: "cmmi", label: "CMMI", w: "62px" }, { id: "status", label: "Status", w: "118px" },
+        { id: "owner", label: "Dono", w: "94px" }
+      ].map(c => ({
+        ...c, arrow: arrow(c.id), sort: sortCol(c.id),
+        ariaSort: S.sort === c.id ? (S.dir > 0 ? "ascending" : "descending") : "none",
+        style: `${th};width:${c.w}${["applic", "cmmi"].includes(c.id) ? ";text-align:right" : ""}`
+      })),
+
+      searchRef: this.searchRef,
+      thSel: `${th};width:34px`,
+
+      // ——— conta, contexto e estados de carga
+      acctOpen: S.acct,
+      toggleAcct: () => this.setState(s => ({ acct: !s.acct })),
+      closeAcct: () => this.setState({ acct: false }),
+      tenant: S.tenant,
+      roleLabel: S.role === "admin" ? "admin · ness." : "cliente · twyn",
+      footStyle: `margin-top:auto;margin-left:${rail ? 18 : 20}px;margin-right:${rail ? 18 : 20}px;padding:14px 0 18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;cursor:pointer;background:${S.acct ? "rgba(255,255,255,.03)" : "transparent"}`,
+      tenants: ["Twyn", "Forense", "ness. labs"].map(t => ({
+        label: t, norm: t === "ness. labs" ? "27701" : "27001",
+        active: S.tenant === t,
+        checkStyle: `flex:none;opacity:${S.tenant === t ? 1 : 0};color:var(--bd)`,
+        style: `display:flex;align-items:center;gap:8px;padding:6px 0;font:400 12px/1 var(--b);color:${S.tenant === t ? "#7fd6f6" : "var(--ink2)"};width:100%`,
+        pick: () => {
+          if (S.tenant === t) return this.setState({ acct: false });
+          this.setState({ tenant: t, acct: false, phase: "loading", sel: [], detail: null, cursor: -1, page: 25 });
+          clearTimeout(this._load);
+          this._load = setTimeout(() => { this.setState({ phase: "ready" }); this.flash(`Contexto trocado para ${t}`, null); }, 1100);
+        }
+      })),
+      viewAsClient: () => this.setState({ role: "cliente", acct: false, phase: "denied", detail: null, sel: [] }),
+      backToAdmin: () => this.setState({ role: "admin", phase: "ready" }),
+      simulateError: () => this.setState({ acct: false, phase: "error", detail: null, sel: [] }),
+      retry: () => {
+        this.setState({ phase: "loading" });
+        clearTimeout(this._load);
+        this._load = setTimeout(() => this.setState({ phase: "ready" }), 900);
+      },
+      isReady: S.phase === "ready",
+      isLoading: S.phase === "loading",
+      isError: S.phase === "error",
+      isDenied: S.phase === "denied",
+      skeletonRows: [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({
+        w1: `${28 + (i % 3) * 4}px`, w2: `${52 + ((i * 17) % 34)}%`, w3: "34px", w4: `${22 + (i % 4) * 5}px`,
+        tdSel: `padding:${pad};border-bottom:1px solid var(--line)`, td
+      })),
+      skStyle: "display:block;height:8px;background:var(--surf2);animation:pulse 1400ms ease-in-out infinite",
+
+      // ——— paginação
+      pageRows: rows.length,
+      hasMore: rows.length > S.page,
+      moreLabel: `Carregar mais ${Math.min(25, rows.length - S.page)} · ${rows.length - S.page} restantes`,
+      loadMore: () => this.setState(s => ({ page: s.page + 25 })),
+      allBg: allOn ? "var(--bd)" : "transparent",
+      toggleAll: () => this.setState(s => ({ sel: allOn ? [] : rows.map(r => r.code) })),
+
+      rows: rows.slice(0, S.page).map((r, i) => {
+        const on = S.sel.includes(r.code);
+        const cursored = S.cursor === i;
+        const num = `${td};color:var(--ink3);text-align:right;font-variant-numeric:tabular-nums`;
+        return {
+          ...r,
+          statusLabel: STATUS[r.status].label,
+          tagStyle: this.tag(r.status),
+          applic: r.applic ? "Sim" : "Não",
+          cmmi: r.cmmi === null ? "—" : r.cmmi,
+          trStyle: `transition:background 150ms cubic-bezier(.16,1,.3,1);cursor:default;background:${cursored ? "var(--surf2)" : on ? "rgba(0,173,232,.07)" : S.detail === r.code ? "var(--surf)" : "transparent"};box-shadow:${cursored ? "inset 2px 0 0 var(--bd)" : "none"}`,
+          td, tdMid: num,
+          tdCode: `${td};font:400 12px var(--m);color:var(--ink3);font-variant-numeric:tabular-nums`,
+          tdSel: `padding:${pad};border-bottom:1px solid var(--line)`,
+          boxBg: on ? "var(--bd)" : "transparent",
+          boxBorder: on ? "var(--bd)" : "var(--ink4)",
+          toggle: () => this.setState(s => ({ sel: on ? s.sel.filter(x => x !== r.code) : [...s.sel, r.code] })),
+          click: (e) => {
+            this.setState({ cursor: i });
+            if (e && e.shiftKey && this.lastClicked !== null) {
+              const [a, b] = [this.lastClicked, i].sort((x, y) => x - y);
+              const range = rows.slice(a, b + 1).map(x => x.code);
+              e.preventDefault();
+              return this.setState(s => ({ sel: Array.from(new Set([...s.sel, ...range])) }));
+            }
+            this.lastClicked = i;
+          },
+          open: () => this.setState({ detail: r.code, draft: {} })
+        };
+      }),
+
+      selectedCount: S.sel.length,
+      selectedLabel: `${S.sel.length} selecionado${S.sel.length > 1 ? "s" : ""}`,
+      clearSel: () => this.setState({ sel: [] }),
+      bulkOwners: ["TI", "SecOps", "Eng"].map(o => ({
+        label: `Atribuir a ${o}`,
+        assign: () => { this.patch(S.sel, { owner: o }, `${S.sel.length} controles atribuídos a ${o}`); this.setState({ sel: [] }); }
+      })),
+      bulkImplemented: () => { this.patch(S.sel, { status: "ok", cmmi: 3 }, `${S.sel.length} controles marcados como implementados`); this.setState({ sel: [] }); },
+
+      detail: det ? { ...det, rationale: det.applic
+        ? `Aplicável ao escopo declarado: ${det.domain.toLowerCase()}. Exigido pelos requisitos do SGSI e referenciado no plano de tratamento de riscos.`
+        : (det.naWhy
+            ? "Controle excluído do escopo — justificativa registrada acima e versionada no histórico."
+            : "Controle excluído do escopo sem justificativa registrada — pendente antes da exportação da SoA."), evidenceCount: ev.length } : null,
+      modes: [
+        { id: "instant", label: "Imediato", hint: "Cada mudança grava na hora, com desfazer — para listas e campos simples" },
+        { id: "draft", label: "Rascunho", hint: "Acumula alterações e grava no salvar — para documentos longos" }
+      ].map(m => ({
+        ...m,
+        style: `height:34px;padding:0 12px;font:500 12px/1 var(--b);color:${S.mode === m.id ? "#04121c" : "var(--ink3)"};background:${S.mode === m.id ? "var(--bd)" : "transparent"}`,
+        pick: () => this.setState({ mode: m.id, draft: {}, confirmClose: false })
+      })),
+
+      closeDetail: () => {
+        if (draftMode && dirtyKeys.length) return this.setState({ confirmClose: true });
+        leave();
+      },
+
+      barStyle: `position:sticky;bottom:0;display:flex;align-items:center;gap:10px;padding:14px 24px;background:${S.confirmClose ? "rgba(239,68,68,.10)" : "var(--surf)"};border-top:1px solid ${n ? "var(--bd)" : "var(--line)"};transition:border-color 150ms cubic-bezier(.16,1,.3,1)`,
+      barNote: S.confirmClose
+        ? `Descartar ${n} ${alt} ${salvas}?`
+        : draftMode
+          ? (n ? `${n} ${alt} ${salvas} · ${dirtyPT}` : "Nenhuma alteração pendente")
+          : "Gravação imediata · toda alteração entra na trilha de auditoria",
+      barDiscard: S.confirmClose || (draftMode && n > 0),
+      discardLabel: S.confirmClose ? "Descartar e fechar" : "Descartar",
+      discard: () => {
+        if (S.confirmClose) return leave();
+        this.setState({ draft: {} });
+        this.flash("Alterações descartadas", null);
+      },
+      barPrimaryLabel: S.confirmClose ? "Continuar editando" : draftMode ? (n ? `Salvar ${n} ${alt}` : "Fechar") : "Fechar",
+      barPrimaryStyle: `height:34px;padding:0 14px;font:500 12px/1 var(--b);${(draftMode && n && !S.confirmClose) ? "background:var(--bd);color:#04121c" : "border:1px solid var(--line);color:var(--ink2)"}`,
+      barPrimary: () => {
+        if (S.confirmClose) return this.setState({ confirmClose: false });
+        if (draftMode && n) {
+          const fields = {}; dirtyKeys.forEach(k => fields[k] = S.draft[k]);
+          this.patch([base.code], fields, `${base.code} salvo · ${n} ${alt}`);
+          return this.setState({ draft: {} });
+        }
+        leave();
+      },
+
+      applicOptions: det ? [
+        { v: 1, label: "Aplicável" },
+        { v: 0, label: "N/A · exige justificativa" }
+      ].map(o => ({
+        label: o.label, style: this.chip(det.applic === o.v),
+        pick: () => o.v
+          ? setField({ applic: 1, status: det.status === "na" ? "gap" : det.status, naWhy: "" }, `${det.code} → aplicável`)
+          : this.setState({ naPending: det.code, naText: det.naWhy || "" })
+      })) : [],
+      naPending: !!det && S.naPending === det.code,
+      naText: S.naText,
+      onNaText: (e) => this.setState({ naText: e.target.value }),
+      naCounter: `${S.naText.trim().length}/${NA_MIN} caracteres mínimos`,
+      naCounterStyle: `font:400 10px/1 var(--m);color:${S.naText.trim().length >= NA_MIN ? "var(--ink4)" : "var(--warn)"}`,
+      naConfirmStyle: `height:34px;padding:0 14px;font:500 12px/1 var(--b);${S.naText.trim().length >= NA_MIN ? "background:var(--bd);color:#04121c" : "border:1px solid var(--line);color:var(--ink4);cursor:not-allowed"}`,
+      naConfirm: () => {
+        if (S.naText.trim().length < NA_MIN) return;
+        setField({ applic: 0, status: "na", cmmi: null, owner: "—", naWhy: S.naText.trim() }, `${det.code} → N/A com justificativa`);
+        this.setState({ naPending: null, naText: "" });
+      },
+      naCancel: () => this.setState({ naPending: null, naText: "" }),
+      naWhyText: det && !det.applic ? (det.naWhy || "") : "",
+      naWhyMissing: !!det && !det.applic && !det.naWhy && S.naPending !== det.code,
+      naFix: () => this.setState({ naPending: det.code, naText: "" }),
+
+      naMissingCount: S.ctrls.filter(c => !c.applic && !c.naWhy).length,
+      naMissingLabel: (() => {
+        const k = S.ctrls.filter(c => !c.applic && !c.naWhy).length;
+        return `${k} controle${k > 1 ? "s" : ""} N/A sem justificativa de exclusão — a SoA não pode ser exportada`;
+      })(),
+      showNaMissing: () => this.setState({ query: "", domains: [], statuses: ["na"] }),
+      exportStyle: (() => {
+        const blocked = S.ctrls.some(c => !c.applic && !c.naWhy);
+        return `height:34px;padding:0 14px;font:500 12px/1 var(--b);${blocked ? "border:1px solid var(--line);color:var(--ink4);cursor:not-allowed" : "background:var(--bd);color:#04121c"}`;
+      })(),
+      exportTitle: S.ctrls.some(c => !c.applic && !c.naWhy)
+        ? "Bloqueado: há controle N/A sem justificativa de exclusão"
+        : `Exporta o recorte atual (${rows.length} controles)`,
+
+      statusOptions: det ? Object.keys(STATUS).filter(k => k !== "na").map(k => ({
+        label: STATUS[k].label, style: this.chip(det.status === k) + (det.applic ? "" : ";opacity:.4;cursor:not-allowed"),
+        pick: () => det.applic && setField({ status: k }, `${det.code} → ${STATUS[k].label}`)
+      })) : [],
+      ownerOptions: det ? OWNERS.map(o => ({
+        label: o, style: this.chip(det.owner === o) + (det.applic ? "" : ";opacity:.4;cursor:not-allowed"),
+        pick: () => det.applic && setField({ owner: o }, `${det.code} atribuído a ${o}`)
+      })) : [],
+      cmmiOptions: det ? [0, 1, 2, 3, 4, 5].map(n => ({
+        label: String(n), style: this.chip(det.cmmi === n) + ";width:34px;justify-content:center;padding:0" + (det.applic ? "" : ";opacity:.4;cursor:not-allowed"),
+        pick: () => det.applic && setField({ cmmi: n }, `${det.code} · maturidade CMMI ${n}`)
+      })) : [],
+      naLock: !!det && !det.applic,
+      detailEvidence: ev.map(e => ({ ...e, tagStyle: this.tag(e.status === "aprovada" ? "ok" : e.status === "revisar" ? "gap" : "partial") })),
+      detailNoEvidence: !!det && ev.length === 0,
+
+      historyCount: det ? S.log.filter(l => l.code === det.code).length : 0,
+      history: det ? S.log.filter(l => l.code === det.code).map(l => {
+        const mins = Math.round((Date.now() - l.at.getTime()) / 6e4);
+        const when = mins < 1 ? "agora" : mins < 60 ? `há ${mins} min` : mins < 1440 ? `há ${Math.round(mins / 60)} h` : `há ${Math.round(mins / 1440)} dias`;
+        return {
+          ...l, when,
+          meta: `${l.author}${l.batch ? ` · em lote (${l.batch} controles)` : ""} · ${when}`,
+          change: `${l.field}: ${l.from} → ${l.to}`
+        };
+      }) : [],
+      historyEmpty: !!det && S.log.filter(l => l.code === det.code).length === 0,
+
+      toast: S.toast,
+      undo: () => S.undo && S.undo()
+    };
+  }
+}
+</script>
+</body>
+</html>

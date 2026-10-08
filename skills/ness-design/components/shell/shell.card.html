@@ -1,0 +1,41 @@
+<!-- @dsCard group="Components" viewport="700x260" subtitle="Marca, item de navegação e banda de título fixa" name="Shell" -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<style>
+  .nav{display:flex;align-items:center;gap:12px;height:32px;padding:0 20px;font:400 13px/1 var(--font-body);color:var(--text-muted)}
+  .nav.on{color:var(--text-primary);font-weight:500;box-shadow:inset 2px 0 0 var(--accent)}
+  .ic{width:16px;height:16px;flex:none;opacity:.5}
+  .nav.on .ic{opacity:1;color:var(--accent)}
+</style></head>
+<body style="padding:0;background:var(--surface-page)">
+  <div style="display:flex;height:260px">
+    <div style="width:232px;flex:none;background:var(--surface-card);border-right:1px solid var(--border-hairline);display:flex;flex-direction:column">
+      <div style="height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border-hairline)">
+        <span class="ness-brand">n<span class="dot">.</span>iso</span>
+        <span style="color:var(--text-faint);font:400 14px var(--font-body)">«</span>
+      </div>
+      <div style="margin:12px;height:34px;padding:0 10px;background:var(--surface-raised);display:flex;align-items:center;gap:8px">
+        <span style="font:500 12.5px/1 var(--font-body);color:var(--text-primary)">Twyn</span>
+        <span style="font:400 10px/1 var(--font-mono);color:var(--text-muted)">27001</span>
+        <span style="margin-left:auto;color:var(--text-faint);font-size:10px">▾</span>
+      </div>
+      <div class="ness-meta" style="padding:14px 20px 8px">Implementação</div>
+      <div class="nav"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>Jornada</div>
+      <div class="nav on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 17l2 2 4-4"/><path d="M3 7l2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></svg>SoA</div>
+      <div class="nav"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></svg>Riscos</div>
+      <div style="margin-top:auto;margin-inline:20px;padding:14px 0 18px;border-top:1px solid var(--border-hairline);display:flex;align-items:center;gap:10px">
+        <span style="width:30px;height:30px;background:var(--surface-raised);display:flex;align-items:center;justify-content:center;font:500 10px/1 var(--font-mono);color:var(--text-secondary)">RE</span>
+        <span style="display:flex;flex-direction:column;gap:3px"><span style="font:400 12px/1 var(--font-body)">R. Esper</span><span class="ness-meta" style="letter-spacing:.12em">admin · ness.</span></span>
+        <span style="margin-left:auto;color:var(--text-faint);font-size:11px">▴</span>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="height:64px;display:flex;align-items:center;gap:16px;padding:0 28px;border-bottom:1px solid var(--border-hairline)">
+        <h1 style="margin:0;flex:1;font:var(--type-h1);letter-spacing:var(--tracking-title)">Declaração de Aplicabilidade</h1>
+        <span style="height:34px;padding:0 14px;display:inline-flex;align-items:center;border:1px solid var(--border-hairline);font:500 12px/1 var(--font-body);color:var(--text-secondary)">Colunas</span>
+        <span style="height:34px;padding:0 14px;display:inline-flex;align-items:center;background:var(--accent);color:var(--accent-ink);font:500 12px/1 var(--font-body)">Exportar SoA</span>
+      </div>
+      <div style="padding:18px 28px;font:var(--type-body);color:var(--text-muted)">As duas bandas têm 64px e fecham na mesma hairline.</div>
+    </div>
+  </div>
+</body></html>

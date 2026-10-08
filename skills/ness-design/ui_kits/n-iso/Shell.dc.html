@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="_ds/industry-1314a8a2-4a2f-40d0-a1f6-6281a6969fab/styles.css">
+<script src="_ds/industry-1314a8a2-4a2f-40d0-a1f6-6281a6969fab/_ds_bundle.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--bd:#00ade8;--paper:#0b1326;--surf:#162244;--surf2:#1e2d52;--line:rgba(255,255,255,.10);--ink:#f1f5f9;--ink2:#cbd5e1;--ink3:#94a3b8;--ink4:#8fa0b6;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--h:"Montserrat",system-ui,sans-serif;--b:"Inter",system-ui,sans-serif;--m:"JetBrains Mono",ui-monospace,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--b)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--bd);outline-offset:2px}
+a{color:var(--bd);text-decoration:none}
+a:hover{color:#7fd6f6}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}}
+@keyframes rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+</style></helmet>
+
+<div style="display:flex;min-height:100vh;align-items:stretch">
+
+<aside style="{{ asideStyle }}">
+<div style="{{ brandRow }}">
+<span style="font:500 22px/1 var(--h);letter-spacing:-.015em;white-space:nowrap">{{ productHead }}<span style="color:var(--bd)">.</span><span style="{{ labelStyle }}">{{ productTail }}</span></span>
+<button onClick="{{ toggleRail }}" aria-label="Recolher menu" style="flex:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:var(--ink4);font:400 14px/1 var(--b)">{{ railIcon }}</button>
+</div>
+
+<button style="{{ tenantBox }}"><span style="font:500 12.5px/1 var(--b);color:var(--ink)">{{ tenantName }}</span><span style="font:400 10px/1 var(--m);color:var(--ink3)">{{ tenantNorm }}</span><span style="margin-left:auto;color:var(--ink4);font-size:10px">▾</span></button>
+<div style="{{ tenantRail }}">{{ tenantShort }}</div>
+
+<nav style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;padding:4px 0">
+<sc-for list="{{ nav }}" as="n" hint-placeholder-count="6">
+<div style="{{ n.groupStyle }}">{{ n.group }}</div>
+<button style="{{ n.style }}" title="{{ n.label }}">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ n.stroke }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:{{ n.opacity }}"><path d="{{ n.d1 }}"></path><path d="{{ n.d2 }}"></path><path d="{{ n.d3 }}"></path></svg>
+<span style="{{ labelStyle }}">{{ n.label }}</span>
+</button>
+</sc-for>
+</nav>
+
+<button onClick="{{ toggleAcct }}" aria-label="Menu da conta" style="{{ footStyle }}">
+<span style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--surf2);font:500 10px/1 var(--m);letter-spacing:.04em;color:var(--ink2)">{{ userInitials }}</span>
+<span style="{{ footId }}"><span style="font:400 12px/1 var(--b)">{{ userName }}</span><span style="font:500 9px/1 var(--m);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)">{{ userRole }}</span></span>
+<span style="{{ footCaret }}">▴</span>
+</button>
+</aside>
+
+<main style="flex:1;min-width:0;display:flex;flex-direction:column">
+<header style="position:sticky;top:0;z-index:4;height:64px;flex:none;display:flex;align-items:center;gap:16px;padding:0 28px;background:var(--paper);border-bottom:1px solid var(--line)">
+<h1 style="margin:0;font:600 20px/1 var(--h);letter-spacing:-.02em;flex:1;min-width:0">{{ pageTitle }}</h1>
+<sc-if value="{{ secondaryAction }}" hint-placeholder-val="{{ true }}">
+<button style="height:34px;padding:0 14px;border:1px solid var(--line);font:500 12px/1 var(--b);color:var(--ink2)">{{ secondaryAction }}</button>
+</sc-if>
+<sc-if value="{{ primaryAction }}" hint-placeholder-val="{{ true }}">
+<button style="height:34px;padding:0 14px;background:var(--bd);color:#04121c;font:500 12px/1 var(--b)">{{ primaryAction }}</button>
+</sc-if>
+</header>
+
+<div style="flex:1;padding:24px 28px 32px;display:flex;flex-direction:column;gap:16px">
+<div style="flex:1;min-height:280px;border:1px dashed var(--ink4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:32px">
+<span style="font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)">Área de conteúdo</span>
+<span style="font:400 13px/1.6 var(--b);color:var(--ink2);max-width:52ch">Duplique este arquivo para começar a tela de um produto novo e troque este bloco pela lista, detalhe ou formulário do domínio. Marca, tenant, navegação e conta vêm dos props — nada de recortar chrome.</span>
+<span style="font:400 11px/1.6 var(--m);color:var(--ink4)">estados obrigatórios: vazio · carregando · erro · sem permissão</span>
+</div>
+</div>
+</main>
+
+<sc-if value="{{ acctOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:11">
+<button onClick="{{ closeAcct }}" aria-label="Fechar menu" style="position:absolute;inset:0;cursor:default"></button>
+<div style="position:absolute;left:12px;bottom:74px;width:236px;background:var(--surf);border:1px solid var(--line);box-shadow:0 10px 15px -3px rgba(0,0,0,.5);padding:12px;display:flex;flex-direction:column;gap:10px;animation:rise 180ms cubic-bezier(.16,1,.3,1)">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--surf2);font:500 10px/1 var(--m);color:var(--ink2)">{{ userInitials }}</span>
+<span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font:500 12.5px/1 var(--b)">{{ userName }}</span><span style="font:400 10px/1 var(--m);color:var(--ink4);overflow:hidden;text-overflow:ellipsis">{{ userEmail }}</span></span>
+</div>
+<div style="height:1px;background:var(--line)"></div>
+<sc-for list="{{ acctItems }}" as="a" hint-placeholder-count="4">
+<div style="{{ a.style }}">{{ a.label }}<span style="margin-left:auto;font:400 10px/1 var(--m);color:var(--ink4)">{{ a.meta }}</span></div>
+</sc-for>
+<div style="height:1px;background:var(--line)"></div>
+<div style="display:flex;align-items:center;font:500 12px/1 var(--h);letter-spacing:-.01em;color:var(--ink2)">ness<span style="color:var(--bd)">.</span><span style="margin-left:auto;font:400 10px/1 var(--m);color:var(--ink4)">{{ version }}</span></div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860},
+&quot;product&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;n.iso&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Produto&quot;},
+&quot;version&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;n.iso 4.2&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Produto&quot;},
+&quot;pageTitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Declaração de Aplicabilidade&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tela&quot;},
+&quot;primaryAction&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Exportar SoA&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tela&quot;},
+&quot;secondaryAction&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Densidade compacta&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tela&quot;},
+&quot;tenantName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Twyn&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tenant&quot;},
+&quot;tenantNorm&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;27001&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Tenant&quot;},
+&quot;navJson&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Navegação&quot;},
+&quot;userInitials&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;RE&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conta&quot;},
+&quot;userName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;R. Esper&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conta&quot;},
+&quot;userRole&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;admin · ness.&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conta&quot;},
+&quot;userEmail&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;r.esper@ness.com.br&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conta&quot;}}">
+// Shell reutilizável da família ness. — copie este arquivo para iniciar a tela
+// de um produto novo (n.priv, n.risk, n.audit) e troque só os props + o conteúdo.
+const ICONS = {
+  dashboard: ["M3 3h7v9H3z", "M14 3h7v5h-7z", "M14 12h7v9h-7z"],
+  jornada:   ["M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15", "M6 16a3 3 0 1 0 0 6 3 3 0 0 0 0-6", "M18 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6"],
+  lista:     ["M3 17l2 2 4-4", "M3 7l2 2 4-4", "M13 6h8M13 12h8M13 18h8"],
+  risco:     ["m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3", "M12 9v4", "M12 17h.01"],
+  documento: ["M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", "M14 2v4a2 2 0 0 0 2 2h4", "M9 13h6"],
+  dados:     ["M3 5c0-1.7 4-3 9-3s9 1.3 9 3-4 3-9 3-9-1.3-9-3", "M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5", "M3 12c0 1.7 4 3 9 3s9-1.3 9-3"],
+  pessoas:   ["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8", "M22 21v-2a4 4 0 0 0-3-3.87"],
+  privacidade: ["M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z", "M12 8v4", "M12 16h.01"],
+  marcador:  ["m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z", "", ""]
+};
+
+const DEFAULT_NAV = [
+  { group: "Implementação", label: "Jornada", icon: "jornada" },
+  { label: "SoA", icon: "lista", active: true },
+  { group: "Operacional", label: "Riscos", icon: "risco" },
+  { label: "Evidências", icon: "documento" },
+  { group: "Sistema", label: "Usuários", icon: "pessoas" }
+];
+
+class Component extends DCLogic {
+  state = { rail: false, acct: false };
+
+  renderVals() {
+    const p = this.props;
+    const rail = this.state.rail;
+    const product = p.product ?? "n.iso";
+    const parts = product.split(".");
+    const nav = (() => {
+      try { return p.navJson ? JSON.parse(p.navJson) : DEFAULT_NAV; }
+      catch (e) { return DEFAULT_NAV; }
+    })();
+    const navBase = `display:flex;align-items:center;gap:10px;height:32px;padding:0 ${rail ? "24px" : "20px"};font:400 13px/1 var(--b);transition:color 150ms cubic-bezier(.16,1,.3,1)`;
+    const tenantName = p.tenantName ?? "Twyn";
+
+    return {
+      asideStyle: `flex:0 0 ${rail ? 72 : 232}px;width:${rail ? 72 : 232}px;position:sticky;top:0;height:100vh;overflow:hidden;display:flex;flex-direction:column;background:var(--surf);border-right:1px solid var(--line);transition:flex-basis 200ms cubic-bezier(.16,1,.3,1),width 200ms cubic-bezier(.16,1,.3,1)`,
+      brandRow: `height:64px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 ${rail ? 18 : 20}px;border-bottom:1px solid var(--line)`,
+      productHead: parts[0],
+      productTail: parts.slice(1).join("."),
+      labelStyle: rail ? "display:none" : "display:inline",
+      railIcon: rail ? "»" : "«",
+      toggleRail: () => this.setState(s => ({ rail: !s.rail })),
+
+      tenantName,
+      tenantShort: tenantName.slice(0, 2).toUpperCase(),
+      tenantNorm: p.tenantNorm ?? "27001",
+      tenantBox: `margin:12px;padding:0 10px;height:34px;background:var(--surf2);display:${rail ? "none" : "flex"};align-items:center;gap:8px;width:calc(100% - 24px)`,
+      tenantRail: `margin:12px 18px;height:36px;display:${rail ? "flex" : "none"};align-items:center;justify-content:center;background:var(--surf2);font:500 10px/1 var(--m);letter-spacing:.06em;color:var(--ink2)`,
+
+      nav: nav.map(n => {
+        const d = ICONS[n.icon] || ICONS.lista;
+        return {
+          ...n,
+          group: n.group || "",
+          groupStyle: `font:500 9px/1 var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--ink4);padding:14px 20px 8px;display:${(!n.group || rail) ? "none" : "block"}`,
+          style: n.active ? `${navBase};color:var(--ink);font-weight:500;box-shadow:inset 2px 0 0 var(--bd)` : `${navBase};color:var(--ink3)`,
+          stroke: n.active ? "var(--bd)" : "currentColor",
+          opacity: n.active ? 1 : .5,
+          d1: d[0], d2: d[1], d3: d[2]
+        };
+      }),
+
+      pageTitle: p.pageTitle ?? "Título da tela",
+      primaryAction: p.primaryAction ?? "Ação primária",
+      secondaryAction: p.secondaryAction ?? "Ação secundária",
+
+      userInitials: p.userInitials ?? "RE",
+      userName: p.userName ?? "R. Esper",
+      userRole: p.userRole ?? "admin · ness.",
+      userEmail: p.userEmail ?? "r.esper@ness.com.br",
+      version: p.version ?? `${product} 4.2`,
+      footStyle: `margin-top:auto;margin-left:${rail ? 18 : 20}px;margin-right:${rail ? 18 : 20}px;padding:14px 0 18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;cursor:pointer;background:${this.state.acct ? "rgba(255,255,255,.03)" : "transparent"}`,
+      footId: `display:${rail ? "none" : "flex"};flex-direction:column;gap:3px;min-width:0`,
+      footCaret: `margin-left:auto;color:var(--ink4);font-size:11px;display:${rail ? "none" : "block"}`,
+      acctOpen: this.state.acct,
+      toggleAcct: () => this.setState(s => ({ acct: !s.acct })),
+      closeAcct: () => this.setState({ acct: false }),
+      acctItems: [
+        { label: "Trocar tenant", meta: this.props.tenantName ?? "Twyn" },
+        { label: "Minha conta e MFA", meta: "" },
+        { label: "Tema", meta: "escuro" },
+        { label: "Trilha da minha sessão", meta: "" },
+        { label: "Encerrar sessão", meta: "⇧⌘Q", danger: true }
+      ].map(a => ({
+        ...a,
+        style: `display:flex;align-items:center;gap:8px;padding:6px 0;font:400 12px/1 var(--b);color:${a.danger ? "var(--bad)" : "var(--ink2)"}`
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

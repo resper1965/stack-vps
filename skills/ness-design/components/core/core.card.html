@@ -1,0 +1,40 @@
+<!-- @dsCard group="Components" viewport="700x230" subtitle="Botão, chip de faceta, badge de status e toast com desfazer" name="Core" -->
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<style>
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:34px;padding:0 14px;font:500 12px/1 var(--font-body);white-space:nowrap}
+  .btn.pri{background:var(--accent);color:var(--accent-ink)}
+  .btn.sec{border:1px solid var(--border-hairline);color:var(--text-secondary)}
+  .btn.ghost{color:var(--text-muted)}
+  .btn.danger{border:1px solid var(--border-hairline);color:var(--ness-bad)}
+  .btn.off{border:1px solid var(--border-hairline);color:var(--text-faint);cursor:not-allowed}
+  .chip{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;font:400 12px/1 var(--font-body);border:1px solid var(--border-hairline);color:var(--text-muted)}
+  .chip.on{border-color:var(--accent);color:#7fd6f6;background:var(--ness-bluedot-tint)}
+  .b{display:inline-block;font:500 10px/1.7 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;padding:1px 8px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+</style></head>
+<body style="padding:20px;background:var(--surface-page)">
+  <div class="row">
+    <span class="btn pri">Exportar SoA</span>
+    <span class="btn sec">Colunas</span>
+    <span class="btn ghost">Limpar filtros</span>
+    <span class="btn danger">Encerrar sessão</span>
+    <span class="btn off" title="Aplicabilidade exige justificativa individual">Marcar N/A</span>
+  </div>
+  <div class="row">
+    <span class="chip on">Tecnológico ×</span>
+    <span class="chip on">Gap <span style="font:400 10px var(--font-mono);color:var(--text-faint)">5</span> ×</span>
+    <span class="chip">Parcial <span style="font:400 10px var(--font-mono);color:var(--text-faint)">9</span></span>
+    <span class="chip">+ Dono</span>
+  </div>
+  <div class="row">
+    <span class="b" style="color:var(--ness-ok);background:color-mix(in oklab,var(--ness-ok) 16%,transparent)">implementado</span>
+    <span class="b" style="color:var(--ness-warn);background:color-mix(in oklab,var(--ness-warn) 16%,transparent)">parcial</span>
+    <span class="b" style="color:var(--ness-bad);background:color-mix(in oklab,var(--ness-bad) 16%,transparent)">gap</span>
+    <span class="b" style="color:var(--text-muted);background:color-mix(in oklab,var(--text-muted) 16%,transparent)">n/a</span>
+  </div>
+  <div style="display:inline-flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-raised);border-left:2px solid var(--accent);font:400 12.5px/1 var(--font-body)">
+    3 controles atribuídos a TI
+    <span style="font:500 12.5px/1 var(--font-body);color:var(--accent)">Desfazer</span>
+  </div>
+</body></html>
