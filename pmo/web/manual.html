@@ -43,10 +43,10 @@ table.m td code { white-space: nowrap; }
 .tag { font-size: 12px; border: 1px solid var(--borda); border-radius: 999px; padding: 1px 8px; color: var(--suave); }
 .tag.dev { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--borda)); }
 .tag.sec { color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 40%, var(--borda)); }
-.box { border: 1px solid var(--borda); border-left: 3px solid var(--acento); border-radius: 8px;
+.box { border: 1px solid var(--borda); border-radius: 8px;
   background: var(--superficie); padding: 10px 14px; margin: 12px 0; font-size: 14px; }
-.box.aviso { border-left-color: var(--perigo); background: color-mix(in srgb, var(--perigo) 7%, var(--superficie)); }
-.box.ok { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 7%, var(--superficie)); }
+.box.aviso { border-color: color-mix(in srgb, var(--perigo) 40%, var(--borda)); background: color-mix(in srgb, var(--perigo) 7%, var(--superficie)); }
+.box.ok { border-color: color-mix(in srgb, var(--ok) 40%, var(--borda)); background: color-mix(in srgb, var(--ok) 7%, var(--superficie)); }
 .box b { color: var(--texto); }
 .fig { border: 1px solid var(--borda); border-radius: var(--raio); background: var(--superficie); padding: 16px; margin: 14px 0; }
 .fig svg { width: 100%; height: auto; display: block; }
@@ -86,11 +86,13 @@ table.m td code { white-space: nowrap; }
   </nav>
 
   <main class="doc">
+    <h1>Manual operacional — ambiente <code>stack</code></h1>
+    <p class="lede">Um ambiente de desenvolvimento remoto único: você e os agentes trabalham na VPS,
+    o laptop é só terminal. Acessível de qualquer lugar sem porta aberta, um projeto não atrapalha o
+    outro, e tudo é recriável pelos scripts do repositório <code>stack-vps</code>.</p>
+
     <section id="visao">
-      <h1>A VPS <code>stack</code>, por dentro</h1>
-      <p class="lede">Um ambiente de desenvolvimento remoto único: você e os agentes trabalham na VPS,
-      o laptop é só terminal. Acessível de qualquer lugar sem porta aberta, um projeto não atrapalha o
-      outro, e tudo é recriável pelos scripts do repositório <code>stack-vps</code>.</p>
+      <h2><span class="n">1</span> Visão geral</h2>
 
       <div class="fig">
         <svg viewBox="0 0 860 300" role="img" aria-label="Arquitetura da VPS stack">
@@ -170,6 +172,7 @@ table.m td code { white-space: nowrap; }
       <p>O dia a dia de desenvolvimento é com <b>Claude Code</b> e <b>Codex</b>. Os modelos do comando
       <code>modelo</code> e o Continue no VS Code são para <b>teste de segurança</b>, não para o dev comum.</p>
 
+      <h3>Agentes</h3>
       <div class="cards">
         <div class="card"><h4>Claude Code <span class="tag dev">dev</span></h4>
           <p>Duas contas: <b>bekaa</b> (<code>~/.claude</code>, padrão) e <b>ionic</b> (<code>~/.claude-ionic</code>).</p>
@@ -201,6 +204,7 @@ table.m td code { white-space: nowrap; }
       <h2><span class="n">4</span> Skills</h2>
       <p>Habilidades empacotadas, instaladas nos três agentes pelo <code>29-skills.sh</code>. As do repo são
       linkadas em <code>~/.claude/skills</code> e <code>~/.agents/skills</code>.</p>
+      <h3>Instaladas nos agentes</h3>
       <div class="cards">
         <div class="card"><h4>pentest</h4>
           <p>Conduz um pentest autorizado em fases (0–6) e gera relatório A4 no ness.design (CVSS como escala).
