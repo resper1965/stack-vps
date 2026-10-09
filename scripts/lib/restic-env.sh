@@ -23,9 +23,13 @@ export AWS_DEFAULT_REGION=auto RESTIC_PASSWORD
 # entra antes do restore. Plugins dos agentes sao reinstalados pelo 04.
 # REQUIRED: sem eles nao ha recuperacao; o backup recusa rodar se faltar algum.
 BACKUP_REQUIRED=("$R/srv/dev/state" "$R/srv/dev/secrets/admin.env" "$R/etc/cloudflared/credentials.json")
+# /var/lib/pmo guarda o que o painel NAO regenera do GitHub: classificacao, ajustes, verticais, log de acoes.
+# painel.json (regeneravel) ja vem pelo state. A fila (abaixo) fica de fora: acao enfileirada e transitoria.
 BACKUP_OPTIONAL=("$R/srv/dev/data" "$R/srv/forense" "$R/srv/dev/secrets/agente.env" "$R/srv/dev/secrets/projetos"
-                 "$R/home/dev/.claude" "$R/home/dev/.codex" "$R/home/agente/.claude" "$R/home/agente/.codex")
+                 "$R/home/dev/.claude" "$R/home/dev/.codex" "$R/home/agente/.claude" "$R/home/agente/.codex"
+                 "$R/var/lib/pmo")
 BACKUP_PATHS=("${BACKUP_REQUIRED[@]}" "${BACKUP_OPTIONAL[@]}")
 BACKUP_EXCLUDES=("$R/home/dev/.claude/.credentials.json" "$R/home/dev/.codex/auth.json"
                  "$R/home/agente/.claude/.credentials.json" "$R/home/agente/.codex/auth.json"
-                 "$R/home/dev/.claude/plugins" "$R/home/agente/.claude/plugins" "node_modules")
+                 "$R/home/dev/.claude/plugins" "$R/home/agente/.claude/plugins" "node_modules"
+                 "$R/var/lib/pmo/fila")

@@ -28,6 +28,7 @@ afirma_log "--include /etc/cloudflared/credentials.json" "inclui a credencial do
 nega_log "chown" "destino de teste: nao mexe em dono"
 afirma_log "--include /home/agente/.claude" "inclui a config do agente"
 afirma_log "--include /srv/forense" "inclui as evidencias"
+afirma_log "--include /var/lib/pmo" "inclui os dados do painel (classificacao, ajustes, log)"
 
 novo_tmp; prepara
 bash "$S" --qualquer >/dev/null 2>&1; afirma_rc $? 1 "argumento desconhecido: recusa"

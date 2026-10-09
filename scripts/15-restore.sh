@@ -42,6 +42,7 @@ if [[ $DEST == / ]]; then
   for d in /home/agente/.claude /home/agente/.codex; do
     if [[ -e $d ]] && id agente >/dev/null 2>&1; then chown -R agente:agente "$d"; fi
   done
+  if [[ -e /var/lib/pmo ]] && id pmo >/dev/null 2>&1; then chown -R pmo:pmo /var/lib/pmo; fi
   if [[ -e /srv/forense ]]; then chown -R dev:dev /srv/forense; chmod 750 /srv/forense; fi
   if [[ -f /srv/dev/secrets/admin.env ]]; then chown dev:dev /srv/dev/secrets/admin.env; chmod 600 /srv/dev/secrets/admin.env; fi
   if [[ -f /srv/dev/secrets/agente.env ]]; then chown dev:agente /srv/dev/secrets/agente.env; chmod 640 /srv/dev/secrets/agente.env; fi
