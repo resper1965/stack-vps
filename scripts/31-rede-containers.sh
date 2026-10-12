@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Containers (workspaces do Coder, runners) nao alcancam a tailnet nem o metadata da nuvem.
+# Containers (runners) nao alcancam a tailnet nem o metadata da nuvem.
 # O host ja esta protegido pelo UFW (entrada negada; 22 so na tailscale0). Aqui o que se fecha
-# e o encaminhamento: sem isto um workspace de terceiro chegaria ao laptop e as outras maquinas
+# e o encaminhamento: sem isto um container de terceiro chegaria ao laptop e as outras maquinas
 # da tailnet passando pela VPS. Idempotente; reaplicado pelo stack-rede-containers.service.
 # Uso: sudo ./31-rede-containers.sh [--instalar]
 set -euo pipefail
@@ -14,7 +14,7 @@ for destino in 100.64.0.0/10 169.254.169.254/32; do
 done
 
 # DNS dos containers: resolvedores publicos, nao o do provedor (que guarda NXDOMAIN de registro
-# recem-criado por ate meia hora e ja derrubou o agente do Coder). Reinicia o Docker so se mudar.
+# recem-criado por ate meia hora). Reinicia o Docker so se mudar.
 if [[ ${STACK_TESTE:-} != 1 ]]; then
   D=/etc/docker/daemon.json; [[ -s $D ]] || echo '{}' > "$D"
   novo=$(jq -S '.dns = ["1.1.1.1", "8.8.8.8"]' "$D")

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # sysbox: runtime de container que permite Docker dentro do container sem modo privilegiado.
-# Base dos workspaces do Coder e dos runners: o terceiro tem root no container, nao no host.
+# Base dos runners: o terceiro tem root no container, nao no host.
 # Idempotente. Uso: sudo ./30-sysbox.sh   (antes de existir container: o pacote reinicia o Docker)
 set -euo pipefail
 [[ $EUID -eq 0 ]] || { echo "rode como root"; exit 1; }

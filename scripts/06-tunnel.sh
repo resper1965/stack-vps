@@ -40,9 +40,9 @@ echo "tunnel: $TID"
 
 # 2. ingress local — servico novo entra aqui, nunca como porta aberta.
 # Hostnames extras em TUNNEL_EXTRA (admin.env): "host=servico host2=servico2",
-# ex.: TUNNEL_EXTRA="coder.ness.com.br=http://localhost:7080"
+# ex.: TUNNEL_EXTRA="app.exemplo.com.br=http://localhost:3000"
 EXTRAS=()
-for par in ${TUNNEL_EXTRA-coder.ness.com.br=http://localhost:7080}; do EXTRAS+=("$par"); done
+for par in ${TUNNEL_EXTRA-}; do EXTRAS+=("$par"); done
 { printf 'tunnel: %s
 credentials-file: %s/credentials.json
 ingress:
