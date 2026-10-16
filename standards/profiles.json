@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "defaults": {
+    "authentication": "oidc-server-session",
+    "authorization": "deny-by-default",
+    "design_system": "ness-design",
+    "secrets": "scoped",
+    "ci": "local-vps"
+  },
+  "profiles": {
+    "gcp": {
+      "label": "Google Cloud",
+      "guidance": "Use IAM least privilege, Workload Identity Federation or attached service identities; Secret Manager; Cloud Logging. Do not create static service-account keys."
+    },
+    "vercel": {
+      "label": "Vercel",
+      "guidance": "Use project-scoped environment variables, preview deployments, managed identity/OIDC where supported. No GitHub Actions required."
+    },
+    "cloudflare": {
+      "label": "Cloudflare",
+      "guidance": "Use scoped API tokens, Workers secrets/bindings, Wrangler and environment-specific config. Do not expose admin DNS tokens to apps."
+    },
+    "azure": {
+      "label": "Microsoft Azure",
+      "guidance": "Use Entra ID, managed identities, Key Vault, Azure Monitor, RBAC least privilege; do not assume Azure AD B2C migration is complete."
+    },
+    "local": {
+      "label": "VPS / self-hosted",
+      "guidance": "Use Docker rootless, localhost-only ports or Tailnet, project-scoped secrets and systemd jobs."
+    }
+  }
+}
