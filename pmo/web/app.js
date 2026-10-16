@@ -32,6 +32,13 @@ const tipoDe = (p) => classe(p).tipo || p.tipo || "";
 const quando = (dias) => dias === 0 ? "hoje" : dias === 1 ? "ontem" : dias >= 9999 ? "sem atividade" : `${dias} dias`;
 // repositorios de cliente: so arquivar (o executor recusa excluir de qualquer forma)
 const ehCliente = (p) => ["nessenergy/alupdatalake", "nessenergy/sitealupar"].includes((p.id || "").toLowerCase());
+// sessões do OpenCode (fundidas pelo painel): contagem, última atividade e comando de retomada
+const quandoSessao = (p) => p.ultima_sessao ? quando(Math.max(0, Math.floor((Date.now() - p.ultima_sessao) / 86400000))) : "—";
+const copiarSessao = (p) => navigator.clipboard.writeText(`opencode -s ${p.sessao_id}`).then(() => toast("Comando copiado"));
+const sessoesPar = (p) => p.sessoes ? [el("dt", {}, "Sessões OpenCode"),
+  el("dd", {}, `${p.sessoes} · última ${quandoSessao(p)}`,
+    el("button", { class: "bt", style: "margin-left:6px;padding:2px 8px;font-size:12px", title: `opencode -s ${p.sessao_id}`,
+      onclick: () => copiarSessao(p) }, "copiar comando"))] : [];
 
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
@@ -65,6 +72,7 @@ function cartao(p) {
       ...(p.tecnologias || []).filter((t) => t !== (p.linguagem || "").toLowerCase()).slice(0, 3).map((t) => el("span", { class: "etiqueta tec" }, t)),
       (p.segredos_no_repo || []).length ? el("span", { class: "etiqueta ruim", title: p.segredos_no_repo.join(", ") }, "segredo no repo") : null,
       el("span", { class: "etiqueta" }, quando(p.dias)),
+      p.sessoes ? el("span", { class: "etiqueta", title: `última sessão ${quandoSessao(p)}` }, `sessões ${p.sessoes}`) : null,
       p.prs ? el("span", { class: "etiqueta" }, `${p.prs} PR`) : null,
       p.ci === "failure" ? el("span", { class: "etiqueta ruim" }, "CI vermelho") : null),
     el("div", { class: "passo" }, passo ? `→ ${passo}` : (p.esquecido || "sem próximo passo")));
@@ -95,6 +103,7 @@ function abrir(p) {
       el("dt", {}, "Estágio"), el("dd", {}, etiquetaEstagio(p)),
       el("dt", {}, "Tipo"), el("dd", {}, tipoDe(p) || "não declarado"),
       el("dt", {}, "Última atividade"), el("dd", {}, quando(p.dias)),
+      ...sessoesPar(p),
       el("dt", {}, "Pasta na VPS"), el("dd", {}, p.pasta || "sem clone na VPS"),
       el("dt", {}, "PRs / issues"), el("dd", {}, `${p.prs || 0} / ${p.issues || 0}`),
       el("dt", {}, "CI"), el("dd", {}, p.ci || "sem CI"))),

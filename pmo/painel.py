@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pmo.regras import contar
 
 SAIDA = "/srv/dev/state/pmo/painel.json"
+SESSOES = "/srv/dev/state/pmo/sessoes.json"   # 0600, escrito pelo coletor do próprio agente
+DEFAZAGEM = 2 * 86400
 
 
 def a_destinar(raiz="/srv/dev/laptop"):
@@ -60,6 +62,64 @@ def gerar(registros, destinar, anterior, agora):
             "mudou_desde_ontem": mudou, "projetos": ativos, "arquivados": arquivados, "a_destinar": destinar}
 
 
+def fundir(dados, sessoes, agora):
+    """Consolida sessões do OpenCode aos projetos: join projeto -> id.lower().
+    Ausente, corrupta, incompleta (o coletor só grava coleta completa — tratada como ausente)
+    ou defasada não derrubam a geração; só agregados por projeto (contagem, última atividade,
+    id completo da mais recente, para o comando opencode -s) — a lista bruta (0600, do agente)
+    nunca vem para o painel. Muta e retorna."""
+    if not isinstance(sessoes, dict) or not isinstance(sessoes.get("sessoes"), list):
+        return dados
+    if sessoes.get("coleta_incompleta"):
+        return dados
+    por_id = {}
+    for s in sessoes["sessoes"]:
+        if not isinstance(s, dict):
+            continue
+        projeto, sid = s.get("projeto"), s.get("id")
+        if not isinstance(projeto, str) or not isinstance(sid, str):
+            continue
+        atualizada = s.get("atualizada")
+        if not isinstance(atualizada, int) or isinstance(atualizada, bool):
+            atualizada = 0
+        por_id.setdefault(projeto.lower(), []).append((atualizada, sid))
+    if not por_id:
+        return dados
+    projetos = {x["id"].lower(): x for k in ("projetos", "arquivados") for x in dados.get(k, [])}
+    com = 0
+    for id, lista in por_id.items():
+        p = projetos.get(id)
+        if p is None:
+            continue
+        atualizada, sid = max(lista)
+        p["sessoes"] = len(lista)
+        p["ultima_sessao"] = atualizada or None
+        p["sessao_id"] = sid
+        com += 1
+    if isinstance(dados.get("contadores"), dict):
+        dados["contadores"]["projetos_com_sessao"] = com
+    gerado = sessoes.get("gerado_em")
+    gerado = gerado.strip() if isinstance(gerado, str) else ""
+    dados["sessoes_gerado_em"] = gerado or None
+    try:
+        g = datetime.fromisoformat(gerado)
+        if (agora - g).total_seconds() > DEFAZAGEM:
+            dados["sessoes_defasada"] = True
+    except (ValueError, TypeError):
+        pass
+    return dados
+
+
+def ler_sessoes(caminho=SESSOES):
+    """sessoes.json (0600, do próprio agente); ausente, corrupto ou fora de contrato vira None."""
+    try:
+        with open(caminho, encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return None
+    return d if isinstance(d, dict) and isinstance(d.get("sessoes"), list) else None
+
+
 def gravar(dados, caminho=SAIDA):
     os.makedirs(os.path.dirname(caminho), exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=os.path.dirname(caminho), suffix=".json")
@@ -85,10 +145,16 @@ def main():
         print(f"coleta incompleta: {e}", file=sys.stderr)
         regs = None
     dados = gerar(regs, a_destinar(), anterior, agora)
+    fundir(dados, ler_sessoes(), agora)
     gravar(dados)
     c = dados["contadores"]
+    com = c.get("projetos_com_sessao")
+    extra = ""
+    if com is not None:
+        n = sum(p["sessoes"] for k in ("projetos", "arquivados") for p in dados[k] if "sessoes" in p)
+        extra = f" | sessões: {n} em {com} projetos" + (" | DEFAZADA" if dados.get("sessoes_defasada") else "")
     print(f"painel: {c['projetos']} projetos | {c['esquecidos']} esquecidos | {c['a_destinar']} a destinar"
-          + (" | COLETA INCOMPLETA" if dados["coleta_incompleta"] else ""))
+          + (" | COLETA INCOMPLETA" if dados["coleta_incompleta"] else "") + extra)
 
 
 if __name__ == "__main__":
