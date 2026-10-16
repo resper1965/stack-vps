@@ -4,6 +4,11 @@ Description=Coleta diaria do PMO
 Type=oneshot
 User=agente
 Environment=PYTHONPATH=/opt
+Environment=HOME=/home/agente
 EnvironmentFile=/srv/dev/secrets/agente.env
+# coletor de sessões antes do painel: fusão fresca na mesma corrida; o travessão faz o
+# systemd ignorar falha (a coleta diária nunca é bloqueada pela sessão; rodar() também
+# nunca sai com erro — ColetaFalhada é capturada). Ativação só ocorre no deploy da unidade.
+ExecStartPre=-/usr/bin/python3 -m pmo.sessoes
 ExecStart=/usr/bin/python3 -m pmo.painel
 TimeoutStartSec=30min
