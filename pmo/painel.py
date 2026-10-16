@@ -64,10 +64,13 @@ def gerar(registros, destinar, anterior, agora):
 
 def fundir(dados, sessoes, agora):
     """Consolida sessões do OpenCode aos projetos: join projeto -> id.lower().
-    Sessões ausente, corrupta, incompleta ou defasada não derrubam a geração; só agregados
-    por projeto (contagem, última atividade, id completo da mais recente, para o comando
-    opencode -s) — a lista bruta (0600, do agente) nunca vem para o painel. Muta e retorna."""
+    Ausente, corrupta, incompleta (o coletor só grava coleta completa — tratada como ausente)
+    ou defasada não derrubam a geração; só agregados por projeto (contagem, última atividade,
+    id completo da mais recente, para o comando opencode -s) — a lista bruta (0600, do agente)
+    nunca vem para o painel. Muta e retorna."""
     if not isinstance(sessoes, dict) or not isinstance(sessoes.get("sessoes"), list):
+        return dados
+    if sessoes.get("coleta_incompleta"):
         return dados
     por_id = {}
     for s in sessoes["sessoes"]:

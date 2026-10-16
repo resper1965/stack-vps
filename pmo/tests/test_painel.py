@@ -115,6 +115,22 @@ class Sessoes(unittest.TestCase):
         self.assertNotIn("sessoes", d["projetos"][0])
 
 
+    def test_incompleta_tratada_como_ausente(self):
+        d = self.painel("o/a")
+        antes = json.loads(json.dumps(d))
+        s = self.sessoes(("ses_1", "o/a", 5))
+        s["coleta_incompleta"] = True
+        fundir(d, s, AGORA)
+        self.assertEqual(d, antes, "coleta incompleta (o coletor nunca grava) não funde nada")
+
+    def test_fusao_em_arquivados(self):
+        d = gerar([reg("o/a"), reg("o/velho", arquivado=True)], [], None, AGORA)
+        fundir(d, self.sessoes(("ses_1", "o/velho", 1792183738118)), AGORA)
+        p = d["arquivados"][0]
+        self.assertEqual((p["sessoes"], p["sessao_id"]), (1, "ses_1"), "projeto arquivado também recebe sessões")
+        self.assertEqual(d["contadores"]["projetos_com_sessao"], 1)
+
+
 class LerSessoes(unittest.TestCase):
     def test_ausente_corrupto_e_fora_de_contrato(self):
         caminho = os.path.join(tempfile.mkdtemp(), "sessoes.json")
