@@ -24,6 +24,7 @@ class Servidor(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.srv.shutdown()
+        cls.srv.server_close()
 
     def req(self, metodo, caminho, corpo=None, **cab):
         c = http.client.HTTPConnection("127.0.0.1", self.porta, timeout=5)
@@ -32,7 +33,7 @@ class Servidor(unittest.TestCase):
         for k in [k for k, v in cab.items() if v is None]:
             h.pop(k.replace("_", "-"), None)
         c.request(metodo, caminho, body=json.dumps(corpo) if corpo is not None else None, headers=h)
-        r = c.getresponse(); return r.status, r.read()
+        r = c.getresponse(); corpo = r.read(); c.close(); return r.status, corpo
 
     def test_pagina_e_dados_com_ajustes(self):
         self.assertEqual(self.req("GET", "/")[0], 200)
@@ -83,10 +84,13 @@ class Servidor(unittest.TestCase):
             c.request("POST", "/acao", body=json.dumps({"acao": "arquivar", "alvo": "o/a"}),
                       headers={"Content-Type": "application/json", "X-PMO": "1"})
             self.assertEqual(c.getresponse().status, 403)
+            c.close()
             c = http.client.HTTPConnection("127.0.0.1", porta, timeout=5); c.request("GET", "/painel.json")
             self.assertEqual(c.getresponse().status, 200, "leitura continua livre")
+            c.close()
         finally:
             srv.shutdown()
+            srv.server_close()
 
     def test_classificar_grava_na_hora(self):
         st, _ = self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a",
