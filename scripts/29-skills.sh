@@ -22,6 +22,8 @@ add supabase/agent-skills      --skill '*' "${AGENTES[@]}"
 add vercel-labs/agent-skills   --skill '*' "${AGENTES[@]}"
 add github/awesome-copilot     --skill github-issues --skill github-release \
                                --skill github-actions-hardening --skill github-actions-efficiency "${AGENTES[@]}"
+# superpowers (planejamento/testes — decisao registrada no doc de continuidade)
+add obra/superpowers           --skill '*' "${AGENTES[@]}"
 
 # skills proprias do stack-vps (ness-design, pentest): o repo de provisionamento e a fonte; link nas
 # tres ferramentas. O relatorio.py da skill pentest le os tokens em ../ness-design, entao ficam juntos.
