@@ -1,4 +1,3 @@
-import importlib.util
 import json
 import subprocess
 import sys
@@ -10,19 +9,26 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/35-projeto-standards.py"
 
 class BootstrapTests(unittest.TestCase):
-    def test_preview_and_exclusive_creation(self):
+    def test_new_project(self):
         with tempfile.TemporaryDirectory() as d:
-            project = Path(d)
-            cmd = [sys.executable, str(SCRIPT), d, "--provider", "gcp", "--provider", "cloudflare"]
+            project = Path(d) / "novo"
+            cmd = [sys.executable, str(SCRIPT), str(project), "--provider", "gcp", "--provider", "cloudflare"]
             preview = subprocess.run(cmd, capture_output=True, text=True, check=True)
             self.assertIn("PREVIEW", preview.stdout)
-            self.assertFalse((project / ".standards.json").exists())
+            self.assertFalse(project.exists())
             subprocess.run(cmd + ["--apply"], check=True, capture_output=True, text=True)
             cfg = json.loads((project / ".standards.json").read_text())
             self.assertEqual(cfg["deployment_targets"], ["gcp", "cloudflare"])
             self.assertEqual(cfg["status"], "proposed")
-            repeated = subprocess.run(cmd + ["--apply"], capture_output=True, text=True)
-            self.assertNotEqual(repeated.returncode, 0)
+            self.assertNotEqual(subprocess.run(cmd + ["--apply"], capture_output=True).returncode, 0)
+
+    def test_existing_project_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            project = Path(d)
+            (project / "README.md").write_text("existing")
+            r = subprocess.run([sys.executable, str(SCRIPT), d, "--provider", "azure", "--apply"], capture_output=True)
+            self.assertNotEqual(r.returncode, 0)
+            self.assertFalse((project / ".standards.json").exists())
 
 if __name__ == "__main__":
     unittest.main()
