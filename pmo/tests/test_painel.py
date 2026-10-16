@@ -131,6 +131,32 @@ class Sessoes(unittest.TestCase):
         self.assertEqual(d["contadores"]["projetos_com_sessao"], 1)
 
 
+    def test_itens_nao_dicionario_ficam_de_fora(self):
+        d = self.painel("o/a")
+        antes = json.loads(json.dumps(d))
+        cru = {"gerado_em": "2026-10-06T05:00:00+00:00", "coleta_incompleta": False,
+               "contadores": {}, "sessoes": ["lixo", 7, None, ["x"], ("tupla",)]}
+        fundir(d, cru, AGORA)
+        self.assertEqual(d, antes, "itens que não são dict são ignorados sem interromper")
+        cru["sessoes"] = [{"id": "ses_2"}, {"projeto": "o/a"}, 7,
+                          {"id": "ses_1", "projeto": "o/a", "atualizada": 60}]
+        fundir(d, cru, AGORA)
+        p = d["projetos"][0]
+        self.assertEqual((p["sessoes"], p["ultima_sessao"], p["sessao_id"]), (1, 60, "ses_1"),
+                         "só itens completos fundem; os demais somem sem erro")
+
+    def test_defazagem_datas_incompativeis_nao_levantam(self):
+        for gerado, agora in (("2026-10-06T05:00:00", AGORA),
+                              ("2026-10-06T05:00:00+00:00", AGORA.replace(tzinfo=None)),
+                              ("2026-10-06T05:00:00+00:00", "lixo")):
+            with self.subTest(gerado=gerado, agora=agora):
+                d = self.painel("o/a")
+                fundir(d, self.sessoes(("ses_1", "o/a", 5), gerado=gerado), agora)
+                self.assertEqual(d["sessoes_gerado_em"], gerado, "gerado_em fica de pé")
+                self.assertEqual(d["projetos"][0]["sessoes"], 1, "a fusão acontece apesar da data")
+                self.assertNotIn("sessoes_defasada", d, "data inválida/sem tz/incompatível não marca nem lança")
+
+
 class LerSessoes(unittest.TestCase):
     def test_ausente_corrupto_e_fora_de_contrato(self):
         caminho = os.path.join(tempfile.mkdtemp(), "sessoes.json")

@@ -74,6 +74,8 @@ def fundir(dados, sessoes, agora):
         return dados
     por_id = {}
     for s in sessoes["sessoes"]:
+        if not isinstance(s, dict):
+            continue
         projeto, sid = s.get("projeto"), s.get("id")
         if not isinstance(projeto, str) or not isinstance(sid, str):
             continue
