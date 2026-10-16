@@ -113,6 +113,14 @@ class Servidor(unittest.TestCase):
         a = next(x for x in json.loads(self.req("GET", "/painel.json")[1])["projetos"] if x["id"] == "o/a")
         self.assertEqual((a["sessoes"], a["sessao_id"]), (2, "ses_9"), "classificar preserva os campos fundidos")
 
+    def test_painel_sem_sessoes_serve_normal(self):
+        st, corpo = self.req("GET", "/painel.json")
+        d = json.loads(corpo)
+        self.assertEqual(st, 200, "painel sem sessões segue servido")
+        todos = (*d["projetos"], *d["arquivados"])
+        self.assertNotIn("sessoes", next(x for x in todos if x["id"] == "o/b"), "registro sem fundidos passa intato")
+        self.assertNotIn("sessoes", next(x for x in todos if x["id"] == "o/velho"), "registro sem fundidos passa intato")
+
     def test_clonar_leva_a_pasta(self):
         self.assertEqual(self.req("POST", "/acao", {"acao": "clonar", "alvo": "o/a", "pasta": "ness"})[0], 202)
         pedidos = [json.load(open(os.path.join(self.fila, f))) for f in os.listdir(self.fila)]
