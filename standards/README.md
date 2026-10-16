@@ -1,32 +1,20 @@
-# Standards & Skills — versão inicial
+# Standards & Skills — escolha para projetos novos
 
-O stack-vps **não** substitui o código nem a arquitetura dos projetos existentes. Este catálogo define perfis selecionáveis de implantação e padrões recomendados; alterações reais são propostas e revisadas separadamente.
+**Projetos existentes permanecem em suas stacks atuais.** Não há migração, adoção retroativa nem exigência de cadastrar seus provedores neste catálogo.
 
-## Perfis
-
-Selecione um ou mais: `gcp`, `vercel`, `cloudflare`, `azure`, `local`. Um projeto pode usar frontend Vercel e backend Azure, por exemplo.
+Ao **criar um projeto novo**, escolher um ou mais destinos: `gcp`, `vercel`, `cloudflare`, `azure`, `local`. Essa seleção orienta os agentes e futuros templates, mas não implanta infraestrutura automaticamente.
 
 ```bash
-python3 scripts/35-projeto-standards.py /srv/dev/projetos/meu-projeto --provider gcp
-python3 scripts/35-projeto-standards.py /srv/dev/projetos/meu-projeto --provider gcp --apply
+python3 scripts/35-projeto-standards.py /srv/dev/projetos/novo-projeto --provider gcp
+python3 scripts/35-projeto-standards.py /srv/dev/projetos/novo-projeto --provider gcp --apply
 ```
 
-Sem `--apply`, apenas apresenta prévia. Com `--apply`, cria exclusivamente `.standards.json` (não sobrescreve arquivo existente). Nenhuma dependência, SDK, secret, deploy, workflow ou código de aplicação é alterado.
+O comando aceita somente pasta inexistente ou vazia; a prévia não escreve nada. `--apply` cria `.standards.json`. Não instala dependências nem cria recursos cloud.
 
-## Incorporação em projeto existente
-
-1. Examinar infraestrutura, autenticação, componentes visuais, requisitos contratuais e código já presente.
-2. Escolher perfis correspondentes aos **alvos de implantação**, não às linguagens.
-3. Gerar `.standards.json` em estado `proposed` e comparar com o projeto.
-4. Registrar exceções em `overrides`; validar com o responsável. Não forçar migração de autenticação/design existente.
-5. Aplicar melhorias incrementais, com testes e revisão. Atualizar `status` para `adopted` somente após validação.
-
-## Governança
-
-- Instruções globais continuam no `docs/AGENTS.md`; instruções específicas ficam no projeto.
-- Preservar `AGENTS.md`, `CLAUDE.md`, `STATE.md` e skills locais existentes.
-- `skills/ness-design` é a referência visual já existente, não substituir por cópia.
-- Políticas de segurança e autorização não podem ser enfraquecidas por overrides.
-- Não distribuir secrets globais a todos os processos. Compartilhar capacidades de leitura via perfis autorizados.
-- Evitar GitHub Actions, serviços pagos, novas assinaturas e migrações automáticas.
-- O PMO poderá editar `.standards.json` após criar uma interface e validar autorização; este MVP é CLI.
+## Regras
+- Para projetos existentes: manter arquitetura, identidade, design, deploy e código; podem consumir skills pontuais sem serem migrados.
+- Para projetos novos: escolher stack e provider no bootstrap; aplicar design e receitas aprovadas conforme necessidade.
+- `skills/ness-design` permanece fonte dos padrões de marca.
+- Nunca carregar segredos globais indiscriminadamente.
+- Sem GitHub Actions, novas assinaturas ou migração automática.
+- O futuro PMO pode oferecer um assistente de **Novo Projeto** e apenas **exibir** a stack de projetos existentes, sem alterá-la.
