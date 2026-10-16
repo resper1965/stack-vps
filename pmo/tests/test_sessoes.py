@@ -1,6 +1,6 @@
-import json, os, tempfile, unittest
+import json, os, subprocess, tempfile, types, unittest
 from datetime import datetime, timezone
-from pmo.sessoes import ColetaFalhada, coletar, gravar, listar, rodar
+from pmo.sessoes import (ColetaFalhada, LIMITE_RESPOSTA, _get, coletar, gravar, listar, rodar)
 
 AGORA = datetime(2026, 10, 16, 12, tzinfo=timezone.utc)
 PAGINA = "/api/session?limit=100"
@@ -25,6 +25,16 @@ def falso(paginas):
 
 def resposta(data, proximo=None):
     return {"data": data, "cursor": {"next": proximo}}
+
+
+def saida(stdout, returncode=0, stderr=b""):
+    return types.SimpleNamespace(stdout=stdout, stderr=stderr, returncode=returncode)
+
+
+def lanca(e):
+    def run(*a, **k):
+        raise e
+    return run
 
 
 class Sessoes(unittest.TestCase):
@@ -128,6 +138,58 @@ class Paginacao(unittest.TestCase):
         self.assertEqual(len(itens), 1)
         self.assertTrue(incompleta)
 
+    def test_next_de_tipo_errado_marca_incompleta(self):
+        for proximo in (5, True, {"x": 1}):
+            with self.subTest(proximo=proximo):
+                itens, incompleta = listar(falso({PAGINA: {"data": [sessao()], "cursor": {"next": proximo}}}))
+                self.assertEqual(len(itens), 1)
+                self.assertTrue(incompleta)
+
+    def test_next_nulo_e_ausente_terminam_completos(self):
+        itens, incompleta = listar(falso({PAGINA: {"data": [sessao()], "cursor": {"next": None}}}))
+        self.assertEqual(len(itens), 1)
+        self.assertFalse(incompleta)
+        itens, incompleta = listar(falso({PAGINA: {"data": [sessao()]}}))
+        self.assertFalse(incompleta)
+
+    def test_pagina_vazia_com_continuacao_marca_incompleta(self):
+        itens, incompleta = listar(falso({PAGINA: resposta([], "X")}))
+        self.assertEqual(itens, [])
+        self.assertTrue(incompleta, "no contrato real, página vazia termina com next nulo")
+
+    def test_pagina_vazia_com_next_nulo_termina_completa(self):
+        itens, incompleta = listar(falso({PAGINA: resposta([])}))
+        self.assertEqual(itens, [])
+        self.assertFalse(incompleta)
+
+
+class Resposta(unittest.TestCase):
+    def test_limite_de_tamanho(self):
+        with self.assertRaises(ColetaFalhada):
+            _get("/x", run=lambda *a, **k: saida(b"x" * (LIMITE_RESPOSTA + 1)))
+
+    def test_limite_no_razo_passa(self):
+        d = _get("/x", run=lambda *a, **k: saida(b'{"data": [], "cursor": {"next": null}}'))
+        self.assertEqual(d, {"data": [], "cursor": {"next": None}})
+
+    def test_saida_com_erro(self):
+        with self.assertRaises(ColetaFalhada):
+            _get("/x", run=lambda *a, **k: saida(b"", returncode=1, stderr=b"boom"))
+
+    def test_resposta_nao_json(self):
+        with self.assertRaises(ColetaFalhada):
+            _get("/x", run=lambda *a, **k: saida(b"lixo"))
+
+    def test_estrutura_inesperada(self):
+        with self.assertRaises(ColetaFalhada):
+            _get("/x", run=lambda *a, **k: saida(b'{"outra": 1}'))
+
+    def test_timeout_e_oserror(self):
+        for e in (subprocess.TimeoutExpired("cmd", 1), OSError("sem binário")):
+            with self.subTest(e=e):
+                with self.assertRaises(ColetaFalhada):
+                    _get("/x", run=lanca(e))
+
 
 class Gravar(unittest.TestCase):
     def test_atomica_0600(self):
@@ -138,6 +200,16 @@ class Gravar(unittest.TestCase):
             self.assertEqual(json.load(f)["sessoes"], [])
         self.assertEqual(os.listdir(pasta), ["sessoes.json"], "tmp some no replace")
         self.assertEqual(os.stat(caminho).st_mode & 0o777, 0o600)
+
+    def test_falha_limpa_tmp_e_preserva_anterior(self):
+        pasta = tempfile.mkdtemp()
+        caminho = os.path.join(pasta, "sessoes.json")
+        gravar({"sessoes": ["anterior"]}, caminho)
+        with self.assertRaises(TypeError):
+            gravar({"x": object()}, caminho)
+        self.assertEqual(os.listdir(pasta), ["sessoes.json"], "nenhum tmp sobra")
+        with open(caminho, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["sessoes"], ["anterior"])
 
 
 class Rodar(unittest.TestCase):

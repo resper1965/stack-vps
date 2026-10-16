@@ -7,9 +7,11 @@ criada/atualizada e projeto — o id dono/repo (minúsculo, igual às chaves de
 mapear_locais) do clone sob /srv/dev/projetos que contém o diretório da sessão.
 Título, caminho absoluto e conteúdo de mensagens (nunca consultado) ficam de
 fora; os tipos recebidos da API são validados com rigor. Cursor repetido,
-sessão duplicada, item de tipo errado ou paginação que não termina marcam a
+sessão duplicada, item, cursor ou next de tipo errado, página vazia com
+continuação, paginação que não termina ou resposta maior que o limite marcam a
 coleta como incompleta — e só coleta completa substitui o anterior (0600,
-gravado em atômica). API indisponível não derruba a coleta diária.
+gravado em atômica, com tmp removido na falha). API indisponível não derruba a
+coleta diária.
 """
 import json
 import os
@@ -27,6 +29,7 @@ RAIZ = "/srv/dev/projetos"
 LIMITE_PAGINA = 100
 LIMITE_PAGINAS = 50
 TIMEOUT = 20
+LIMITE_RESPOSTA = 1_000_000
 
 
 class ColetaFalhada(Exception):
@@ -37,12 +40,15 @@ def _binario():
     return os.environ.get("OPENCODE_BIN") or shutil.which("opencode") or "/home/agente/.opencode/bin/opencode"
 
 
-def _get(caminho):
-    """GET pelo opencode api; timeout, saída com erro ou resposta não-JSON levanta ColetaFalhada."""
+def _get(caminho, run=subprocess.run):
+    """GET pelo opencode api; timeout, saída com erro, resposta não-JSON, estrutura inesperada
+    ou resposta maior que LIMITE_RESPOSTA levanta ColetaFalhada."""
     try:
-        r = subprocess.run([_binario(), "api", "get", caminho], capture_output=True, timeout=TIMEOUT)
+        r = run([_binario(), "api", "get", caminho], capture_output=True, timeout=TIMEOUT)
     except (subprocess.TimeoutExpired, OSError) as e:
         raise ColetaFalhada(f"opencode api indisponível: {e}")
+    if len(r.stdout) > LIMITE_RESPOSTA:
+        raise ColetaFalhada(f"resposta maior que o limite de {LIMITE_RESPOSTA} bytes")
     if r.returncode != 0:
         erro = r.stderr.decode("utf-8", errors="replace").strip()[:200]
         raise ColetaFalhada(f"opencode api saiu com {r.returncode}: {erro}")
@@ -106,8 +112,9 @@ def _projeto(diretorio, bases):
 
 def listar(api, limite=LIMITE_PAGINA, max_paginas=LIMITE_PAGINAS):
     """Sessões com paginação por cursor. Falha da API na 1a página (ou sem item válido) levanta;
-    cursor repetido, sessão duplicada, item ou cursor de tipo errado e limite de páginas marcam
-    incompleta. Quem grava é rodar: só coleta completa substitui o anterior."""
+    cursor repetido, sessão duplicada, item, cursor ou next de tipo errado, página vazia com
+    continuação e limite de páginas marcam incompleta. Quem grava é rodar: só coleta completa
+    substitui o anterior."""
     itens, vistos, cursores, incompleta = [], set(), set(), False
     caminho = f"/api/session?limit={limite}"
     for pagina in range(1, max_paginas + 1):
@@ -133,7 +140,11 @@ def listar(api, limite=LIMITE_PAGINA, max_paginas=LIMITE_PAGINAS):
             incompleta = True  # cursor de tipo errado
             cursor = {}
         proximo = _str(cursor.get("next")) if isinstance(cursor, dict) else None
-        if not (proximo and d["data"]):
+        if isinstance(cursor, dict) and cursor.get("next") is not None and proximo is None:
+            incompleta = True  # next de tipo errado
+        if proximo is None or not d["data"]:
+            if proximo is not None and not d["data"]:
+                incompleta = True  # página vazia com continuação: no contrato real, vazia termina com next nulo
             return itens, incompleta
         if proximo in cursores:
             return itens, True  # cursor repetido — a listagem está em loop
@@ -158,10 +169,17 @@ def coletar(api, locais, agora):
 def gravar(dados, caminho=SAIDA):
     os.makedirs(os.path.dirname(caminho), exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=os.path.dirname(caminho), suffix=".json")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(dados, f, ensure_ascii=False, indent=1)
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, caminho)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=1)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, caminho)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def rodar(api, locais, agora, saida=SAIDA):
