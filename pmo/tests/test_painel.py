@@ -1,6 +1,6 @@
-import os, tempfile, unittest
+import json, os, tempfile, unittest
 from datetime import datetime, timezone
-from pmo.painel import gerar, a_destinar
+from pmo.painel import gerar, a_destinar, fundir, ler_sessoes
 
 AGORA = datetime(2026, 10, 6, 6, tzinfo=timezone.utc)
 
@@ -42,6 +42,89 @@ class Destinar(unittest.TestCase):
         os.makedirs(os.path.join(D, "com git", ".git")); open(os.path.join(D, "com git", "y"), "w").close()
         nomes = sorted(x["caminho"] for x in a_destinar(r))
         self.assertEqual(nomes, ["DESENVOLVIMENTO/ORM Esper", "DESENVOLVIMENTO/bekaa-apps/bekaa-gestao"])
+
+
+class Sessoes(unittest.TestCase):
+    def painel(self, *ids):
+        return gerar([reg(i) for i in ids], [], None, AGORA)
+
+    def sessoes(self, *sess, gerado="2026-10-06T05:00:00+00:00"):
+        return {"gerado_em": gerado, "coleta_incompleta": False, "contadores": {"sessoes": len(sess)},
+                "sessoes": [{"id": i, "projeto": p, "atualizada": a} for i, p, a in sess]}
+
+    def test_fusao_junta_id_minusculo(self):
+        d = self.painel("Resper1965/Stack-VPS")
+        fundir(d, self.sessoes(("ses_1", "resper1965/stack-vps", 1792183738118)), AGORA)
+        p = d["projetos"][0]
+        self.assertEqual(p["sessoes"], 1)
+        self.assertEqual(p["ultima_sessao"], 1792183738118)
+        self.assertEqual(p["sessao_id"], "ses_1", "id completo, para o comando opencode -s")
+        self.assertEqual(d["contadores"]["projetos_com_sessao"], 1)
+        self.assertEqual(d["sessoes_gerado_em"], "2026-10-06T05:00:00+00:00")
+
+    def test_id_da_mais_recente_vence(self):
+        d = self.painel("o/a")
+        fundir(d, self.sessoes(("ses_1", "o/a", 5), ("ses_2", "o/a", 60)), AGORA)
+        p = d["projetos"][0]
+        self.assertEqual((p["sessoes"], p["ultima_sessao"], p["sessao_id"]), (2, 60, "ses_2"), "a mais recente vence, não importa a ordem")
+
+    def test_ausencia_nao_marca_nada(self):
+        d = self.painel("o/a")
+        antes = json.loads(json.dumps(d))
+        fundir(d, None, AGORA)
+        fundir(d, self.sessoes(), AGORA)
+        fundir(d, self.sessoes(("ses_1", None, 5)), AGORA)
+        self.assertEqual(d, antes, "sessões ausentes, vazias ou fora de projeto: painel idêntico")
+
+    def test_invalidos_ficam_de_fora(self):
+        d = self.painel("o/a")
+        fundir(d, self.sessoes((7, "o/a", 5), ("ses_3", 7, 5)), AGORA)
+        self.assertEqual(d, self.painel("o/a"), "id ou projeto de tipo errado: nada fundido")
+        fundir(d, self.sessoes(("ses_1", "o/a", True)), AGORA)
+        p = d["projetos"][0]
+        self.assertEqual(p["sessoes"], 1)
+        self.assertIsNone(p["ultima_sessao"], "bool não vale como int")
+        self.assertEqual(p["sessao_id"], "ses_1")
+
+    def test_contrato_sem_lista_integral(self):
+        d = self.painel("o/a", "o/b")
+        fundir(d, self.sessoes(("ses_1", "o/a", 5)), AGORA)
+        self.assertNotIn("sessoes", d, "a lista bruta (0600) nunca vem para o painel")
+        self.assertNotIn("sessoes", d["projetos"][1], "projeto sem sessão não ganha campo")
+        d2 = self.painel("o/a")
+        fundir(d2, {"sessoes": "lixo"}, AGORA)
+        fundir(d2, {"lixo": 1}, AGORA)
+        fundir(d2, 7, AGORA)
+        self.assertEqual(d2, self.painel("o/a"), "estrutura inválida não marca nada")
+
+    def test_defazada(self):
+        d = self.painel("o/a")
+        fundir(d, self.sessoes(("ses_1", "o/a", 5), gerado="2026-10-01T05:00:00+00:00"), AGORA)
+        self.assertTrue(d["sessoes_defasada"])
+        d2 = self.painel("o/a")
+        fundir(d2, self.sessoes(("ses_1", "o/a", 5), gerado="2026-10-06T05:00:00+00:00"), AGORA)
+        self.assertNotIn("sessoes_defasada", d2)
+        d3 = self.painel("o/a")
+        fundir(d3, self.sessoes(("ses_1", "o/a", 5), gerado="garbage"), AGORA)
+        self.assertNotIn("sessoes_defasada", d3, "gerado_em de tipo errado não derruba nada")
+
+    def test_projeto_desconhecido_conta_zero(self):
+        d = self.painel("o/a")
+        fundir(d, self.sessoes(("ses_1", "o/inexistente", 5)), AGORA)
+        self.assertEqual(d["contadores"]["projetos_com_sessao"], 0, "sessão em projeto fora do painel não funde")
+        self.assertNotIn("sessoes", d["projetos"][0])
+
+
+class LerSessoes(unittest.TestCase):
+    def test_ausente_corrupto_e_fora_de_contrato(self):
+        caminho = os.path.join(tempfile.mkdtemp(), "sessoes.json")
+        self.assertIsNone(ler_sessoes(caminho), "arquivo ausente vira None")
+        open(caminho, "w").write("{ lixo")
+        self.assertIsNone(ler_sessoes(caminho))
+        open(caminho, "w").write('{"outra": 1}')
+        self.assertIsNone(ler_sessoes(caminho))
+        open(caminho, "w").write('{"sessoes": []}')
+        self.assertEqual(ler_sessoes(caminho), {"sessoes": []})
 
 
 if __name__ == "__main__":

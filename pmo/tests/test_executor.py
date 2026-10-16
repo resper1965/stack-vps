@@ -197,6 +197,16 @@ class Ajustes(unittest.TestCase):
         ajustes = {"o/a": {"de": "projetos", "para": "arquivados", "em": "2026-10-06T12:00:00+00:00"}}
         self.assertEqual([x["id"] for x in aplicar_ajustes(painel, ajustes)["projetos"]], ["o/a"])
 
+    def test_fundidos_sobrevivem_ao_arquivamento(self):
+        painel = {"gerado_em": "2026-10-07T09:00:00+00:00",
+                  "projetos": [{"id": "o/a", "sessoes": 2, "ultima_sessao": 60, "sessao_id": "ses_9"}],
+                  "arquivados": [], "a_destinar": []}
+        ajustes = {"o/a": {"de": "projetos", "para": "arquivados", "em": "2026-10-08T12:00:00+00:00"}}
+        d = aplicar_ajustes(painel, ajustes)
+        self.assertEqual([x["id"] for x in d["arquivados"]], ["o/a"])
+        self.assertEqual((d["arquivados"][0]["sessoes"], d["arquivados"][0]["sessao_id"]), (2, "ses_9"),
+                         "o arquivamento (aplicar_ajustes) preserva os campos fundidos")
+
 
 if __name__ == "__main__":
     unittest.main()

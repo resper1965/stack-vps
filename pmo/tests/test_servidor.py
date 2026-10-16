@@ -10,7 +10,8 @@ class Servidor(unittest.TestCase):
         open(os.path.join(web, "index.html"), "w").write("<h1>PMO</h1>")
         cls.painel = os.path.join(cls.tmp, "painel.json")
         json.dump({"gerado_em": "2026-10-06T09:00:00+00:00",
-                   "projetos": [{"id": "o/a", "sugestao": {"empresa": "ness", "tipo": "app"}}, {"id": "o/b"}],
+                   "projetos": [{"id": "o/a", "sessoes": 2, "ultima_sessao": 60, "sessao_id": "ses_9",
+                                 "sugestao": {"empresa": "ness", "tipo": "app"}}, {"id": "o/b"}],
                    "arquivados": [{"id": "o/velho"}], "a_destinar": [{"id": "destinar:DESENVOLVIMENTO/ORM Esper"}]},
                   open(cls.painel, "w"))
         cls.ajustes = os.path.join(cls.tmp, "ajustes.json")
@@ -104,6 +105,13 @@ class Servidor(unittest.TestCase):
         for classe in ({"empresa": "acme"}, {"tipo": "foguete"}, {"estagio": "voando"}, {"area": "a\nb"}, {"cliente": "x" * 61}, "lixo"):
             with self.subTest(classe=classe):
                 self.assertEqual(self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a", "classe": classe})[0], 400)
+
+    def test_fundidos_sobrevivem_a_classificar(self):
+        a = next(x for x in json.loads(self.req("GET", "/painel.json")[1])["projetos"] if x["id"] == "o/a")
+        self.assertEqual((a["sessoes"], a["sessao_id"]), (2, "ses_9"), "campos fundidos passam pelo servidor")
+        self.assertEqual(self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a", "classe": {"empresa": "bekaa"}})[0], 200)
+        a = next(x for x in json.loads(self.req("GET", "/painel.json")[1])["projetos"] if x["id"] == "o/a")
+        self.assertEqual((a["sessoes"], a["sessao_id"]), (2, "ses_9"), "classificar preserva os campos fundidos")
 
     def test_clonar_leva_a_pasta(self):
         self.assertEqual(self.req("POST", "/acao", {"acao": "clonar", "alvo": "o/a", "pasta": "ness"})[0], 202)
