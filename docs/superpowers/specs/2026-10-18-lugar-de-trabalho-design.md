@@ -1,0 +1,197 @@
+# Lugar de trabalho — redesenho do stack-vps (spec mestre)
+
+**Data:** 2026-10-18 · **Estado:** proposto, aguardando revisão do Ricardo
+**Substitui:** a direção de produto de `docs/pmo-ux-ui-handoff.md` (8 telas, PR #14) e o perfil `azure` de
+`standards/profiles.json` (PR #8). `docs/development-hub-continuity.md` segue válido como registro operacional.
+
+## Problema
+
+O projeto cresceu em peças (Coder, runners, OpenRig, comando `modelo`, Continue, painel de 8 telas planejado)
+sem um centro. A dor real é outra: **ter um lugar único para trabalhar**, de qualquer computador, onde se
+constroem **agentes, pareceres e sistemas** com vários modelos, e de onde os sistemas saem prontos para um de
+quatro destinos, com o design system da ness e um caminho único de autenticação.
+
+Recursos disponíveis: 2 assinaturas Claude (bekaa, ionic), 1 ChatGPT, Antigravity, chaves OpenRouter,
+DeepSeek e Featherless, API da Hostinger.
+
+## Decisões
+
+| Tema | Decisão |
+|---|---|
+| Porta de entrada | **OpenCode Web** na VPS `stack`; tudo começa nele. |
+| Acesso | **Tailscale**, via `tailscale serve`; serviços escutam em `127.0.0.1`. Fallback em 3 camadas. |
+| Modelos | **9router** como gateway único (assinaturas e chaves); CLIs oficiais como plano B. Spike antes. |
+| Projetos | Comando **`/novo-projeto`** no OpenCode; naturezas **sistema, agente, parecer**. |
+| Autenticação | Pacote **`@ness/auth`** extraído do niso; SSO OIDC no v1. |
+| Authentik | **Opcional e externo** (ness.OS, VPS própria, não pronto); entra como provedor OIDC. |
+| Destinos | **Cloudflare, Vercel, GCP e "fora das nuvens"** (VPS, servidor do cliente, on-prem) com **Kamal**. |
+| Painel | **PMO em uma página**: projetos + saúde + atalhos. |
+| Avaliação | **promptfoo** no template de agente. |
+| Aviso | Sessão do OpenCode concluída → `alertar.sh` (ntfy/Telegram). |
+
+## Arquitetura
+
+```
+ Computador / celular ──Tailscale (tailscale serve, HTTPS)──► VPS stack (usuário agente)
+                                                               │
+   OpenCode Web 127.0.0.1:4096  ◄── porta de entrada
+     ├─► 9router 127.0.0.1:20128 ── assinaturas (2× Claude, ChatGPT, Antigravity)
+     │                            └ chaves (OpenRouter, DeepSeek, Featherless)
+     ├─► CLIs oficiais (claude-bekaa, claude-ionic, codex, agy) — plano B
+     ├─► /novo-projeto → /srv/dev/projetos/<nome>  ou  /srv/dev/pareceres/<nome>
+     └─► plugin de aviso → alertar.sh
+
+   PMO 127.0.0.1:8080 (uma página)       Base inalterada: scripts 01–07, 16, restic, vigia-health
+```
+
+Princípios: uma porta de entrada; nada público por padrão; segredos continuam em `admin.env`, `agente.env`
+e `projetos.env`; a VPS `stack` nunca hospeda sistema de cliente.
+
+## 1. Acesso e fallback
+
+OpenCode e PMO passam a escutar em `127.0.0.1` e são publicados na tailnet por `tailscale serve`. Assim a queda
+do `tailscaled` não derruba os serviços — só o caminho até eles.
+
+| Camada | Como | Estado padrão |
+|---|---|---|
+| 0. Normal | `https://stack.<tailnet>` via `tailscale serve` | ligado |
+| 1. SSH pelo Cloudflare Tunnel | `ssh stack-cf` com `LocalForward 4096` e `8080` (tunnel já existe, `06-tunnel.sh`) | ligado |
+| 2. Web de emergência | hostname público atrás de Cloudflare Access (e-mail + MFA) para o OpenCode; `stack-emergencia on/off`; ligar e desligar geram alerta | **desligado** |
+| 3. Hostinger | console pelo navegador; reinício ou modo de recuperação pela API da Hostinger | sob demanda |
+
+`vigia-health` ganha checagem do Tailscale da `stack`; o alerta sai por ntfy/Telegram, que não dependem da tailnet.
+
+## 2. Camada de modelos (9router)
+
+- Serviço systemd de usuário do `agente` (padrão do `opencode-web.service`), só `127.0.0.1:20128`, versão
+  fixada no script; atualizar é trocar a versão e rodar de novo. Novo script substitui `24-modelos.sh`.
+- Consumidores: OpenCode (provedor compatível com OpenAI) e promptfoo. CLIs oficiais mantêm login próprio.
+- Contas: assinaturas por OAuth no 9router; chaves lidas do `agente.env`. Conta Claude ionic só na vertical ionic.
+- Segurança: senha do painel vem do ambiente e o script **recusa subir sem ela**; painel só na tailnet;
+  tokens OAuth no home do `agente` (0600), cobertos pelo restic; prompts e transcrições nunca vão ao PMO.
+- Risco aceito: uso de assinatura por gateway de terceiros pode ser bloqueado pelo provedor.
+- Falha: `vigia-health` checa o 9router; trabalho segue pelos CLIs.
+
+**Spike (resultado descartável) responde:** (1) duas contas Claude convivem? (2) ChatGPT e Antigravity
+funcionam? (3) existe senha padrão no código? (4) onde e com que permissão ficam os tokens? (5) termos de uso
+de cada provedor. **Se falhar:** modo "duas faixas" — assinaturas nos CLIs, chaves no 9router. O resto do
+desenho não muda.
+
+## 3. Fábrica de projetos (`/novo-projeto`)
+
+Comando do OpenCode que conduz a skill `project-bootstrap` (PR #8): **natureza → poucas perguntas → prévia →
+confirmação → pasta + `STATE.md` → sessão do OpenCode aberta nela**. Criar repositório privado no GitHub é
+confirmação separada. Projeto existente nunca recebe bootstrap.
+
+Templates versionados em `templates/<natureza>/`, copiados (não gerados):
+
+| Natureza | Conteúdo |
+|---|---|
+| **sistema** | Hono + TypeScript, `skills/ness-design`, `@ness/auth` opcional, um arquivo de deploy por destino |
+| **agente** | TypeScript, modelos via 9router, `promptfoo` com `casos/` e um caso que passa |
+| **parecer** | Markdown → Typst → PDF/DOCX ness.design; `fontes.md` marca cada citação como verificada ou não. **Conteúdo fora do Git**, em `/srv/dev/pareceres/<nome>` (restic); só o template é versionado |
+
+Análise, GRC, forense e documentação são variantes de **parecer**.
+
+### Destinos
+
+| Destino | Arquivo no template | Dados |
+|---|---|---|
+| cloudflare | `wrangler.jsonc` | D1 / KV |
+| vercel | `vercel.json` | Postgres gerenciado |
+| gcp | `Dockerfile` para Cloud Run, sem chave estática de conta de serviço | Postgres (Cloud SQL) |
+| fora das nuvens | `Dockerfile` + `config/deploy.yml` do **Kamal** (imagem Docker oficial; nada de Ruby na `stack`) | Postgres acessório do Kamal |
+
+"Fora das nuvens" = qualquer máquina com SSH e Docker (VPS, servidor do cliente, on-prem). Deploy e rollback
+saem da `stack` (`kamal deploy`, `kamal rollback`). `standards/profiles.json` troca `local` por `fora-das-nuvens`
+e perde `azure`.
+
+## 4. `@ness/auth`
+
+Repositório privado próprio, publicado no GitHub Packages. Middleware e rotas Hono, extraídos de `src/sso.ts`,
+`src/middleware/auth.ts`, `src/routes/auth.ts` e `auth-policy.ts` do niso. O niso migra depois, em trabalho
+separado.
+
+- **v1:** e-mail e senha, sessão, RBAC que nega por padrão, chave de API, SSO OIDC por tenant com as proteções
+  do niso (host público contra SSRF/DNS rebinding, `redirect: 'manual'`, segredo do IdP cifrado, retorno por
+  fragmento, mensagens genéricas).
+- **v2:** SCIM, política de MFA, lista de IPs. Sobe para o v1 se o primeiro cliente exigir desprovisionamento.
+- **Adaptadores de armazenamento:** D1/KV e Postgres.
+- **Modos de login por sistema:** sem SSO; SSO direto com o IdP do cliente (Entra ID, Google, Okta via OIDC);
+  SSO via **Authentik da ness**, que também faz ponte para clientes só com SAML.
+- **Login de emergência:** e-mail e senha só para administradores quando o IdP cair; desligável, sempre na trilha.
+
+## 5. Painel (PMO em uma página)
+
+As 8 telas nunca foram implementadas; nada a remover de código. A página tem três blocos:
+
+- **Projetos:** o que já existe (coleta, classificação, arquivar/restaurar) + sessões do OpenCode com
+  "copiar `opencode -s <id>`" (PRs #9, #11, #12).
+- **Saúde:** `health.sh`, último backup restic, 9router e OpenCode de pé, Tailscale, e CPU/RAM/disco pela API
+  da Hostinger (só leitura).
+- **Atalhos:** OpenCode e painel do 9router.
+
+Ferramentas internas ficam só na tailnet. Quando o Authentik do ness.OS existir, ligá-lo nelas é opcional; o
+teste do servidor do PMO ganha o caso do `Host` repassado pelo proxy.
+
+## 6. API da Hostinger
+
+Leitura livre; alteração só com confirmação (regra do `AGENTS.md`). Usos:
+
+1. **Snapshot da `stack` antes de cada deploy de etapa** — rollback da máquina inteira.
+2. **Fallback camada 3:** reinício e modo de recuperação.
+3. **Métricas** no bloco de saúde do PMO.
+
+Token no `admin.env`; endpoints a confirmar no spike.
+
+## 7. O que sai
+
+| Sai | Motivo |
+|---|---|
+| `30-sysbox`, `31-rede-containers`, `33-runners`, restos de `compose/` e `coder/` | Coder já saiu (#7); sem equipe em container |
+| `22-openrig`, `23-papeis`, `openrig/` | Dupla principal/revisor vira sessões do OpenCode |
+| `24-modelos`, comando `modelo`, Continue | Substituídos pelo 9router |
+| Perfil `azure` | Fora dos 4 destinos |
+
+Antes de cada remoção, confirmar que nada mais chama o script. Desinstalação na VPS tem roteiro próprio e pede
+confirmação.
+
+## 8. Testes
+
+- Bash e Python rodam **na VPS ou no WSL**; `tests/run.sh` avisa e sai fora do Linux (os 19 erros de 10/10 eram
+  do Windows: `os.O_NOFOLLOW` e symlink).
+- `@ness/auth`: testes do niso vêm junto e rodam contra os dois adaptadores — D1 via wrangler/miniflare,
+  Postgres via `/srv/dev/bin/postgres.yml` descartável.
+- Templates: cada um com teste rápido que gera numa pasta temporária, faz build e roda os testes do projeto.
+  Kamal: valida `deploy.yml` sempre; deploy real testado uma vez em máquina descartável.
+- Fallback: ensaio documentado de cada camada (derrubar `tailscaled`, usar camada 1, ligar e desligar camada 2).
+
+## 9. Falhas
+
+| Cai | Continua |
+|---|---|
+| Tailscale | Camadas 1–3 de acesso |
+| 9router | CLIs oficiais |
+| OpenCode | SSH + CLIs |
+| Authentik (app que usa) | Login de emergência de administrador |
+| Deploy ruim (Kamal) | `kamal rollback` |
+| Mudança ruim na `stack` | Snapshot da Hostinger |
+
+## 10. Ordem de entrega
+
+Cada etapa tem plano e PR próprios; nada vai à VPS sem aprovação explícita.
+
+| # | Etapa | Entrega |
+|---|---|---|
+| 0 | Sincronizar | Clone local alinhado ao `origin/main`; conferir na VPS o que de #9, #11 e #12 está ativo |
+| 1 | Spikes | 9router (5 perguntas), Kamal (versão, TLS), endpoints da API da Hostinger |
+| 2 | Lugar de trabalho | `tailscale serve`, fallback 1–3, aviso de agente concluído, PMO em uma página, snapshot antes de deploy, remoções |
+| 3 | 9router | Script, serviço, checagem no `vigia-health` (ou modo "duas faixas") |
+| 4 | `@ness/auth` v1 | Repositório próprio, extração com adaptadores D1 e Postgres |
+| 5 | `/novo-projeto` | Templates sistema (4 destinos, Kamal), agente (promptfoo), parecer (Typst) |
+
+## Fora de escopo
+
+Multiusuário na `stack`; Authentik na `stack`; SAML no `@ness/auth`; migração do niso para `@ness/auth`;
+observabilidade de LLM além do painel do 9router; segredos de deploy centralizados (SOPS/Infisical) e
+configuração única de MCP — entram quando a dor aparecer.
