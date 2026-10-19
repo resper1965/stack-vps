@@ -53,4 +53,16 @@ afirma_rc "$(bash "$S" status)" desligada "status sem config: desligada"
 
 novo_tmp; prepara; stub alertar 1
 bash "$S" on >/dev/null 2>&1; afirma_rc "$?" 0 "alerta falhou: comando segue com rc 0"
+
+for modo in on off; do
+  novo_tmp; prepara; [[ $modo == off ]] && bash "$S" on >/dev/null 2>&1
+  : > "$STUB_LOG"
+  printf '#!/usr/bin/env bash\nprintf partial\nexit 1\n' > "$STUBS/awk"; chmod +x "$STUBS/awk"
+  antes=$(cat "$STACK_CF_DIR/config.yml")
+  bash "$S" "$modo" >/dev/null 2>&1; rc=$?
+  afirma "$(( rc == 0 ))" "$modo com awk falhando: rc != 0"
+  afirma_rc "$(cat "$STACK_CF_DIR/config.yml")" "$antes" "$modo com awk falhando: config intacta"
+  afirma_rc "$(find "$STACK_CF_DIR" -type f | wc -l)" 1 "$modo com awk falhando: sem temporario sobrando"
+  nega_log "systemctl restart" "$modo com awk falhando: nao reinicia"
+done
 fim

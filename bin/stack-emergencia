@@ -24,7 +24,8 @@ fi
 
 tmp=$(mktemp "$CFG.XXXXXX") || exit 1
 trap 'rm -f "$tmp"' EXIT
-cp -p "$CFG" "$tmp"   # herda modo e dono
+falhou() { echo "stack-emergencia: falha ao gravar o config; nada foi alterado" >&2; exit 1; }
+cp -p "$CFG" "$tmp" || falhou   # herda modo e dono
 if [[ $1 == on ]]; then
   # tira qualquer rota antiga antes de inserir: duas chamadas dao uma regra so
   awk -v h="  - hostname: $HOST" -v c="$CATCHALL" '
@@ -32,14 +33,15 @@ if [[ $1 == on ]]; then
     skip && /^    service:/ { skip = 0; next }
     { skip = 0 }
     $0 == c { print h; print "    service: http://localhost:4096" }
-    { print }' "$CFG" > "$tmp"
+    { print }' "$CFG" > "$tmp" || falhou
 else
   awk -v h="  - hostname: $HOST" '
     $0 == h { skip = 1; next }
     skip && /^    service:/ { skip = 0; next }
-    { skip = 0; print }' "$CFG" > "$tmp"
+    { skip = 0; print }' "$CFG" > "$tmp" || falhou
 fi
-mv "$tmp" "$CFG"
+[[ -s $tmp ]] || falhou
+mv "$tmp" "$CFG" || falhou
 
 systemctl restart cloudflared || { echo "stack-emergencia: cloudflared nao reiniciou" >&2; exit 1; }
 if [[ $1 == on ]]; then titulo='stack: emergência LIGADA'; else titulo='stack: emergência desligada'; fi
