@@ -100,9 +100,20 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             p = unquote(urlsplit(self.path).path)
             return ".." not in p.split("/")
 
+        def _host(self):
+            # Modo socket: o tailscale serve com alvo unix reescreve Host para localhost e leva o original em
+            # X-Forwarded-Host (Set a partir de r.In.Host: o valor do cliente e sempre substituido). Um navegador nao
+            # envia X-Forwarded-Host entre origens sem preflight, que nunca e respondido. O fallback SSH
+            # (LocalForward ao socket) nao o envia e segue lendo (GET) por Host: localhost:8080; o POST continua
+            # exigindo X-Forwarded-For e login Tailscale, entao esse caminho e so leitura. Premissa residual: quem
+            # abre o socket (grupo pmo) forja qualquer cabecalho; por isso a fronteira e o diretorio/grupo.
+            if socket:
+                return self.headers.get("X-Forwarded-Host") or self.headers.get("Host")
+            return self.headers.get("Host")
+
         def _host_ok(self):
             if hosts:
-                return self.headers.get("Host") in hosts
+                return self._host() in hosts
             return self.headers.get("Host") == "%s:%d" % self.server.server_address[:2]
 
         def do_GET(self):
@@ -143,7 +154,7 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
                 xff = (self.headers.get("X-Forwarded-For") or "").split(",")[-1].strip().strip("[]")
                 if not xff or xff in ips_proprios:
                     return self._resposta(403, "recusado: origem")
-            host = self.headers.get("Host")
+            host = self._host()
             if (not self._host_ok() or self.headers.get("X-PMO") != "1"
                     or (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json"
                     or origem not in (None, "http://" + host, "https://" + host)

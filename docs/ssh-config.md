@@ -68,8 +68,8 @@ No WSL, os mesmos blocos servem no `~/.ssh/config` dele, trocando o `ProxyComman
 `cloudflared access ssh --hostname %h` (com o `cloudflared` instalado pelo apt).
 
 Sem a tailnet não há `tailscale serve`, então o `stack-cf` leva o OpenCode em `http://localhost:4096` e o PMO
-em `http://localhost:8080` por `LocalForward`. O PMO fica só leitura por aqui, porque esse caminho não traz o
-cabeçalho de identidade da tailnet. `LocalForward` para socket Unix exige OpenSSH 6.7 ou mais novo no cliente;
+em `http://localhost:8080` por `LocalForward`. O PMO fica só leitura por aqui por desenho: o POST exige `X-Forwarded-For` e um login da tailnet que o caminho SSH
+não fornece (quem abre o socket, o dono ou o grupo `pmo`, tecnicamente poderia enviar qualquer cabeçalho). `LocalForward` para socket Unix exige OpenSSH 6.7 ou mais novo no cliente;
 no cliente OpenSSH do Windows, confirmar.
 
 ## Login do Access (só para `stack-cf`)

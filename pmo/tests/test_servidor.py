@@ -281,6 +281,45 @@ class ServidorSocket(unittest.TestCase):
         self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Host="evil.example", Tailscale_User_Login=self.LOGIN), 403)
         self.assertEqual(self.pedidos(), [])
 
+    # tailscale serve com alvo unix: o proxy reescreve Host para localhost e leva o original em X-Forwarded-Host
+    def test_serve_unix_host_localhost_com_forwarded_host_da_lista(self):
+        c = dict(Host="localhost", X_Forwarded_Host=self.HOST)
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        self.assertEqual(self.req("GET", "/painel.json", **c), 200)
+        self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, **c), 202)
+        self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, Origin="https://" + self.HOST, **c), 202)
+        self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, Origin="http://" + self.HOST, **c), 202)
+
+    def test_forwarded_host_fora_da_lista_vence_o_host(self):
+        c = dict(Host=self.HOST, X_Forwarded_Host="evil.example")
+        self.assertEqual(self.req("GET", "/painel.json", **c), 403)
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN, **c), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_sem_forwarded_host_so_leitura_pelo_host_da_lista(self):
+        # caminho do fallback SSH (LocalForward): GET passa; POST nao, por falta de X-Forwarded-For
+        c = dict(Host="localhost:8080", X_Forwarded_For=None)
+        self.assertEqual(self.req("GET", "/painel.json", **c), 200)
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN, **c), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_origin_alheia_com_forwarded_host_valido_recusada(self):
+        for o in ("https://evil.example", "https://localhost"):
+            self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN,
+                                      Host="localhost", X_Forwarded_Host=self.HOST, Origin=o), 403, o)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_forwarded_host_vazio_cai_no_host(self):
+        self.assertEqual(self.req("GET", "/painel.json", X_Forwarded_Host=""), 200)
+        self.assertEqual(self.req("GET", "/painel.json", Host="evil.example", X_Forwarded_Host=""), 403)
+
+    def test_forwarded_host_com_caixa_ou_ponto_final_recusado(self):
+        for xfh in (self.HOST.upper(), "stack.tailnet.ts.net.:8443"):
+            self.assertEqual(self.req("GET", "/painel.json", Host="localhost", X_Forwarded_Host=xfh), 403, xfh)
+            self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN,
+                                      Host="localhost", X_Forwarded_Host=xfh), 403, xfh)
+        self.assertEqual(self.pedidos(), [])
+
 
 class ServidorSaude(unittest.TestCase):
     def setUp(self):

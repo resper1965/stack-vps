@@ -415,18 +415,20 @@ de novo reescreve o `config.yml` — se a emergência estava ligada, ela desliga
 
 **PORTÃO OBRIGATÓRIO antes de rodar o `34-pmo.sh` com a nova unidade (com aprovação):** o PMO só aceita ação se o
 `tailscale serve` entregar o `X-Forwarded-For`; sem ele, toda ação pelo painel dá 403 (falha fechada).
-1. Suba um backend de eco só em `127.0.0.1` (por exemplo, `python3` com um `BaseHTTPRequestHandler` que devolve os
-   cabeçalhos recebidos, ou `socat`), porta alta qualquer.
-2. Publique-o com `tailscale serve --bg --https=9443 http://127.0.0.1:<porta>` (porta temporária, diferente de 443 e 8443).
+1. Suba um backend de eco em **socket Unix** (não TCP: o `Host` só muda com alvo `unix:`, e um eco TCP daria falso
+   verde), por exemplo `python3` com `socketserver.UnixStreamServer` + `BaseHTTPRequestHandler` que devolve os
+   cabeçalhos recebidos, em `/tmp/eco.sock`, de dono o usuário que o roda.
+2. Publique-o com `tailscale serve --bg --https=9443 unix:/tmp/eco.sock` (porta temporária, diferente de 443 e 8443).
 3. Requisite `https://stack.<tailnet>.ts.net:9443/` **do notebook** e **de dentro da VPS como `agente`**
-   (`sudo -u agente -H curl -s …`). Registre, nos dois casos, se chegam `Tailscale-User-Login`, `X-Forwarded-For` e
-   `Host`, e com que valores.
-4. Critérios: do notebook, `X-Forwarded-For` termina no IP tailnet do notebook e `Host` é `stack.<tailnet>.ts.net:9443`;
-   de dentro da VPS, `X-Forwarded-For` termina no IP da própria stack (é isso que o PMO recusa). **Se o
-   `X-Forwarded-For` não chegar, ou o `Host` chegar diferente do esperado, PARE:** a ação pelo painel fica impossível
-   (falha fechada) e é preciso escolher, antes do deploy, a opção (a): marcar o nó `stack` com tag no ACL da tailnet
-   (nó com tag não recebe `Tailscale-User-Login`, então o agente na VPS nunca é identificado como o dono) e ajustar
-   o desenho; decisão de ACL do dono.
+   (`sudo -u agente -H curl -s …`). Registre, nos dois casos, quais `Host`, `X-Forwarded-Host`, `X-Forwarded-For` e
+   `Tailscale-User-Login` chegam, e com que valores.
+4. Critérios: o `Host` chega como `localhost` e o nome real (`stack.<tailnet>.ts.net:9443`) chega em
+   `X-Forwarded-Host` (o PMO valida esse cabeçalho no modo socket); do notebook, `X-Forwarded-For` termina no IP
+   tailnet do notebook; de dentro da VPS, termina no IP da própria stack (é isso que o PMO recusa). **Se o
+   `X-Forwarded-Host` não chegar com o nome real, ou o `X-Forwarded-For` não chegar, PARE e avise o dono antes do
+   deploy:** o painel pelo serve fica impossível (falha fechada). Para o `X-Forwarded-For`, a opção (a): marcar o
+   nó `stack` com tag no ACL da tailnet (nó com tag não recebe `Tailscale-User-Login`, então o agente na VPS nunca é
+   identificado como o dono) e ajustar o desenho; decisão de ACL do dono.
 5. Remova: `tailscale serve --https=9443 off` e pare o backend de eco.
 
 **Deploy da etapa 2 (com aprovação):** snapshot (`sudo bash /opt/stack-vps/bin/hostinger.sh metricas`, conferência

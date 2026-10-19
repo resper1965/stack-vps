@@ -79,4 +79,5 @@ systemctl enable --now pmo-coleta.timer pmo-executor.timer pmo-resumo.timer >/de
 systemctl enable pmo-servidor.service >/dev/null; systemctl restart pmo-servidor.service
 sleep 2
 PRIMEIRO_HOST=$(sed -n 's/^PMO_HOSTS=//p' /etc/pmo/servidor.env | cut -d, -f1)
+# exercita o socket direto (cabecalho Host); NAO prova o caminho pelo tailscale serve (X-Forwarded-Host)
 echo "painel: $(curl -s --unix-socket /run/pmo/pmo.sock -H "Host: $PRIMEIRO_HOST" -o /dev/null -w '%{http_code}' http://localhost/) no socket /run/pmo/pmo.sock"
