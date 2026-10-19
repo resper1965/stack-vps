@@ -104,11 +104,26 @@ tar -C /srv -czf "$D/coder.tgz" coder
 for V in coder-b8dec1e8-0db7-492a-88d4-70e382da0439-home coder-e7fd6a59-faa3-4fde-a794-4fe7061b08cc-agentes; do
   docker run --rm -v "$V":/v -v "$D":/b alpine tar -C /v -czf "/b/$V.tgz" .
 done
-ls -l "$D"                                              # esperado: coder.tgz e um .tgz por volume, com tamanho > 0
+chmod 600 "$D"/*.tgz                                    # contêm o banco do Coder
+ls -l "$D"                                              # esperado: coder.tgz e um .tgz por volume, com tamanho > 0, modo -rw-------
 ```
 
-(Se o `alpine:latest` já não existir, o `docker run` o baixa de novo.) Prova de que os volumes não estão em uso, um por
-um, antes de cada remoção:
+Os comandos só escrevem em `$D`, na própria VPS: **copie os arquivos para fora da VPS antes de seguir**, porque a
+partir daqui o 2b (e depois o 2a) remove dados de forma irreversível.
+
+(Se o `alpine:latest` já não existir, o `docker run` o baixa de novo.)
+
+Remova primeiro o container parado do workspace. **Atenção:** isso apaga a camada gravável dele; tudo o que o workspace
+guardou fora dos dois volumes nomeados se perde (os backups acima já cobrem os volumes). Nome exato, sem `-f`: se ele
+estiver rodando, o Docker recusa, e então pare e investigue.
+
+```sh
+docker ps -a --filter name=coder-ricardo-teste          # esperado: uma linha, status Exited
+docker rm coder-ricardo-teste
+```
+
+Prova de que os volumes não estão em uso, um por um, antes de cada remoção (o filtro lista também containers parados,
+por isso só vale depois do `docker rm` acima):
 
 ```sh
 docker volume ls | grep coder-                          # esperado: os 2 volumes
@@ -120,8 +135,8 @@ du -sh /srv/coder                                       # confira o tamanho do q
 test "$(realpath /srv/coder)" = /srv/coder && test -d /srv/coder && rm -rf -- /srv/coder
 ```
 
-Se um `docker ps -a --filter volume=...` listar um container, **não remova esse volume**: ele ainda está em uso
-(provavelmente `coder-ricardo-teste`, que o 2a remove; nesse caso decida e remova o container antes). Se a guarda do
+Se um `docker ps -a --filter volume=...` ainda listar algum container (outro que não o `coder-ricardo-teste`, já
+removido acima), **não remova esse volume**: ele está em uso; identifique o container e decida antes. Se a guarda do
 `test` falhar (código 1, nada apagado): `/srv/coder` não existe ou é link simbólico; não apague, investigue.
 
 Conferência: `docker volume ls | grep coder-` não imprime nada; `ls /srv/coder` retorna "No such file".
@@ -132,10 +147,10 @@ Rollback: só pelo backup/snapshot feito antes (restaurar o snapshot desfaz tamb
 
 Os containers `coder-coder-1` e `coder-database-1` já foram removidos em 2026-10-19. Sobra o container **parado**
 `coder-ricardo-teste` (workspace do Coder), as imagens e a rede. Daemon do sistema, conforme a seção acima.
+O container `coder-ricardo-teste` já foi removido no 2b; um `docker rm` repetido aqui só diria "no such container".
 
 ```sh
-docker ps -a --filter name=coder                        # esperado: só coder-ricardo-teste, parado
-docker rm coder-ricardo-teste
+docker ps -a --filter name=coder                        # esperado: vazio (o coder-ricardo-teste saiu no 2b)
 docker network rm coder_default
 docker rmi ghcr.io/coder/coder:latest postgres:17 alpine:latest stack/web
 ```
@@ -144,8 +159,8 @@ Antes: `docker ps -a` e `docker images`; se `postgres:17`, `alpine:latest` ou `s
 app seu, não os remova. O Docker recusa remover imagem em uso por container.
 
 Conferência: `docker ps -a` vazio; `docker network ls` só com `bridge`, `host` e `none`; `docker images` sem as imagens acima.
-Perde: o container de teste (a home dele provavelmente vive no volume do bloco 2b, não no container) e imagens
-rebaixáveis. Rollback: as imagens se baixam de novo; o container de teste não se recria (o Coder saiu, PR #7).
+Perde: imagens rebaixáveis (o container de teste e a sua camada gravável já se foram no 2b; a home dele
+provavelmente vivia no volume). Rollback: as imagens se baixam de novo; o container de teste não se recria (o Coder saiu, PR #7).
 
 ## 3. sysbox — root, DESTRUTIVO
 
