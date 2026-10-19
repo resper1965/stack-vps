@@ -192,7 +192,7 @@ Token no `admin.env`; endpoints a confirmar no spike.
 
 | Sai | Motivo |
 |---|---|
-| `30-sysbox`, `31-rede-containers`, `33-runners`, restos de `compose/` e `coder/` | Coder já saiu (#7); sem equipe em container |
+| `30-sysbox`, `31-rede-containers`, `33-runners`, restos de `compose/` e `coder/` | Coder já saiu (#7); sem equipe em container. **REVISADO em 2026-10-19: runners voltam, ver docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md** (`33-runners` e `compose/runners.yml` saem aqui e voltam adaptados depois) |
 | `22-openrig`, `23-papeis`, `openrig/` | Dupla principal/revisor vira sessões do OpenCode |
 | `24-modelos`, Continue | Substituídos pelo 9router (o comando `modelo` fica, apontado ao 9router) |
 | Perfil `azure` | Fora dos 4 destinos |

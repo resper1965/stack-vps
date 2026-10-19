@@ -36,7 +36,7 @@ Repositório: `resper1965/stack-vps`. Referência principal examinada: `main` em
 - **PR #9:** `feat/pmo-opencode-sessoes`, **Fase 1** de coleta somente de metadados (`pmo/sessoes.py` + testes). Branch verificada com **3 commits à frente de main**, nenhum atrás. Revisão identificou bugs de paginação; o terceiro commit corrige cursor inválido, página vazia com continuação, validação de limite e limpeza de temporários. O PR permanece em revisão: não confundir correção no GitHub com aprovação/deploy. Testes **105/105 relatados pelo executor**, não reproduzidos independentemente.
 - **Fase 2:** branch `feat/pmo-painel-sessoes` criada **a partir da Fase 1**, **4 commits à frente de main**, nenhum atrás; último commit informado `da51461`. Adiciona fusão de metadados em `pmo/painel.py`, testes e componentes em `pmo/web/app.js`. Coletor ainda **sem ativação automática** e **sem deploy**. Testes **115/115 relatados pelo OpenCode**, revisão independente ainda pendente. **Dependência de merge:** Fase 1 antes ou conjuntamente via PR empilhado; não misturar histórico acidentalmente.
 - **PR #8:** `feat/standards-profiles-bootstrap`, **9 commits à frente de main**. Catálogo de perfis, CLI e skill de bootstrap **somente projetos novos**; integração com wizard do PMO ainda pendente.
-- **PR #7:** decisão de retirar Coder. Embora material legado e scripts de runners possam permanecer no repositório, não reintroduzir Coder, GitHub Actions ou runners como dependência do MVP. Status real de desinstalação na VPS requer inspeção.
+- **PR #7:** decisão de retirar Coder. Embora material legado e scripts de runners possam permanecer no repositório, não reintroduzir Coder, GitHub Actions ou runners como dependência do MVP. Status real de desinstalação na VPS requer inspeção. **REVISADO em 2026-10-19:** a parte dos runners foi superada, eles voltam como CI sem créditos (`docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md`); o Coder continua fora.
 - Origem da verdade é o GitHub **e** o estado operacional da VPS, que podem divergir; planos antigos em `docs/superpowers` são históricos, não necessariamente implementação atual.
 
 ## Próximas ações recomendadas
@@ -68,5 +68,23 @@ Levantamento somente leitura na VPS, sem segredo e sem URL de pareamento. Nada f
 
 - **Clone de trabalho** `/srv/dev/projetos/STACK-VPS`: branch `feat/29-skills-superpowers`, 26 commits atrás de `origin/main`, árvore limpa (só `__pycache__`).
 - **Instalado x fonte**: `/opt/pmo` é idêntico a `/opt/stack-vps/pmo` (só difere `__pycache__`). O `pmo-coleta.service` instalado já tem `ExecStartPre` (coletor de sessões ativo), então os PRs #9, #11 e #12 estão instalados. Não foi possível ler o git de `/opt/stack-vps` (propriedade root, "dubious ownership"); nenhuma configuração foi alterada.
-- **Ativos hoje**: `opencode-web` (usuário `agente`), `pmo-servidor`, `pmo-coleta.timer`, `cloudflared`, `tailscaled` e `stack-rede-containers`. Pacote `sysbox-ce 0.7.1` instalado. Nenhum container Docker rodando. `~/.continue` existe no `agente`. `tailscale serve` sem configuração.
+- **Ativos hoje**: `opencode-web` (usuário `agente`), `pmo-servidor`, `pmo-coleta.timer`, `cloudflared`, `tailscaled` e `stack-rede-containers`. Pacote `sysbox-ce 0.7.1` instalado. ~~Nenhum container Docker rodando~~ (errado: só conferi o Docker rootless do `agente`; o Docker do sistema tinha 6 containers, ver "Atualização 2026-10-19"). `~/.continue` existe no `agente`. `tailscale serve` sem configuração.
 - **Alcance**: é isso que as remoções da Task 16 e o deploy da etapa 2 vão tocar.
+
+## Atualização 2026-10-19 — Docker do sistema, runners e CI sem créditos
+
+- **Correção:** o Docker do sistema tinha **6 containers**: Coder (`coder-coder-1`, `coder-database-1`) e 4 runners do GitHub
+  (`runners-nessenergy-runner-1/2`, `runners-bekaa-trusted-advisors-runner-1/2`), de pé havia 2 dias.
+- **Removidos hoje, com aprovação do dono** (`docker stop` + `docker rm`): os 2 do Coder e os 4 runners.
+- **Ficou na VPS:** volumes `coder-b8dec1e8-0db7-492a-88d4-70e382da0439-home` e `coder-e7fd6a59-faa3-4fde-a794-4fe7061b08cc-agentes`;
+  diretório `/srv/coder` (root 0700, com o banco do Coder); imagens `myoung34/github-runner:ubuntu-noble` (3,33 GB), `stack/web`
+  (5,28 GB), `ghcr.io/coder/coder:latest` (876 MB), `postgres:17` (646 MB) e `alpine:latest`; redes `coder_default`,
+  `runners-nessenergy_default` e `runners-bekaa-trusted-advisors_default`; o container **parado** `coder-ricardo-teste` (workspace do Coder).
+  Limpeza em `docs/runbooks/2026-10-remocoes-vps.md`.
+- **Túnel:** a rota `coder.ness.com.br` saiu da configuração do tunnel (reexecução do `06-tunnel.sh`, `TUNNEL_EXTRA` vazio). O
+  registro DNS na Cloudflare **não** foi apagado (órfão, responde 404).
+- **Workflows:** 10 workflows agendados de repositórios privados da conta pessoal foram desligados com `gh workflow disable`
+  (lista na spec abaixo).
+- **Decisão nova:** o dono não tem créditos de GitHub Actions. Runners na VPS voltam (containers isolados sob a conta `ci`,
+  só repositórios privados das organizações), com CI local como padrão e jobs agendados como timers systemd. **Planejado,
+  nada implementado ainda.** Ver `docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md`.

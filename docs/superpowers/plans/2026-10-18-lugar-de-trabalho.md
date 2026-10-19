@@ -67,7 +67,7 @@ GraphQL API, API da Hostinger.
 | `pmo/painel.py`, `pmo/web/app.js` | `ler_saude`, `montar`, bloco Saúde, congelar | 13, 17, 18 |
 | `bin/hostinger.sh` | snapshot, métricas, reinício, recuperação | 14 |
 | `opencode/plugin/aviso.js` | aviso de agente concluído | 15 |
-| remoções (ver Task 16) | OpenRig, sysbox, rede de containers, runners, Continue | 16 |
+| remoções (ver Task 16) | OpenRig, sysbox, rede de containers, runners, Continue (**REVISADO em 2026-10-19: runners voltam, ver docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md**) | 16 |
 | `pmo/regras.py` | estágio `congelado` | 17 |
 | `pmo/linear.py`, `systemd/pmo-linear.{service,timer}` | espelho PMO → Linear | 18, 19 |
 | `docs/spikes/2026-10-*.md` | respostas dos spikes | 1–6 |
@@ -395,12 +395,14 @@ de novo reescreve o `config.yml` — se a emergência estava ligada, ela desliga
 
 `24-modelos.sh`, `bin/modelo` e `docs/modelos.tsv` **ficam** até a etapa 4.
 
+> **REVISADO em 2026-10-19: runners voltam, ver docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md.** A exclusão de `scripts/33-runners.sh` e `compose/runners.yml` abaixo vale; eles voltam adaptados em mudança posterior. O estado da VPS também difere do assumido: havia 6 containers no Docker do sistema (ver `docs/runbooks/2026-10-remocoes-vps.md`).
+
 - [ ] **Step 1:** `git grep -nE "22-openrig|23-papeis|30-sysbox|31-rede-containers|33-runners|rig-dupla|openrig|sysbox|rede-containers|runners\.yml|continue\.continue|~/.continue"`
   — anote cada ocorrência fora de `docs/superpowers/` (histórico fica).
 - [ ] **Step 2:** apague e edite até o mesmo `git grep` não achar nada fora de `docs/superpowers/` e do runbook.
 - [ ] **Step 3:** `bash tests/run.sh` (WSL) passa.
 - [ ] **Step 4:** runbook da VPS (executar só com aprovação, como root, um bloco por item, cada um com o comando de
-  conferência): parar e desabilitar `stack-rede-containers`; remover containers e imagens de runner; remover o
+  conferência): parar e desabilitar `stack-rede-containers`; remover containers e imagens de runner (*REVISADO em 2026-10-19: containers já removidos, runners voltam, ver spec de CI sem créditos*); remover o
   pacote sysbox; remover `~/.continue` e a extensão do VS Code do `agente`; remover o estado do OpenRig em
   `/srv/dev/state/openrig`. Antes de tudo: `sudo bash /opt/stack-vps/bin/hostinger.sh metricas` e então `... snapshot --sim` (o `hostinger.sh` só entra no PATH depois do `05-servicos.sh`).
 - [ ] **Step 5:** `git commit -m "chore: remove OpenRig, sysbox, rede de containers, runners e Continue"`.
