@@ -313,6 +313,17 @@ class ServidorSocket(unittest.TestCase):
         self.assertEqual(self.req("GET", "/painel.json", X_Forwarded_Host=""), 200)
         self.assertEqual(self.req("GET", "/painel.json", Host="evil.example", X_Forwarded_Host=""), 403)
 
+    def test_forwarded_host_so_vale_com_host_localhost(self):
+        # sob DNS rebinding o navegador forja X-Forwarded-Host sem preflight; Host != "localhost" nao e o proxy.
+        # "localhost:8080" (fallback SSH, sem proxy) tambem nao: forwarded host ali e nao confiavel
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        for host in ("evil.example:8080", "localhost:8080"):
+            c = dict(Host=host, X_Forwarded_Host=self.HOST)
+            self.assertEqual(self.req("GET", "/painel.json", **c), 403, host)
+            self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, **c), 403, host)
+            self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, Origin="https://" + self.HOST, **c), 403, host)
+        self.assertEqual(self.pedidos(), [])
+
     def test_forwarded_host_com_caixa_ou_ponto_final_recusado(self):
         for xfh in (self.HOST.upper(), "stack.tailnet.ts.net.:8443"):
             self.assertEqual(self.req("GET", "/painel.json", Host="localhost", X_Forwarded_Host=xfh), 403, xfh)

@@ -416,14 +416,28 @@ de novo reescreve o `config.yml` — se a emergência estava ligada, ela desliga
 **PORTÃO OBRIGATÓRIO antes de rodar o `34-pmo.sh` com a nova unidade (com aprovação):** o PMO só aceita ação se o
 `tailscale serve` entregar o `X-Forwarded-For`; sem ele, toda ação pelo painel dá 403 (falha fechada).
 1. Suba um backend de eco em **socket Unix** (não TCP: o `Host` só muda com alvo `unix:`, e um eco TCP daria falso
-   verde), por exemplo `python3` com `socketserver.UnixStreamServer` + `BaseHTTPRequestHandler` que devolve os
-   cabeçalhos recebidos, em `/tmp/eco.sock`, de dono o usuário que o roda.
+   verde), por exemplo (testado com `curl --unix-socket`; sem o `log_message` vazio o handler quebra, pois
+   `client_address` é `''` em AF_UNIX, e o curl sai com 52):
+   ```python
+   import os, socketserver
+   from http.server import BaseHTTPRequestHandler
+   S = "/tmp/eco.sock"
+   if os.path.exists(S): os.unlink(S)
+   class H(BaseHTTPRequestHandler):
+       def log_message(self, *a): pass
+       def do_GET(self):
+           b = "".join(f"{k}: {v}
+" for k, v in self.headers.items()).encode()
+           self.send_response(200); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
+   socketserver.UnixStreamServer(S, H).serve_forever()
+   ```
+   em `/tmp/eco.sock`, de dono o usuário que o roda.
 2. Publique-o com `tailscale serve --bg --https=9443 unix:/tmp/eco.sock` (porta temporária, diferente de 443 e 8443).
 3. Requisite `https://stack.<tailnet>.ts.net:9443/` **do notebook** e **de dentro da VPS como `agente`**
    (`sudo -u agente -H curl -s …`). Registre, nos dois casos, quais `Host`, `X-Forwarded-Host`, `X-Forwarded-For` e
    `Tailscale-User-Login` chegam, e com que valores.
 4. Critérios: o `Host` chega como `localhost` e o nome real (`stack.<tailnet>.ts.net:9443`) chega em
-   `X-Forwarded-Host` (o PMO valida esse cabeçalho no modo socket); do notebook, `X-Forwarded-For` termina no IP
+   `X-Forwarded-Host` (o PMO valida esse cabeçalho no modo socket, e só o aceita quando o `Host` é exatamente `localhost`); do notebook, `X-Forwarded-For` termina no IP
    tailnet do notebook; de dentro da VPS, termina no IP da própria stack (é isso que o PMO recusa). **Se o
    `X-Forwarded-Host` não chegar com o nome real, ou o `X-Forwarded-For` não chegar, PARE e avise o dono antes do
    deploy:** o painel pelo serve fica impossível (falha fechada). Para o `X-Forwarded-For`, a opção (a): marcar o
