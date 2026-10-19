@@ -8,9 +8,17 @@ prepara() {
   export STACK_CF_DIR=$T/cf HEALTH_PMO_ENV=$T/servidor.env HEALTH_OPENCODE_URL=http://127.0.0.1:4096/ HEALTH_PMO_SOCKET=$T/pmo.sock
   mkdir -p "$STACK_CF_DIR"; printf 'ingress:\n  - service: http_status:404\n' > "$STACK_CF_DIR/config.yml"
   printf 'PMO_HOSTS=pmo.esper.ws,outro.esper.ws\n' > "$HEALTH_PMO_ENV"
-  stub systemctl; stub tailscale 0 100.1.2.3; stub ip; stub docker; stub df 0 "Use%"
+  systemctl_com 1; stub tailscale 0 100.1.2.3; stub ip; stub docker; stub df 0 "Use%"
   curl_com 200 200
 }
+# systemctl_com <rc-do-is-failed>: is-failed devolve esse rc, o resto (is-active, is-enabled) 0
+systemctl_com() {
+  printf '#!/usr/bin/env bash
+echo "systemctl $*" >> "$STUB_LOG"
+[[ $1 == is-failed ]] && exit %s
+exit 0
+' "$1" > "$STUBS/systemctl"
+  chmod +x "$STUBS/systemctl"; }
 # curl_com <codigo-opencode> <codigo-pmo>: o stub distingue pelo --unix-socket
 curl_com() {
   cat > "$STUBS/curl" <<STUB
@@ -47,6 +55,12 @@ curl_com 200 502; roda; tem "FALHA painel do PMO"; afirma "$?" "pmo 502: FALHA"
 novo_tmp; prepara; rm "$HEALTH_PMO_ENV"; curl_com 200 fail; roda
 tem "pend  painel do PMO sem /etc/pmo/servidor.env"; afirma "$?" "sem servidor.env: pend"
 ! tem "FALHA painel do PMO"; afirma "$?" "sem servidor.env: nao e falha"
+
+# espelho do Linear: is-failed rc 0 = unidade falhou; rc 1 (falhou nao, ou unidade inexistente) = silencio
+novo_tmp; prepara; systemctl_com 0; roda
+tem "FALHA espelho do Linear"; afirma "$?" "pmo-linear falhou: FALHA"
+systemctl_com 1; roda
+! tem "espelho do Linear"; afirma "$?" "pmo-linear sem falha: sem linha"
 
 # secao hostinger: comando ausente some; rc 0 repassa a linha; rc 1 vira pend sem FALHA
 novo_tmp; prepara; export HEALTH_HOSTINGER=$T/nao-existe; roda

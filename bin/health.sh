@@ -23,6 +23,8 @@ else
   pc=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 --unix-socket "${HEALTH_PMO_SOCKET:-/run/pmo/pmo.sock}" -H "Host: $pmo_host" http://localhost/ 2>/dev/null)
   if [[ $pc == 200 ]]; then ok "painel do PMO"; else bad "painel do PMO"; fi
 fi
+# unidade inexistente (espelho nao instalado) nao conta como falhada
+if systemctl is-failed --quiet pmo-linear.service; then bad "espelho do Linear (pmo-linear.service falhou)"; fi
 
 echo "docker"
 if systemctl is-active --quiet docker; then ok "docker ativo, $(timeout 10 docker ps -q 2>/dev/null | wc -l) container(s)"

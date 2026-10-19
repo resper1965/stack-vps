@@ -37,6 +37,17 @@ PMO_LOGINS=%s
 chown root:pmo /etc/pmo/servidor.env; chmod 640 /etc/pmo/servidor.env
 usermod -aG pmo dev
 
+# espelho do Linear (opcional): chave e time so do pmo; unidades instaladas SEM habilitar o timer
+# (a primeira carga e manual, depois da previa: pmo.linear --previa)
+if ( set -a; . /srv/dev/secrets/admin.env; [[ -n ${LINEAR_API_KEY:-} && -n ${LINEAR_TEAM_KEY:-} ]] ); then
+  ( umask 027; set -a; . /srv/dev/secrets/admin.env; printf '%s' "$LINEAR_API_KEY" ) > /etc/pmo/linear-token
+  ( umask 027; set -a; . /srv/dev/secrets/admin.env; printf '%s' "$LINEAR_TEAM_KEY" ) > /etc/pmo/linear-team
+  chown root:pmo /etc/pmo/linear-token /etc/pmo/linear-team; chmod 640 /etc/pmo/linear-token /etc/pmo/linear-team
+  for u in pmo-linear.service pmo-linear.timer; do install -m 644 "$REPO/systemd/$u" /etc/systemd/system/; done
+else
+  echo "espelho do Linear pulado: faltam LINEAR_API_KEY e LINEAR_TEAM_KEY no admin.env"
+fi
+
 # o pmo pede ao agente as operacoes de pasta; so este comando, fixo e do root
 cat > /usr/local/bin/pmo-pasta <<'SH'
 #!/bin/sh
