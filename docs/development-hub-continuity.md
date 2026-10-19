@@ -59,3 +59,12 @@ Antes de recomendar ações: leia este documento, os PRs #8/#9, compare as branc
 - Testes reportados pelo executor e reexecutados na VPS nesta validação: 120/120 (duas corridas, com e sem `-W error::ResourceWarning`).
 
 **Este documento registra decisões, não autoriza merge nem deploy.**
+
+## Estado em 2026-10-18 (antes do redesenho)
+
+Levantamento somente leitura na VPS, sem segredo e sem URL de pareamento. Nada foi instalado, reiniciado ou apagado.
+
+- **Clone de trabalho** `/srv/dev/projetos/STACK-VPS`: branch `feat/29-skills-superpowers`, 26 commits atrás de `origin/main`, árvore limpa (só `__pycache__`).
+- **Instalado x fonte**: `/opt/pmo` é idêntico a `/opt/stack-vps/pmo` (só difere `__pycache__`). O `pmo-coleta.service` instalado já tem `ExecStartPre` (coletor de sessões ativo), então os PRs #9, #11 e #12 estão instalados. Não foi possível ler o git de `/opt/stack-vps` (propriedade root, "dubious ownership"); nenhuma configuração foi alterada.
+- **Ativos hoje**: `opencode-web` (usuário `agente`), `pmo-servidor`, `pmo-coleta.timer`, `cloudflared`, `tailscaled` e `stack-rede-containers`. Pacote `sysbox-ce 0.7.1` instalado. Nenhum container Docker rodando. `~/.continue` existe no `agente`. `tailscale serve` sem configuração.
+- **Alcance**: é isso que as remoções da Task 16 e o deploy da etapa 2 vão tocar.
