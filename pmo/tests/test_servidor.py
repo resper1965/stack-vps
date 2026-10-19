@@ -1,4 +1,6 @@
-import http.client, json, os, socket, stat, tempfile, threading, unittest
+import http.client, io, json, os, shutil, socket, stat, tempfile, threading, unittest
+from unittest import mock
+from pmo import servidor
 from pmo.servidor import criar
 
 
@@ -134,28 +136,62 @@ class ServidorSocket(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
         web = os.path.join(self.tmp, "web"); os.makedirs(web)
-        painel = os.path.join(self.tmp, "painel.json")
-        with open(painel, "w") as f:
+        self.painel = os.path.join(self.tmp, "painel.json")
+        with open(self.painel, "w") as f:
             json.dump({"projetos": [{"id": "o/a"}], "arquivados": [], "a_destinar": []}, f)
+        self.web = web
         self.fila = os.path.join(self.tmp, "fila")
         self.sock = os.path.join(self.tmp, "pmo.sock")
-        with open(self.sock, "w"):
-            pass  # socket velho: criar() remove antes do bind
-        self.srv = criar(None, None, web, painel, self.fila, os.path.join(self.tmp, "aj.json"),
-                         socket=self.sock, hosts=(self.HOST, "localhost:8080"), logins=(self.LOGIN,),
-                         classes=os.path.join(self.tmp, "cl.json"))
+        velho = socket.socket(socket.AF_UNIX); velho.bind(self.sock); velho.close()  # socket velho: criar() remove antes do bind
+        self.srv = self.sobe(self.sock)
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         self.addCleanup(self.srv.server_close)
         self.addCleanup(self.srv.shutdown)
+
+    def sobe(self, sock, **k):
+        k = {"hosts": (self.HOST, "localhost:8080"), "logins": (self.LOGIN,), **k}
+        return criar(None, None, self.web, self.painel, self.fila, os.path.join(self.tmp, "aj.json"),
+                     socket=sock, classes=os.path.join(self.tmp, "cl.json"), **k)
+
+    def test_sem_hosts_ou_sem_logins_falha_fechado(self):
+        for k in ({"hosts": ()}, {"logins": ()}):
+            with self.assertRaises(ValueError):
+                self.sobe(os.path.join(self.tmp, "outro.sock"), **k)
+
+    def test_arquivo_comum_no_caminho_do_socket_nao_e_apagado(self):
+        f = os.path.join(self.tmp, "importante")
+        open(f, "w").close()
+        with self.assertRaises(ValueError):
+            self.sobe(f)
+        self.assertTrue(os.path.isfile(f))
+
+    def test_main_socket_sem_logins_ou_hosts_sai_2(self):
+        for args in (["--socket", "x.sock", "--hosts", "h"], ["--socket", "x.sock", "--logins", "a@b.c"]):
+            with mock.patch("sys.argv", ["pmo"] + args), mock.patch("sys.stderr", io.StringIO()),                     mock.patch.object(servidor, "criar") as c:
+                with self.assertRaises(SystemExit) as e:
+                    servidor.main()
+            self.assertEqual(e.exception.code, 2)
+            c.assert_not_called()
+
+    def test_origin_propria_aceita_e_alheia_recusada(self):
+        h = dict(Tailscale_User_Login=self.LOGIN)
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        self.assertEqual(self.req("POST", "/acao", ped, Origin="https://" + self.HOST, **h), 202)
+        self.assertEqual(self.req("POST", "/acao", ped, Origin="https://evil.example", **h), 403)
 
     def req(self, metodo, caminho, corpo=None, **cab):
         s = socket.socket(socket.AF_UNIX); s.settimeout(5); s.connect(self.sock)
         c = http.client.HTTPConnection("localhost", timeout=5); c.sock = s
         h = {"Host": self.HOST, "Content-Type": "application/json", "X-PMO": "1"}
         h.update({k.replace("_", "-"): v for k, v in cab.items()})
-        c.request(metodo, caminho, body=json.dumps(corpo) if corpo is not None else None, headers=h)
-        r = c.getresponse(); r.read(); c.close(); return r.status
+        self.addCleanup(c.close); self.addCleanup(s.close)
+        try:
+            c.request(metodo, caminho, body=json.dumps(corpo) if corpo is not None else None, headers=h)
+        except BrokenPipeError:
+            pass  # recusa antes de ler o corpo: o servidor fecha e a resposta ja esta no buffer
+        r = c.getresponse(); r.read(); return r.status
 
     def pedidos(self):
         return [f for f in os.listdir(self.fila) if not f.startswith(".")]
@@ -185,6 +221,41 @@ class ServidorSocket(unittest.TestCase):
     def test_post_host_fora_da_lista_recusado(self):
         self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Host="evil.example", Tailscale_User_Login=self.LOGIN), 403)
         self.assertEqual(self.pedidos(), [])
+
+
+class ServidorSaude(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup); self.tmp = tmp.name
+        web = os.path.join(self.tmp, "web"); os.makedirs(web)
+        self.painel = os.path.join(self.tmp, "painel.json")
+        with open(self.painel, "w") as f:
+            json.dump({"projetos": [], "arquivados": [], "a_destinar": []}, f)
+        self.web, self.saude = web, os.path.join(self.tmp, "health.txt")
+        with open(self.saude, "w") as f:
+            f.write("acesso\n  FALHA cloudflared parado\n")
+
+    def pega(self, **k):
+        srv = criar("127.0.0.1", 0, self.web, self.painel, os.path.join(self.tmp, "fila"), os.path.join(self.tmp, "a.json"),
+                    bloquear_local=False, classes=os.path.join(self.tmp, "c.json"), **k)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.server_close); self.addCleanup(srv.shutdown)
+        c = http.client.HTTPConnection("127.0.0.1", srv.server_address[1], timeout=5)
+        c.request("GET", "/painel.json"); r = c.getresponse(); d = json.loads(r.read()); c.close()
+        return d
+
+    def test_painel_json_tem_saude(self):
+        d = self.pega(saude=self.saude)
+        self.assertEqual(d["saude"]["itens"], [{"secao": "acesso", "estado": "falha", "texto": "cloudflared parado"}])
+        self.assertFalse(d["saude"]["velho"])
+
+    def test_sem_saude_a_chave_some(self):
+        self.assertNotIn("saude", self.pega())
+        self.assertNotIn("atalhos", self.pega())
+
+    def test_atalho_so_https(self):
+        for url, esperado in (("https://stack.ts.net/", "https://stack.ts.net/"), ("http://x/", None),
+                              ("javascript:alert(1)", None), ("", None), (None, None)):
+            self.assertEqual(self.pega(atalhos={"opencode": url})["atalhos"], {"opencode": esperado}, url)
 
 
 if __name__ == "__main__":

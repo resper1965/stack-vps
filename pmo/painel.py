@@ -10,6 +10,9 @@ from pmo.regras import contar
 SAIDA = "/srv/dev/state/pmo/painel.json"
 SESSOES = "/srv/dev/state/pmo/sessoes.json"   # 0600, escrito pelo coletor do próprio agente
 DEFAZAGEM = 2 * 86400
+SAUDE = "/srv/dev/state/health.txt"   # saida do health.sh, gravada pelo vigia-health
+SAUDE_VELHA = 30 * 60
+_ESTADOS = {"ok": "ok", "FALHA": "falha", "pend": "pend"}
 
 
 def a_destinar(raiz="/srv/dev/laptop"):
@@ -118,6 +121,30 @@ def ler_sessoes(caminho=SESSOES):
     except (OSError, ValueError):
         return None
     return d if isinstance(d, dict) and isinstance(d.get("sessoes"), list) else None
+
+
+def ler_saude(caminho, agora):
+    """health.txt: linha sem indentacao abre secao; '  ok|FALHA|pend texto' e item. Linha estranha e ignorada."""
+    vazio = {"gerado_em": None, "velho": True, "itens": []}
+    try:
+        with open(caminho, encoding="utf-8", errors="replace") as f:
+            linhas = f.read().splitlines()
+        mtime = datetime.fromtimestamp(os.stat(caminho).st_mtime, timezone.utc)
+    except OSError:
+        return vazio
+    itens, secao = [], ""
+    for ln in linhas:
+        if not ln.strip():
+            continue
+        if not ln[0].isspace():
+            secao = ln.strip()
+            continue
+        estado, _, texto = ln.strip().partition(" ")
+        if estado in _ESTADOS and texto.strip():
+            itens.append({"secao": secao, "estado": _ESTADOS[estado], "texto": texto.strip()})
+    if not itens:
+        return vazio
+    return {"gerado_em": mtime.isoformat(), "velho": (agora - mtime).total_seconds() > SAUDE_VELHA, "itens": itens}
 
 
 def gravar(dados, caminho=SAIDA):

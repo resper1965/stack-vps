@@ -31,6 +31,9 @@ chown root:pmo /etc/pmo/token; chmod 640 /etc/pmo/token
   printf 'PMO_HOSTS=%s
 PMO_LOGINS=%s
 ' "${PMO_HOSTS:?falta PMO_HOSTS no admin.env}" "${PMO_LOGINS:?falta PMO_LOGINS no admin.env}" ) > /etc/pmo/servidor.env
+# opcional: URL https do atalho "Abrir OpenCode" no painel
+( umask 027; set -a; . /srv/dev/secrets/admin.env
+  [[ -z ${PMO_ATALHO_OPENCODE:-} ]] || printf 'PMO_ATALHO_OPENCODE=%s\n' "$PMO_ATALHO_OPENCODE" ) >> /etc/pmo/servidor.env
 chown root:pmo /etc/pmo/servidor.env; chmod 640 /etc/pmo/servidor.env
 usermod -aG pmo dev
 

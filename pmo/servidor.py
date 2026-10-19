@@ -15,12 +15,15 @@ import hashlib
 import json
 import os
 import socketserver
+import stat
 import threading
 import time
+from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import unquote, urlsplit
 
 from pmo.executor import aplicar_ajustes
+from pmo.painel import ler_saude
 from pmo.pasta import NOME
 from pmo.regras import EMPRESAS, ESTAGIOS, TIPOS, aplicar_classes
 
@@ -52,14 +55,22 @@ class _UnixHTTP(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
 
 
 def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes="/var/lib/pmo/classes.json",
-          *, socket=None, hosts=(), logins=(), saude=None):
+          *, socket=None, hosts=(), logins=(), saude=None, atalhos=None):
+    if socket and not (hosts and logins):
+        raise ValueError("modo socket exige hosts e logins nao vazios (fail closed)")
     os.makedirs(fila, mode=0o700, exist_ok=True)
     trava = threading.Lock()
 
     def ler_painel():
         with open(painel, encoding="utf-8") as f:
             d = json.load(f)
-        return aplicar_classes(aplicar_ajustes(d, _ler_json(ajustes, {})), _ler_json(classes, {}))
+        d = aplicar_classes(aplicar_ajustes(d, _ler_json(ajustes, {})), _ler_json(classes, {}))
+        if saude:  # lido a cada GET: tempo real, sem esperar a coleta diaria
+            d["saude"] = ler_saude(saude, datetime.now(timezone.utc))
+        if atalhos is not None:
+            # vira href no front: so https
+            d["atalhos"] = {k: v if isinstance(v, str) and v.startswith("https://") else None for k, v in atalhos.items()}
+        return d
 
     def classificar(alvo, classe):
         with trava:
@@ -156,6 +167,8 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
     if not socket:
         return ThreadingHTTPServer((host, porta), Handler)
     if os.path.lexists(socket):
+        if not stat.S_ISSOCK(os.lstat(socket).st_mode):
+            raise ValueError(f"{socket} existe e nao e um socket; nao vou apagar")
         os.unlink(socket)
     srv = _UnixHTTP(socket, Handler)
     os.chmod(socket, 0o660)
@@ -171,6 +184,7 @@ def main():
     a.add_argument("--fila", default="/var/lib/pmo/fila")
     a.add_argument("--ajustes", default="/var/lib/pmo/ajustes.json")
     a.add_argument("--classes", default="/var/lib/pmo/classes.json")
+    a.add_argument("--saude", default="/srv/dev/state/health.txt")
     a.add_argument("--socket")
     a.add_argument("--hosts", default="")
     a.add_argument("--logins", default="")
@@ -179,8 +193,11 @@ def main():
     hosts, logins = lista(o.hosts), lista(o.logins)
     if o.socket and not logins:
         a.error("--socket exige --logins nao vazio (sem lista, nenhuma acao seria autenticada)")
+    if o.socket and not hosts:
+        a.error("--socket exige --hosts nao vazio (sem lista, todo pedido seria recusado)")
     criar(o.host, o.porta, o.web, o.painel, o.fila, o.ajustes, classes=o.classes,
-          socket=o.socket, hosts=hosts, logins=logins).serve_forever()
+          socket=o.socket, hosts=hosts, logins=logins, saude=o.saude,
+          atalhos={"opencode": os.environ.get("PMO_ATALHO_OPENCODE")}).serve_forever()
 
 
 if __name__ == "__main__":

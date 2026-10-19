@@ -1,6 +1,7 @@
 import json, os, tempfile, unittest
 from datetime import datetime, timezone
-from pmo.painel import gerar, a_destinar, fundir, ler_sessoes
+from datetime import timedelta
+from pmo.painel import gerar, a_destinar, fundir, ler_sessoes, ler_saude
 
 AGORA = datetime(2026, 10, 6, 6, tzinfo=timezone.utc)
 
@@ -167,6 +168,41 @@ class LerSessoes(unittest.TestCase):
         self.assertIsNone(ler_sessoes(caminho))
         open(caminho, "w").write('{"sessoes": []}')
         self.assertEqual(ler_sessoes(caminho), {"sessoes": []})
+
+
+class Saude(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.f = os.path.join(self.tmp.name, "health.txt")
+
+    def escreve(self, texto, idade_min=0):
+        with open(self.f, "w") as fh:
+            fh.write(texto)
+        t = (AGORA - timedelta(minutes=idade_min)).timestamp()
+        os.utime(self.f, (t, t))
+
+    def test_ler_saude_agrupa_por_secao(self):
+        self.escreve("acesso\n  ok    tailscale na tailnet\n  FALHA cloudflared parado\nbackup\n  pend  backup restic desligado\nlixo solto\n  ??? x\n", 5)
+        s = ler_saude(self.f, AGORA)
+        self.assertEqual(s["itens"], [
+            {"secao": "acesso", "estado": "ok", "texto": "tailscale na tailnet"},
+            {"secao": "acesso", "estado": "falha", "texto": "cloudflared parado"},
+            {"secao": "backup", "estado": "pend", "texto": "backup restic desligado"}])
+        self.assertFalse(s["velho"])
+        self.assertTrue(s["gerado_em"].startswith("2026-10-06T05:55:00"))
+
+    def test_ler_saude_ausente(self):
+        self.assertEqual(ler_saude(self.f, AGORA), {"gerado_em": None, "velho": True, "itens": []})
+
+    def test_ler_saude_vazio(self):
+        self.escreve("")
+        self.assertEqual(ler_saude(self.f, AGORA), {"gerado_em": None, "velho": True, "itens": []})
+
+    def test_ler_saude_velho(self):
+        self.escreve("acesso\n  ok    x\n", 31)
+        s = ler_saude(self.f, AGORA)
+        self.assertTrue(s["velho"])
+        self.assertEqual(len(s["itens"]), 1)
 
 
 if __name__ == "__main__":
