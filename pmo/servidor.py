@@ -55,11 +55,12 @@ class _UnixHTTP(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
 
 
 def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes="/var/lib/pmo/classes.json",
-          *, socket=None, hosts=(), logins=(), saude=None, atalhos=None):
+          *, socket=None, hosts=(), logins=(), saude=None, atalhos=None, timeout=10):
     if socket and not (hosts and logins):
         raise ValueError("modo socket exige hosts e logins nao vazios (fail closed)")
     os.makedirs(fila, mode=0o700, exist_ok=True)
     trava = threading.Lock()
+    _timeout = timeout
 
     def ler_painel():
         with open(painel, encoding="utf-8") as f:
@@ -82,6 +83,9 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             os.replace(tmp, classes)
 
     class Handler(SimpleHTTPRequestHandler):
+        # leitura parada nao prende a thread: o corpo e lido antes da autenticacao
+        timeout = _timeout
+
         def __init__(self, *a, **k):
             super().__init__(*a, directory=web, **k)
 
@@ -118,10 +122,14 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             return super().do_GET()
 
         def do_POST(self):
-            try:  # le o corpo antes de qualquer resposta: recusar sem ler faz o cliente tomar RST
-                bruto = self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 4096))
+            try:  # le o corpo antes de qualquer resposta (recusar sem ler faz o cliente tomar RST); limitado e com timeout
+                n = max(0, min(int(self.headers.get("Content-Length") or 0), 4096))
+                bruto = self.rfile.read(n)
             except ValueError:
                 bruto = b""
+            except OSError:  # timeout ou conexao quebrada: so fecha, sem traceback
+                self.close_connection = True
+                return
             origem = self.headers.get("Origin")
             if not socket and bloquear_local:
                 cliente = self.client_address[0]

@@ -1,4 +1,4 @@
-import http.client, io, json, os, shutil, socket, stat, tempfile, threading, unittest
+import http.client, io, json, os, shutil, socket, stat, tempfile, threading, time, unittest
 from unittest import mock
 from pmo import servidor
 from pmo.servidor import criar
@@ -192,6 +192,37 @@ class ServidorSocket(unittest.TestCase):
         except BrokenPipeError:
             pass  # recusa antes de ler o corpo: o servidor fecha e a resposta ja esta no buffer
         r = c.getresponse(); r.read(); return r.status
+
+    def bruto(self, cab_extra, corpo=b"", srv=None):
+        """Request cru, sem meia-fechada; devolve (primeira linha da resposta ou b'', segundos)."""
+        s = socket.socket(socket.AF_UNIX); s.settimeout(5); s.connect(srv.server_address if srv else self.sock)
+        self.addCleanup(s.close)
+        cab = ("POST /acao HTTP/1.1%(n)sHost: %(h)s%(n)sContent-Type: application/json%(n)sX-PMO: 1%(n)s%(c)s%(n)s%(n)s"
+               % {"n": chr(13) + chr(10), "h": self.HOST, "c": cab_extra}).encode()
+        t = time.time()
+        try:
+            s.sendall(cab + corpo)
+        except OSError:
+            pass
+        try:
+            r = s.recv(200)
+        except (ConnectionResetError, socket.timeout):
+            r = b""
+        return r.split(bytes([13, 10]))[0], time.time() - t
+
+    def test_content_length_negativo_nao_le_ate_eof(self):
+        linha, dt = self.bruto("Content-Length: -1", b"x" * 100_000)
+        self.assertIn(linha, (b"HTTP/1.0 403 Forbidden", b"HTTP/1.0 400 Bad Request", b""))
+        self.assertLess(dt, 3)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_corpo_prometido_e_nao_enviado_expira(self):
+        srv = self.sobe(os.path.join(self.tmp, "t.sock"), timeout=1)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.server_close); self.addCleanup(srv.shutdown)
+        linha, dt = self.bruto("Content-Length: 4096", srv=srv)
+        self.assertEqual(linha, b"")  # fechou sem responder, nao ficou pendurado
+        self.assertLess(dt, 4)
 
     def pedidos(self):
         return [f for f in os.listdir(self.fila) if not f.startswith(".")]
