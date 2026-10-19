@@ -6,12 +6,16 @@
 # Endpoints: docs/spikes/2026-10-18-hostinger.md (so documentacao, nada foi chamado na API real).
 set -uo pipefail
 ENVF=${HOSTINGER_ENV:-/srv/dev/secrets/admin.env}
+# variavel ja definida no ambiente vence o arquivo
+env_token=${HOSTINGER_API_TOKEN-}; env_vm=${HOSTINGER_VM_ID-}
 if [[ -s $ENVF ]]; then
   set -a
   # shellcheck source=/dev/null
   . "$ENVF"
   set +a
 fi
+[[ -n $env_token ]] && HOSTINGER_API_TOKEN=$env_token
+[[ -n $env_vm ]] && HOSTINGER_VM_ID=$env_vm
 BASE=https://developers.hostinger.com
 P_VM=/api/vps/v1/virtual-machines
 CMD=${1:-}; SIM=${2:-}
@@ -19,6 +23,12 @@ CMD=${1:-}; SIM=${2:-}
 [[ $CMD =~ ^(metricas|snapshot|reiniciar|recuperacao)$ ]] || { echo "uso: $0 metricas | snapshot|reiniciar|recuperacao [--sim]"; exit 1; }
 if [[ -z ${HOSTINGER_API_TOKEN:-} || -z ${HOSTINGER_VM_ID:-} ]]; then
   echo "hostinger: defina HOSTINGER_API_TOKEN e HOSTINGER_VM_ID em $ENVF"; exit 1
+fi
+if [[ ! $HOSTINGER_VM_ID =~ ^[0-9]+$ ]]; then echo "hostinger: HOSTINGER_VM_ID deve ser numerico"; exit 1; fi
+# o token vai dentro de uma string entre aspas na config do curl
+nl=$'\n'
+if [[ $HOSTINGER_API_TOKEN == *'"'* || $HOSTINGER_API_TOKEN == *'\'* || $HOSTINGER_API_TOKEN == *"$nl"* ]]; then
+  echo "hostinger: HOSTINGER_API_TOKEN tem caractere invalido (aspas, barra invertida ou quebra de linha)"; exit 1
 fi
 VM=$P_VM/$HOSTINGER_VM_ID
 # confirmar na VPS: spike (caminhos e campos vem da spec OpenAPI, nao de chamada real)

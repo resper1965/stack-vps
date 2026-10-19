@@ -47,4 +47,14 @@ curl_com 200 502; roda; tem "FALHA painel do PMO"; afirma "$?" "pmo 502: FALHA"
 novo_tmp; prepara; rm "$HEALTH_PMO_ENV"; curl_com 200 fail; roda
 tem "pend  painel do PMO sem /etc/pmo/servidor.env"; afirma "$?" "sem servidor.env: pend"
 ! tem "FALHA painel do PMO"; afirma "$?" "sem servidor.env: nao e falha"
+
+# secao hostinger: comando ausente some; rc 0 repassa a linha; rc 1 vira pend sem FALHA
+novo_tmp; prepara; export HEALTH_HOSTINGER=$T/nao-existe; roda
+! tem "hostinger"; afirma "$?" "hostinger ausente: sem secao"
+printf '#!/usr/bin/env bash\necho "  ok    hostinger cpu 10%% ram 20%% disco 30%%"\n' > "$T/hs"; chmod +x "$T/hs"; export HEALTH_HOSTINGER=$T/hs; roda
+tem "ok    hostinger cpu 10% ram 20% disco 30%"; afirma "$?" "hostinger rc 0: linha repassada"
+printf '#!/usr/bin/env bash\necho "  FALHA hostinger indisponível"\nexit 1\n' > "$T/hs"; roda
+tem "pend  hostinger indisponível"; afirma "$?" "hostinger rc 1: pend"
+! grep -E 'FALHA.*hostinger' <<<"$saida" >/dev/null; afirma "$?" "hostinger rc 1: nao e FALHA"
+unset HEALTH_HOSTINGER
 fim

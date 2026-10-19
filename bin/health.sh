@@ -47,6 +47,14 @@ wl=/srv/dev/state/weekly.log
 if [[ -f $wl ]] && (( ($(date +%s) - $(stat -c %Y "$wl")) / 86400 <= 8 )); then ok "rotina semanal em dia"
 else bad "rotina semanal sem rodar ha mais de 8 dias"; fi
 
+hs=${HEALTH_HOSTINGER:-/usr/local/bin/hostinger.sh}
+if [[ -x $hs ]]; then
+  echo "hostinger"
+  # API externa fora do ar nao e falha do ambiente: so pend, sem fail
+  if linha=$("$hs" metricas 2>/dev/null); then printf '%s\n' "$linha"
+  else printf '  pend  %s\n' "hostinger indisponível"; fi
+fi
+
 echo "disco"
 use=$(df --output=pcent /srv | tail -1 | tr -dc '0-9')
 (( use < 85 )) && ok "/srv em ${use}%" || bad "/srv em ${use}%"

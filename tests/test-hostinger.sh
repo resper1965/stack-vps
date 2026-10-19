@@ -68,4 +68,19 @@ for c in reiniciar recuperacao; do
 done
 nega_log "root_password" "senha de recuperacao fora do argv"
 grep -q root_password "$STUB_LOG.stdin"; afirma $? "senha de recuperacao vai pelo stdin"
+
+# variavel ja no ambiente vence o arquivo
+prep ok; HOSTINGER_API_TOKEN=tok-ambiente roda metricas
+grep -q "Bearer tok-ambiente" "$STUB_LOG.stdin"; afirma $? "env vence o arquivo: token do ambiente no stdin"
+grep -q "tok-secreto" "$STUB_LOG.stdin"; [[ $? != 0 ]]; afirma $? "env vence o arquivo: token do arquivo nao usado"
+
+# validacao do id e do token
+prep ok; HOSTINGER_VM_ID='1/../x' roda metricas
+afirma_rc $rc 1 "id nao numerico: rc 1"
+[[ ! -s $STUB_LOG ]]; afirma $? "id nao numerico: nenhuma chamada curl"
+for t in 'a"b' 'a\b' $'a\nb'; do
+  prep ok; HOSTINGER_API_TOKEN=$t roda metricas
+  afirma_rc $rc 1 "token com caractere invalido: rc 1"
+  [[ ! -s $STUB_LOG ]]; afirma $? "token invalido: nenhuma chamada curl"
+done
 fim
