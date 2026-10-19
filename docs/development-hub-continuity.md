@@ -1,5 +1,7 @@
 # Development Hub — estado e continuidade (2026-10-16)
 
+> **Direção atual:** docs/superpowers/specs/2026-10-18-lugar-de-trabalho-design.md (lugar de trabalho: OpenCode, 9router, PMO em uma página).
+
 > **Leia este documento antes de aconselhar, implementar ou fazer deploy.** Registro de decisões de produto e fotografia operacional. Não substitui o código nem valida serviços em execução. Atualize conforme fatos comprovados. Não reproduza segredos, URLs de pareamento, senhas ou transcrições.
 
 ## Objetivo atual (MVP)

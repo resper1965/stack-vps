@@ -70,9 +70,8 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
   up -d --wait`, sempre com `-p <projeto>`, e `down` ao terminar. Só dado sintético.
 - API da Hostinger e gateway Composio: leitura livre; chamada que altera estado pede confirmação
   dizendo endpoint e efeito.
-- CI: `runs-on: [self-hosted, stack]` (runners da VPS, sem minutos pagos).
 - Desenvolvimento do dia a dia é com Claude e Codex. O comando `modelo` (OpenRouter e Featherless,
-  catálogo em `docs/modelos.tsv`) e o Continue no VS Code são para **teste de segurança**: `glm`/`glm-flash`
+  catálogo em `docs/modelos.tsv`) existe para **teste de segurança** e passará a apontar para o 9router: `glm`/`glm-flash`
   planejam e analisam, `primus` analisa, `livre` cobre passo que um modelo comum recusaria — sempre contra
   alvo autorizado por escrito.
 
