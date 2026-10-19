@@ -84,7 +84,7 @@ Do terminal do `dev`, `ia` e `iax` abrem o Claude e o Codex como `agente` no dir
 
 ## Painel do PMO
 
-`http://100.76.167.6:8080` (só pela VPN). Mostra todos os repositórios dos donos em `pmo/donos.txt`,
+`https://stack.<tailnet>.ts.net:8443` (só pela tailnet; o `tailscale serve` leva ao socket Unix do PMO). Mostra todos os repositórios dos donos em `pmo/donos.txt`,
 descobertos sozinhos todo dia às 06:00 (Brasília), mais as pastas sem git de `/srv/dev/laptop` em
 "A destinar".
 
@@ -107,12 +107,37 @@ configurados no `admin.env`. Canal sem valor e pulado. Teste manual:
 ## Antes de cada deploy de etapa
 
 ```sh
-sudo hostinger.sh snapshot --sim
+sudo bash /opt/stack-vps/bin/hostinger.sh metricas        # confere a credencial, só leitura
+sudo bash /opt/stack-vps/bin/hostinger.sh snapshot --sim
 ```
 
-A Hostinger guarda UM snapshot por VM: o novo substitui o existente (o comando mostra a data do atual
-antes de criar). Sem `--sim`, só mostra o que faria. Credenciais (`HOSTINGER_API_TOKEN`,
-`HOSTINGER_VM_ID`) no `admin.env`.
+O `hostinger.sh` só é instalado em `/usr/local/bin` pelo `05-servicos.sh`, que roda depois: no primeiro deploy
+chame-o pelo caminho do clone (`/opt/stack-vps/bin/`) e **antes de qualquer script do deploy**. A Hostinger
+guarda UM snapshot por VM: o novo substitui o existente (o comando mostra a data do atual antes de criar).
+Sem `--sim`, só mostra o que faria. Credenciais (`HOSTINGER_API_TOKEN`, `HOSTINGER_VM_ID`) no `admin.env`.
+
+### Chaves do `admin.env` usadas pelo PMO
+
+| Chave | Obrigatória | Formato e uso |
+|---|---|---|
+| `GITHUB_TOKEN` | sim | token com `delete_repo`; o `34-pmo.sh` o grava em `/etc/pmo/token` |
+| `PMO_HOSTS` | sim | `stack.<tailnet>.ts.net:8443,localhost:8080`: `Host` aceito, **com a porta**; o primeiro vira a URL do resumo semanal |
+| `PMO_LOGINS` | sim | login(s) da tailnet do dono (`Tailscale-User-Login`), separados por vírgula |
+| `PMO_ATALHO_OPENCODE` | não | `https://stack.<tailnet>.ts.net/`: botão "Abrir OpenCode" do painel |
+| `LINEAR_API_KEY`, `LINEAR_TEAM_KEY` | não | espelho do Linear; sem as duas o `34-pmo.sh` o pula |
+| `HOSTINGER_API_TOKEN`, `HOSTINGER_VM_ID` | para snapshot | `bin/hostinger.sh` |
+
+O `34-pmo.sh` confere `PMO_HOSTS`, `PMO_LOGINS`, `GITHUB_TOKEN` e o IP da tailnet (`tailscale ip -4`) antes de
+escrever qualquer coisa e lista tudo o que faltar numa só mensagem. Ele grava também os IPs do próprio nó
+(`PMO_IPS_PROPRIOS`): o servidor recusa ação cuja origem seja o próprio nó, para o agente não agir pela URL da
+tailnet de dentro da VPS.
+
+### Acesso do notebook ao painel
+
+`*.ts.net` só resolve por MagicDNS, que o notebook Windows do dono não usa. Antes do primeiro acesso, uma das duas:
+uma linha em `C:\Windows\System32\drivers\etc\hosts` (`100.76.167.6 stack.<tailnet>.ts.net`) ou ligar o MagicDNS
+no notebook. E, no admin da tailnet, habilitar **HTTPS Certificates** (aba DNS): sem isso o `37-tailscale-serve.sh`
+falha.
 
 Fallback, camada 3 (acesso perdido pela tailnet e pelo tunnel): `sudo hostinger.sh reiniciar --sim`; se
 não voltar, `sudo hostinger.sh recuperacao --sim` (imprime uma senha root temporária, uma única vez).

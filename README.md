@@ -46,8 +46,8 @@ Notas:
 
 | # | Script | O que faz |
 |---|---|---|
-| 34 | `34-pmo.sh` | painel do PMO em `http://100.76.167.6:8080` (só VPN): coleta diária, alarme de esquecidos, descartar/restaurar |
-| 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36 |
+| 34 | `34-pmo.sh` | painel do PMO em `https://stack.<tailnet>.ts.net:8443` (só tailnet; precisa do 37 e de uma entrada de `hosts` ou do MagicDNS no notebook, ver `docs/ssh-config.md`): coleta diária, alarme de esquecidos, descartar/restaurar |
+| 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36; exige "HTTPS Certificates" habilitado no admin da tailnet |
 
 
 ## Outros

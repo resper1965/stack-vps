@@ -58,6 +58,12 @@ O `HostName` de `stack` é o IP da VPS na tailnet, não o nome: o Windows deste 
 do Tailscale (MagicDNS), então `stack` não resolve. O IP é fixo no painel do Tailscale (Edit machine
 IPv4) e é reaplicado no nó novo quando a VPS é reinstalada.
 
+**As URLs `https://stack.<tailnet>.ts.net` (OpenCode) e `:8443` (PMO) têm o mesmo problema:** `*.ts.net` só
+resolve por MagicDNS. No notebook do dono, use uma das duas saídas: (1) uma linha no arquivo
+`C:\Windows\System32\drivers\etc\hosts` (como administrador): `100.76.167.6 stack.<tailnet>.ts.net`; ou
+(2) ligar o MagicDNS no cliente Tailscale do notebook. Pré-requisito do deploy, uma vez: habilitar
+**HTTPS Certificates** no admin da tailnet (aba DNS); sem isso o `37-tailscale-serve.sh` falha.
+
 No WSL, os mesmos blocos servem no `~/.ssh/config` dele, trocando o `ProxyCommand` por
 `cloudflared access ssh --hostname %h` (com o `cloudflared` instalado pelo apt).
 

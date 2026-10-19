@@ -6,8 +6,10 @@
 
 ## Pré-requisito (antes de qualquer bloco)
 
-1. Snapshot novo: `sudo hostinger.sh snapshot --sim` (sem `--sim` só mostra o que faria). A Hostinger guarda
-   **um** snapshot por VM: o novo **sobrescreve** o anterior.
+1. Snapshot novo. O `hostinger.sh` só é instalado em `/usr/local/bin` pelo `05-servicos.sh`, que roda depois:
+   chame-o pelo clone. Primeiro `sudo bash /opt/stack-vps/bin/hostinger.sh metricas` (confere a credencial, só
+   leitura) e então `sudo bash /opt/stack-vps/bin/hostinger.sh snapshot --sim` (sem `--sim` só mostra o que
+   faria). A Hostinger guarda **um** snapshot por VM: o novo **sobrescreve** o anterior.
 2. `health.sh` verde (`/srv/dev/bin/health.sh`, ver `docs/srv-dev-README.md`). Se não estiver verde, pare.
 
 Rollback geral: restaurar o snapshot.
@@ -122,6 +124,32 @@ Conferência: `test ! -e /srv/dev/state/openrig && echo ok`; `sudo -u agente -H 
 não imprime nada. Perde: rigs, especificações geradas dos `STATE.md` e o histórico do daemon do OpenRig.
 Os `STATE.md` dos projetos não são afetados. As branches/commits `chore/papeis-<data>` que o `23-papeis.sh` fez nos
 repositórios permanecem e são inofensivos (dá para apagá-las depois, se quiser). Rollback: restaurar o snapshot.
+
+## 6. Regra do UFW para a porta 8080 — root, DESTRUTIVO
+
+O `07-firewall.sh` antigo abria `8080/tcp` em `tailscale0` para o painel do PMO. O painel agora escuta em socket
+Unix, atrás do `tailscale serve` (443 e 8443), então nada escuta em 8080 e a regra é só superfície. O script novo
+não a cria, mas a regra já aplicada continua na VPS (rodar o `07` de novo faria `ufw reset` e a tiraria).
+
+```sh
+ufw status numbered | grep 8080                   # confira que existe e que é a de tailscale0
+ufw delete allow in on tailscale0 to any port 8080 proto tcp
+```
+
+(Se o `ufw` pedir confirmação, responda `y` só depois de conferir a regra listada.)
+
+Conferência: `ufw status | grep 8080` não imprime nada; `ufw status` continua listando 22 e 41641/udp; a
+sessão SSH aberta segue de pé. Rollback: `ufw allow in on tailscale0 to any port 8080 proto tcp`.
+
+## Rollback do deploy da etapa 2
+
+Depois do `git revert` do merge e de rodar de novo o `34-pmo.sh`, desfaça também a publicação da tailnet,
+senão o `tailscale serve` continua apontando para o socket e para o OpenCode (a configuração persiste):
+
+```sh
+tailscale serve reset             # ou, por porta: tailscale serve --https=8443 off; tailscale serve --https=443 off
+tailscale serve status            # esperado: sem configuração
+```
 
 ## Fechamento
 

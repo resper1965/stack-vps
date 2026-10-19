@@ -186,10 +186,16 @@ Branch `feat/etapa2-lugar-de-trabalho`.
 
 **Interfaces:**
 - Produces: `criar(web, painel, fila, ajustes, *, socket=None, host=None, porta=None, hosts=(), logins=(),
-  classes=..., saude=None) -> socketserver.BaseServer` — com `socket` cria servidor HTTP em `AF_UNIX` (0660); sem
+  ips_proprios=(), classes=..., saude=None) -> socketserver.BaseServer` — com `socket` cria servidor HTTP em `AF_UNIX` (0660); sem
   `socket`, TCP como hoje (testes e compatibilidade).
 - CLI: `python3 -m pmo.servidor --socket /run/pmo/pmo.sock --hosts stack.<tailnet>.ts.net:8443,localhost:8080
-  --logins resper@bekaa.eu`.
+  --logins resper@bekaa.eu --ips-proprios 100.76.167.6,fd7a:...` (os três nomeados são obrigatórios com `--socket`).
+
+Guarda contra o agente (final-review C1): de dentro da VPS o agente alcança a URL da tailnet, o `serve` resolve o
+próprio nó e injeta `Tailscale-User-Login` do dono. Em modo socket, todo POST também exige `X-Forwarded-For`
+(anexado pelo `serve`); vale o ÚLTIMO elemento, e o pedido é recusado (403, nada na fila) se o cabeçalho faltar ou
+esse IP estiver em `ips_proprios` (o `34-pmo.sh` grava os IPs do nó em `PMO_IPS_PROPRIOS`). Alternativa de ACL:
+marcar o nó com tag. Portão de verificação no "Deploy da etapa 2".
 
 Regras: GET exige `Host` em `hosts`. POST exige `Host` em `hosts` **e** `Tailscale-User-Login` em `logins` (além
 de `X-PMO`, JSON e `Origin` que já existem). No socket, o teste de IP local (`bloquear_local`) sai: quem não está no
@@ -314,7 +320,7 @@ de novo reescreve o `config.yml` — se a emergência estava ligada, ela desliga
 - Test: `tests/test-vigia-health.sh`, `pmo/tests/test_painel.py`, `pmo/tests/test_servidor.py`
 
 **Interfaces:**
-- Produces: `vigia-health.sh` grava a saída do `health.sh` em `${VIGIA_SAIDA:-/srv/dev/state/health.txt}`
+- Produces: `vigia-health.sh` grava a saída do `health.sh` em `${VIGIA_SAIDA:-/var/lib/stack-vps/health.txt}`
   (atômico, 0644) a cada corrida.
 - Produces: `ler_saude(caminho: str, agora: datetime) -> dict` em `pmo/painel.py`:
   `{"gerado_em": iso|None, "velho": bool, "itens": [{"secao": str, "estado": "ok"|"falha"|"pend", "texto": str}]}`;
@@ -396,15 +402,46 @@ de novo reescreve o `config.yml` — se a emergência estava ligada, ela desliga
 - [ ] **Step 4:** runbook da VPS (executar só com aprovação, como root, um bloco por item, cada um com o comando de
   conferência): parar e desabilitar `stack-rede-containers`; remover containers e imagens de runner; remover o
   pacote sysbox; remover `~/.continue` e a extensão do VS Code do `agente`; remover o estado do OpenRig em
-  `/srv/dev/state/openrig`. Antes de tudo: `sudo hostinger.sh snapshot --sim`.
+  `/srv/dev/state/openrig`. Antes de tudo: `sudo bash /opt/stack-vps/bin/hostinger.sh metricas` e então `... snapshot --sim` (o `hostinger.sh` só entra no PATH depois do `05-servicos.sh`).
 - [ ] **Step 5:** `git commit -m "chore: remove OpenRig, sysbox, rede de containers, runners e Continue"`.
 
-**Deploy da etapa 2 (com aprovação):** snapshot → `git pull` em `/opt/stack-vps` → `sudo ./34-pmo.sh` →
+**Pré-requisitos do deploy da etapa 2 (uma vez, pelo dono):**
+- `admin.env` com `PMO_HOSTS` (`stack.<tailnet>.ts.net:8443,localhost:8080`, porta inclusa), `PMO_LOGINS`,
+  `GITHUB_TOKEN`, `HOSTINGER_API_TOKEN`, `HOSTINGER_VM_ID` (e, opcionais, `PMO_ATALHO_OPENCODE`, `LINEAR_*`); formatos em
+  `admin.env.example` e na tabela de `docs/srv-dev-README.md`. O `34-pmo.sh` aborta antes de escrever se faltar algo.
+- "HTTPS Certificates" habilitado no admin da tailnet (aba DNS); sem isso o `37-tailscale-serve.sh` falha.
+- No notebook do dono, `*.ts.net` não resolve (sem MagicDNS): linha `100.76.167.6 stack.<tailnet>.ts.net` no arquivo
+  `hosts` do Windows, ou ligar o MagicDNS (`docs/ssh-config.md`).
+
+**PORTÃO OBRIGATÓRIO antes de rodar o `34-pmo.sh` com a nova unidade (com aprovação):** o PMO só aceita ação se o
+`tailscale serve` entregar o `X-Forwarded-For`; sem ele, toda ação pelo painel dá 403 (falha fechada).
+1. Suba um backend de eco só em `127.0.0.1` (por exemplo, `python3` com um `BaseHTTPRequestHandler` que devolve os
+   cabeçalhos recebidos, ou `socat`), porta alta qualquer.
+2. Publique-o com `tailscale serve --bg --https=9443 http://127.0.0.1:<porta>` (porta temporária, diferente de 443 e 8443).
+3. Requisite `https://stack.<tailnet>.ts.net:9443/` **do notebook** e **de dentro da VPS como `agente`**
+   (`sudo -u agente -H curl -s …`). Registre, nos dois casos, se chegam `Tailscale-User-Login`, `X-Forwarded-For` e
+   `Host`, e com que valores.
+4. Critérios: do notebook, `X-Forwarded-For` termina no IP tailnet do notebook e `Host` é `stack.<tailnet>.ts.net:9443`;
+   de dentro da VPS, `X-Forwarded-For` termina no IP da própria stack (é isso que o PMO recusa). **Se o
+   `X-Forwarded-For` não chegar, ou o `Host` chegar diferente do esperado, PARE:** a ação pelo painel fica impossível
+   (falha fechada) e é preciso escolher, antes do deploy, a opção (a): marcar o nó `stack` com tag no ACL da tailnet
+   (nó com tag não recebe `Tailscale-User-Login`, então o agente na VPS nunca é identificado como o dono) e ajustar
+   o desenho; decisão de ACL do dono.
+5. Remova: `tailscale serve --https=9443 off` e pare o backend de eco.
+
+**Deploy da etapa 2 (com aprovação):** snapshot (`sudo bash /opt/stack-vps/bin/hostinger.sh metricas`, conferência
+de credencial só leitura, e então `sudo bash /opt/stack-vps/bin/hostinger.sh snapshot --sim`; o `hostinger.sh` só
+entra no PATH depois do `05-servicos.sh`) → `git pull` em `/opt/stack-vps` → portão acima → `sudo ./34-pmo.sh` →
 `sudo ./37-tailscale-serve.sh` → como `agente`, `36-opencode.sh` → `sudo ./05-servicos.sh` → runbook de
 remoções → do laptop, abrir `https://stack.<tailnet>.ts.net` e o PMO em `:8443`; ensaio do fallback: derrubar o
 `tailscaled` por 2 min (`sudo systemctl stop tailscaled; sleep 120; sudo systemctl start tailscaled` em `tmux`) e
 entrar por `ssh stack-cf`; `stack-emergencia on`, abrir de um celular fora da tailnet, `off`.
-**Rollback:** restaurar o snapshot, ou `git revert` do merge e rodar de novo `34-pmo.sh`.
+Prova extra do C1: de dentro da VPS, como `agente`, `curl -s https://stack.<tailnet>.ts.net:8443/acao -H 'X-PMO: 1'
+-H 'Content-Type: application/json' -d '{"acao":"arquivar","alvo":"<id de teste>"}'` deve dar 403 e a fila
+(`/var/lib/pmo/fila`) deve ficar vazia.
+**Rollback:** restaurar o snapshot, ou `git revert` do merge e rodar de novo `34-pmo.sh`, **e depois**
+`tailscale serve reset` (ou `tailscale serve --https=8443 off` e `--https=443 off`): a publicação persiste e
+continuaria apontando para o socket e para o OpenCode.
 
 ---
 

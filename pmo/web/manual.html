@@ -126,7 +126,7 @@ table.m td code { white-space: nowrap; }
           <text class="svgt s" x="413" y="204" text-anchor="middle">admin · agente · projetos — nunca no Git</text>
           <!-- panel -->
           <rect class="svgbox" x="232" y="224" width="362" height="36" rx="8"/>
-          <text class="svgt" x="413" y="246" text-anchor="middle">painel do PMO · :8080 (só VPN)</text>
+          <text class="svgt" x="413" y="246" text-anchor="middle">painel do PMO · :8443 (só tailnet)</text>
           <!-- external -->
           <path class="svgln" d="M612 90 H712"/>
           <rect class="svgbox" x="712" y="64" width="138" height="40" rx="8"/>
@@ -161,7 +161,7 @@ table.m td code { white-space: nowrap; }
         <tr><td>SSH principal</td><td><code>ssh stack</code></td><td>entra como <code>dev</code> pela tailnet</td></tr>
         <tr><td>SSH de reserva</td><td><code>ssh stack-cf</code></td><td>pelo túnel Cloudflare, se a tailnet cair</td></tr>
         <tr><td>VS Code</td><td><code>code --remote ssh-remote+stack-agente</code></td><td>Remote-SSH como <code>agente</code>; Jupyter vem pela extensão</td></tr>
-        <tr><td>Painel do PMO</td><td><code>http://100.76.167.6:8080</code></td><td>dashboard dos projetos (só VPN)</td></tr>
+        <tr><td>Painel do PMO</td><td><code>https://stack.&lt;tailnet&gt;.ts.net:8443</code></td><td>dashboard dos projetos (só tailnet)</td></tr>
       </table>
       <div class="box"><b>Primeira vez na VPS:</b> <code>claude /login</code>, <code>gcloud auth login</code> +
       <code>application-default login</code>, <code>codex login</code>, e autenticar o MCP do Linear com <code>/mcp</code>.</div>
@@ -271,7 +271,7 @@ table.m td code { white-space: nowrap; }
 
     <section id="pmo">
       <h2><span class="n">7</span> PMO & verticais</h2>
-      <p>O painel (<code>:8080</code>, só VPN) mostra todos os projetos das organizações, com estágio, tecnologias
+      <p>O painel (<code>:8443</code>, só tailnet) mostra todos os projetos das organizações, com estágio, tecnologias
       e alerta de esquecidos. A coleta roda diária pela API do GitHub.</p>
       <ul>
         <li><b>Classificar</b> — empresa, área, cliente, tipo e estágio. Grava na hora em <code>classes.json</code>.</li>
