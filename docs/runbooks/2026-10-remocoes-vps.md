@@ -83,17 +83,45 @@ Conferência: `sudo -u agente ls -d /home/agente/.continue` falha; `ls /home/age
 não imprime nada. Perde: a config de modelos do Continue (era gerada por `modelo --continue`, recriável) e o
 atalho para `agente.env` (o `.env` era um link; o arquivo de segredos não é tocado, mas confira que o `rm -rf` não seguiu o link: `ls -l /srv/dev/secrets/agente.env`).
 
-## 5. Estado do OpenRig — root, DESTRUTIVO
+## 5. OpenRig (pacote, estado e variáveis do `.bashrc`) — root/agente, DESTRUTIVO
 
-```sh
-sudo -u agente -H npm rm -g @openrig/cli
-sudo -u agente rm -f /home/agente/.local/bin/rig-dupla
-rm -rf /srv/dev/state/openrig
+O `22-openrig.sh` instalou o pacote npm global `@openrig/cli`, copiou `rig-dupla` para `~/.local/bin`, criou
+`/srv/dev/state/openrig` e **acrescentou 4 linhas ao `~/.bashrc` do `agente`** (sem marcador de início/fim; só entram
+se o arquivo ainda não continha `OPENRIG_HOME`):
+
+```
+export OPENRIG_HOME=/srv/dev/state/openrig
+export OPENRIG_SHARED_DOCS_ROOT=/srv/dev/state/openrig/shared-docs
+export OPENRIG_NO_KERNEL=1
+export OPENRIG_RUNTIME_CODEX_HOOKS_ENABLED=false
 ```
 
-Conferência: `test ! -e /srv/dev/state/openrig && echo ok`; `sudo -u agente -H bash -lc 'command -v rig rig-dupla'` não imprime nada.
-Perde: rigs, especificações geradas dos `STATE.md` e o histórico do daemon do OpenRig. Os `STATE.md` dos projetos
-não são afetados. Rollback: restaurar o snapshot.
+```sh
+# 5a. pacote e atalho. O npm vem do mise: login shell do agente (o script antigo exportava
+# ~/.local/bin e ~/.local/share/mise/shims no PATH antes de usar npm).
+sudo -u agente -H bash -lc 'npm rm -g @openrig/cli; mise reshim; rm -f ~/.local/bin/rig-dupla'
+# Se o pacote nunca esteve instalado, o npm responde "up to date" e sai com 0: não é erro.
+
+# 5b. estado
+rm -rf /srv/dev/state/openrig
+
+# 5c. variáveis do .bashrc: mostrar, fazer backup, remover só as 4 linhas, conferir
+sudo -u agente -H bash -c '
+  grep -n OPENRIG ~/.bashrc                      # revise: devem ser exatamente as 4 linhas acima
+  cp -p ~/.bashrc ~/.bashrc.bak-$(date +%Y%m%d)
+  sed -i "/^export OPENRIG_\(HOME\|SHARED_DOCS_ROOT\|NO_KERNEL\|RUNTIME_CODEX_HOOKS_ENABLED\)=/d" ~/.bashrc
+  grep -c OPENRIG ~/.bashrc                      # esperado: 0
+'
+sudo -u agente -H bash -lc 'echo ok'            # esperado: ok (o .bashrc continua carregando)
+```
+
+Se o `grep -n` mostrar outras linhas com `OPENRIG` (editadas à mão), o `sed` não as apaga: trate-as à mão.
+Os shells já abertos mantêm as variáveis; os novos não as terão. Restaurar: `cp -p ~/.bashrc.bak-AAAAMMDD ~/.bashrc`.
+
+Conferência: `test ! -e /srv/dev/state/openrig && echo ok`; `sudo -u agente -H bash -lc 'command -v rig rig-dupla'`
+não imprime nada. Perde: rigs, especificações geradas dos `STATE.md` e o histórico do daemon do OpenRig.
+Os `STATE.md` dos projetos não são afetados. As branches/commits `chore/papeis-<data>` que o `23-papeis.sh` fez nos
+repositórios permanecem e são inofensivos (dá para apagá-las depois, se quiser). Rollback: restaurar o snapshot.
 
 ## Fechamento
 
