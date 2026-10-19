@@ -54,6 +54,7 @@ Notas:
 | 31 | `31-rede-containers.sh --instalar` | containers sem acesso à tailnet e ao metadata; DNS público para os containers |
 | 33 | `33-runners.sh <org> …` | runners efêmeros do GitHub Actions por organização (`runs-on: [self-hosted, stack]`) |
 | 34 | `34-pmo.sh` | painel do PMO em `http://100.76.167.6:8080` (só VPN): coleta diária, alarme de esquecidos, descartar/restaurar |
+| 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36 |
 
 - Runners: `RUNNER_TOKEN` (admin:org) no `admin.env`; só em organizações sem repositório público usando o rótulo.
 

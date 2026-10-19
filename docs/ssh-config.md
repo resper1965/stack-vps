@@ -4,6 +4,9 @@ Dois caminhos para a mesma VPS: `stack` pela tailnet (principal) e `stack-cf` pe
 Tunnel (reserva). Se os dois caírem, o console do hPanel é a emergência. Nenhuma porta da VPS
 responde no IP público.
 
+Na tailnet, o OpenCode e o PMO abrem direto no navegador (`tailscale serve`, script 37):
+`https://stack.<tailnet>.ts.net` para o OpenCode e `https://stack.<tailnet>.ts.net:8443` para o PMO.
+
 O caminho principal é o **Windows**, não o WSL: em 05/10/2026 o WSL travou e deixou de responder,
 e o acesso não deve depender dele.
 
@@ -45,6 +48,8 @@ Host stack-cf
     IdentitiesOnly yes
     StrictHostKeyChecking accept-new
     ProxyCommand "C:\Program Files (x86)\cloudflared\cloudflared.exe" access ssh --hostname %h
+    LocalForward 4096 127.0.0.1:4096
+    LocalForward 8080 /run/pmo/pmo.sock
     ServerAliveInterval 30
     ServerAliveCountMax 3
 ```
@@ -55,6 +60,11 @@ IPv4) e é reaplicado no nó novo quando a VPS é reinstalada.
 
 No WSL, os mesmos blocos servem no `~/.ssh/config` dele, trocando o `ProxyCommand` por
 `cloudflared access ssh --hostname %h` (com o `cloudflared` instalado pelo apt).
+
+Sem a tailnet não há `tailscale serve`, então o `stack-cf` leva o OpenCode em `http://localhost:4096` e o PMO
+em `http://localhost:8080` por `LocalForward`. O PMO fica só leitura por aqui, porque esse caminho não traz o
+cabeçalho de identidade da tailnet. `LocalForward` para socket Unix exige OpenSSH 6.7 ou mais novo no cliente;
+no cliente OpenSSH do Windows, confirmar.
 
 ## Login do Access (só para `stack-cf`)
 
