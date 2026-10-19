@@ -36,6 +36,7 @@ Testes: `bash tests/run.sh` (precisa de `shellcheck`).
 | 27 | `27-secrets.sh` | carrega `secrets/projetos.env` (um arquivo para todos os projetos) no shell do agente |
 | 28 | `28-contas-claude.sh` | duas contas Claude: bekaa (`~/.claude`, padrão) e ionic (`~/.claude-ionic`, vertical ionic); `claude-bekaa`/`claude-ionic` forçam |
 | 29 | `29-skills.sh` | skills de Cloudflare, Supabase, Vercel e GitHub nos três agentes; ponytail em `full` por padrão |
+| 36 | `36-opencode.sh` | unidade `opencode-web` (OpenCode só em `127.0.0.1:4096`); exige `~/.config/opencode/web.env` 0600 com `OPENCODE_SERVER_PASSWORD`, criado por você — não instala o OpenCode |
 
 Notas:
 
