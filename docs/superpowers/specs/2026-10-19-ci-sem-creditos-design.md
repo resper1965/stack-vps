@@ -14,7 +14,7 @@ Não há créditos para GitHub Actions hospedado. Levantamento feito em 2026-10-
 | Repositórios com workflow | 53 |
 | Só runner do GitHub (gasta crédito) | 52 (1 misto, **0 `self-hosted`**) |
 | Por conta | `resper1965` 37 (33 privados), `bekaa-trusted-advisors` 6, `nessenergy` 6, `forense-io` 4; todos privados exceto 5 |
-| Gatilhos | 47 em `pull_request`, 51 em `push`, **15 repositórios com `schedule`** (23 workflows, 12 repositórios privados) |
+| Gatilhos | 47 em `pull_request`, 51 em `push`, **14 repositórios com workflow agendado ativo** (23 workflows; 11 desses repositórios são privados) |
 | Última execução bloqueada por pagamento ou limite de gasto | **13**, todos da conta pessoal `resper1965` ("The job was not started because recent account payments have failed or your spending limit needs to be increased") |
 
 As organizações **não** estão bloqueadas hoje (os agendados delas, inclusive os de cliente, rodaram com sucesso em 2026-10-19);
@@ -22,7 +22,7 @@ o bloqueio é da conta pessoal. Ainda assim a restrição vale para todos, entã
 
 O que as configurações da stack já previam: `standards/profiles.json` tem `"ci": "local-vps"` por padrão, o `docs/AGENTS.md`
 original dizia `CI: runs-on: [self-hosted, stack] (runners da VPS, sem minutos pagos)` e o bootstrap não cria Actions sozinho.
-O que **desfez** isso: a remoção do Coder e dos runners (PR #7 e o PR #18, que também tirou a linha do `AGENTS.md`), e os 4
+O que **desfez** isso: a remoção do Coder (PR #7) e a decisão de tirar os runners; o PR #18 também tirou a linha de CI do `AGENTS.md`, e os 4
 runners que rodavam no Docker do sistema foram removidos em 2026-10-19. Nenhum workflow usava `self-hosted`, então nada quebrou.
 
 Ações já tomadas em 2026-10-19 (com aprovação): 10 workflows **agendados** de 8 repositórios privados da conta pessoal, que já
