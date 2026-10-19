@@ -8,6 +8,7 @@ STATUS = [{"id": "s1", "name": "Planejado", "type": "backlog"}, {"id": "s2", "na
 class Falsa:
     def __init__(self, falha_na=None):
         self.chamadas, self.falha_na, self.n = [], falha_na, 0
+        self.existentes, self.perde_resposta = set(), False
 
     def statuses(self):
         self.chamadas.append("statuses"); return STATUS
@@ -15,14 +16,28 @@ class Falsa:
     def time(self, key):
         self.chamadas.append("time"); return "t1"
 
-    def criar(self, nome, time_id, status_id):
+    def criar(self, nome, time_id, status_id, linear_id):
         self.n += 1
+        self.ids = getattr(self, "ids", [])
+        self.ids.append(linear_id)
+        if getattr(self, "caminho", None) and not hasattr(self, "no_momento"):
+            self.no_momento = ler(self.caminho)
+        if linear_id in self.existentes:
+            raise RuntimeError("id já existe")
         if self.n == self.falha_na:
+            if self.perde_resposta:
+                self.existentes.add(linear_id)
             raise RuntimeError("boom")
-        self.chamadas.append(("criar", nome)); return f"L{self.n}"
+        self.existentes.add(linear_id)
+        self.chamadas.append(("criar", nome)); return linear_id
 
     def atualizar(self, linear_id, status_id):
         self.chamadas.append(("atualizar", linear_id, status_id))
+
+
+def ler(caminho):
+    with open(caminho) as f:
+        return json.load(f)
 
 
 def painel(n=2):
@@ -93,7 +108,8 @@ class Sincronizar(unittest.TestCase):
     def test_cria_grava_e_nao_repete(self):
         api = Falsa()
         self.roda(api, painel())
-        self.assertEqual(json.load(open(self.v))["o/p1"], {"linear_id": "L2", "enviado": "em andamento"})
+        v = ler(self.v)
+        self.assertEqual(v["o/p1"], {"linear_id": api.ids[1], "enviado": "em andamento"})
         api2 = Falsa()
         self.assertEqual(self.roda(api2, painel()), [])
         self.assertEqual(api2.chamadas, [])
@@ -101,7 +117,52 @@ class Sincronizar(unittest.TestCase):
     def test_falha_no_meio_guarda_progresso(self):
         with self.assertRaises(RuntimeError):
             self.roda(Falsa(falha_na=2), painel(3))
-        self.assertEqual(list(json.load(open(self.v))), ["o/p0"])
+        v = ler(self.v)
+        self.assertEqual(sorted(v), ["o/p0", "o/p1"])
+        self.assertEqual(v["o/p0"]["enviado"], "em andamento")
+        self.assertIsNone(v["o/p1"]["enviado"])
+
+    def test_criar_perdido_nao_duplica(self):
+        api = Falsa(falha_na=1); api.perde_resposta = True
+        with self.assertRaises(RuntimeError):
+            self.roda(api, painel(1))
+        self.roda(api, painel(1))
+        self.assertEqual(len(api.ids), 2)
+        self.assertEqual(api.ids[0], api.ids[1])
+        self.assertEqual(len(api.existentes), 1)
+        self.assertEqual(ler(self.v)["o/p0"]["enviado"], "em andamento")
+
+    def test_atualizar_quando_ja_existe(self):
+        api = Falsa(falha_na=1); api.perde_resposta = True
+        with self.assertRaises(RuntimeError):
+            self.roda(api, painel(1))
+        self.roda(api, painel(1))
+        self.assertEqual([c[:2] for c in api.chamadas if c[0] == "atualizar"], [("atualizar", api.ids[0])])
+
+    def test_criar_que_nunca_chegou_e_refeito(self):
+        api = Falsa(falha_na=1)  # falha sem criar: segunda corrida cria de verdade com o mesmo id
+        with self.assertRaises(RuntimeError):
+            self.roda(api, painel(1))
+        self.roda(api, painel(1))
+        self.assertEqual(api.existentes, {api.ids[0]})
+        self.assertEqual(api.ids[0], api.ids[1])
+
+    def test_vinculo_pendente_grava_antes_da_chamada(self):
+        api = Falsa(); api.caminho = self.v
+        self.roda(api, painel(1))
+        self.assertEqual(api.no_momento, {"o/p0": {"linear_id": api.ids[0], "enviado": None}})
+
+    def test_previa_nao_grava_id(self):
+        self.roda(Falsa(), painel(), previa=True)
+        self.assertFalse(os.path.exists(self.v))
+
+    def test_pendente_na_previa_aparece_como_criar_e_conta_no_lote(self):
+        with open(self.v, "w") as f:
+            json.dump({"o/p0": {"linear_id": "U", "enviado": None}}, f)
+        ops = self.roda(Falsa(), painel(1), previa=True)
+        self.assertEqual([(o["op"], o["linear_id"]) for o in ops], [("criar", "U")])
+        with self.assertRaises(LoteGrande):
+            verificar_lote(ops * 21, False)
 
     def test_segunda_corrida_com_trava_nao_faz_nada(self):
         fd = os.open(self.t, os.O_CREAT | os.O_RDWR)
@@ -134,9 +195,9 @@ class Cliente(unittest.TestCase):
             return {"data": {"projectCreate": {"project": {"id": "P"}}, "teams": {"nodes": [{"id": "T"}]},
                              "projectStatuses": {"nodes": STATUS}}}
         api = Linear("tok", post)
-        self.assertEqual(api.criar("n", "T", "s1"), "P")
+        self.assertEqual(api.criar("n", "T", "s1", "U"), "P")
         self.assertEqual(api.time("K"), "T")
         self.assertEqual(api.statuses(), STATUS)
         self.assertEqual(vistos[0][0], "https://api.linear.app/graphql")
         self.assertEqual(vistos[0][1]["Authorization"], "tok")
-        self.assertEqual(vistos[0][2]["variables"], {"n": "n", "t": "T", "s": "s1"})
+        self.assertEqual(vistos[0][2]["variables"], {"i": "U", "n": "n", "t": "T", "s": "s1"})

@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 import unicodedata
+import uuid
 import urllib.error
 import urllib.request
 from contextlib import contextmanager
@@ -51,7 +52,10 @@ def planejar(desejado, vinculos):
     ops = []
     for id, (nome, estagio) in desejado.items():
         v = vinculos.get(id)
-        if v is None:
+        if v is not None and v["enviado"] is None:
+            # criação anterior pode ou não ter chegado ao Linear: repete com o mesmo id (nunca vira "em dia")
+            ops.append({"op": "criar", "id": id, "nome": nome, "estagio": estagio, "linear_id": v["linear_id"]})
+        elif v is None:
             if estagio != "arquivado":
                 ops.append({"op": "criar", "id": id, "nome": nome, "estagio": estagio})
         elif v["enviado"] != estagio:
@@ -101,10 +105,11 @@ class Linear:
             raise RuntimeError(f"time '{key}' não encontrado no Linear")
         return nos[0]["id"]
 
-    def criar(self, nome, time_id, status_id):
-        return self._q("mutation($n: String!, $t: String!, $s: String!) { projectCreate(input: "
-                       "{name: $n, teamIds: [$t], statusId: $s}) { project { id } } }",
-                       {"n": nome, "t": time_id, "s": status_id})["projectCreate"]["project"]["id"]
+    def criar(self, nome, time_id, status_id, linear_id):
+        # id escolhido pelo cliente (ProjectCreateInput.id, spike 2026-10-18): criação repetível sem duplicar
+        return self._q("mutation($i: String!, $n: String!, $t: String!, $s: String!) { projectCreate(input: "
+                       "{id: $i, name: $n, teamIds: [$t], statusId: $s}) { project { id } } }",
+                       {"i": linear_id, "n": nome, "t": time_id, "s": status_id})["projectCreate"]["project"]["id"]
 
     def atualizar(self, linear_id, status_id):
         d = self._q("mutation($id: String!, $s: String!) { projectUpdate(id: $id, input: {statusId: $s}) "
@@ -157,7 +162,24 @@ def sincronizar(api, painel, vinculos_path, trava_path, previa, confirmar_lote, 
         for o in ops:
             status = escolher_status(o["estagio"], statuses)
             if o["op"] == "criar":
-                vinculos[o["id"]] = {"linear_id": api.criar(o["nome"], time_id, status), "enviado": o["estagio"]}
+                refeita = "linear_id" in o
+                lid = o.get("linear_id") or str(uuid.uuid4())
+                if not refeita:  # vínculo pendente gravado ANTES da chamada: resposta perdida não duplica
+                    vinculos[o["id"]] = {"linear_id": lid, "enviado": None}
+                    _gravar(vinculos, vinculos_path)
+                try:
+                    api.criar(o["nome"], time_id, status, lid)
+                except RuntimeError as e:
+                    if not refeita:
+                        raise
+                    # Suposição (formato do erro de id repetido do Linear não verificado): na repetição, se a
+                    # criação falha, tenta atualizar o id; se o projeto existe a atualização funciona, senão
+                    # propaga o erro original da criação.
+                    try:
+                        api.atualizar(lid, status)
+                    except RuntimeError:
+                        raise e from None
+                vinculos[o["id"]]["enviado"] = o["estagio"]
             else:
                 api.atualizar(o["linear_id"], status)
                 vinculos[o["id"]]["enviado"] = o["estagio"]
