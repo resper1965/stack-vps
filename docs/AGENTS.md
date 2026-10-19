@@ -63,7 +63,7 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 - Você roda como `agente`: sem sudo, Docker rootless. Faltou ferramenta ou permissão: peça, não contorne.
 - CI: antes de commit e de PR, rode o comando de CI local do projeto. Onde houver runner da `stack`, o workflow
   usa `runs-on: [self-hosted, stack]`; nunca `ubuntu-latest` em repositório privado (sem minutos pagos). Os runners
-  estão sendo reinstalados (spec 2026-10-19): não suponha que existam hoje.
+  estão sendo reinstalados (planejado): não suponha que existam hoje.
 - Projetos em `/srv/dev/projetos`; material do laptop em `/srv/dev/laptop` até o Ricardo destinar.
   `/srv/dev/data` e `/srv/forense` estão fora do seu alcance.
 - Segredo vem do ambiente (`agente.env`, `projetos.env`, `.envrc` via direnv). Use a variável; nunca

@@ -9,7 +9,7 @@
 > `coder-database-1`) e os 4 runners (`runners-nessenergy-runner-1/2`, `runners-bekaa-trusted-advisors-runner-1/2`)
 > foram parados e **removidos** (`docker stop` + `docker rm`). A rota `coder.ness.com.br` saiu da configuração do tunnel
 > (`06-tunnel.sh` reexecutado, `TUNNEL_EXTRA` vazio); o registro DNS na Cloudflare ficou (órfão, responde 404).
-> O que sobrou está nos blocos 2, 2a e 2b. Os runners voltam em outra forma (`docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md`).
+> O que sobrou está nos blocos 2, 2b e 2a (nessa ordem). Os runners voltam em outra forma (`docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md`).
 
 ## Pré-requisito (antes de qualquer bloco)
 
@@ -54,27 +54,84 @@ substitui por uma regra de firewall por UID (ainda inexistente). Então: ou se e
 proteção só faz falta se algum container voltar a subir no Docker do sistema. O mesmo vale para o `sysbox` (bloco 3):
 ele não sustenta nada agora, e a `ci` usa Docker rootless.
 
+## Antes dos blocos 2, 2a e 2b: o `docker` tem de falar com o daemon do SISTEMA
+
+Os containers do Coder e dos runners viviam no Docker do **sistema** (root), não no Docker rootless do `agente`. Conferir
+o daemon errado foi o que gerou a afirmação falsa "nenhum container rodando". Rode estes blocos como root (`sudo -i`),
+sem `DOCKER_HOST` e sem `XDG_RUNTIME_DIR` do `agente` no ambiente, e nunca como `agente`. Confirme:
+
+```sh
+echo "${DOCKER_HOST:-}"                       # esperado: vazio
+docker info --format '{{.DockerRootDir}}'     # esperado: /var/lib/docker
+```
+
+Se imprimir outro caminho (por exemplo `~/.local/share/docker`), pare: é o daemon rootless. As conferências "`docker ps -a`
+vazio" e "redes só `bridge`, `host`, `none`" abaixo só valem nesse daemon. **Ordem:** 2b (backup e dados) antes de 2a,
+porque o backup dos volumes usa a imagem `alpine:latest`, que o 2a remove.
+
 ## 2. Containers de runner — JÁ REMOVIDOS em 2026-10-19; restos de imagem, rede e diretório — root, DESTRUTIVO
 
 Os 4 containers `runners-*-runner-*` já foram removidos. Sobram a imagem, as redes e, se existir, `/srv/runners`.
+Daemon do sistema, conforme a seção acima.
 
 ```sh
 docker ps -a --filter name=runner                       # esperado: vazio
 docker compose ls | grep runners-                       # projetos compose órfãos, se listar
 docker network rm runners-nessenergy_default runners-bekaa-trusted-advisors_default
 docker rmi myoung34/github-runner:ubuntu-noble          # 3,33 GB
-rm -rf /srv/runners                                     # envs com RUNNER_TOKEN: apague e revogue o token no GitHub
+# envs com RUNNER_TOKEN: apague e revogue o token no GitHub
+test "$(realpath /srv/runners)" = /srv/runners && test -d /srv/runners && rm -rf -- /srv/runners
 ```
+
+Se a guarda falhar (o `test` sai com código 1 e nada é apagado): `/srv/runners` não existe (nada a fazer) ou é um link
+simbólico para outro lugar (o `realpath` mostra o destino): não apague, investigue.
 
 Conferência: `docker images | grep -i runner` não imprime nada; `docker network ls | grep runners-` não imprime nada;
 `ls /srv/runners` retorna "No such file". Perde: só a imagem (rebaixa de novo se o runner voltar) e os tokens. Rollback:
 a imagem se baixa outra vez; o `33-runners.sh` e o `compose/runners.yml` estão no histórico do `main` e voltam
 adaptados pela spec 2026-10-19. Revogue no GitHub o token que estava em `/srv/runners`.
 
-## 2a. Coder: container parado, imagens e rede — root, DESTRUTIVO
+## 2b. Dados do Coder: volumes e `/srv/coder` — root, DESTRUTIVO, **irreversível** (executar ANTES do 2a)
+
+Aqui estão os dados reais do Coder: o banco (`/srv/coder`, root 0700) e a home dos workspaces (volumes). **Não há volta
+depois destes comandos.** Daemon do sistema, conforme a seção acima. Antes: decida com o dono se algo daqui importa. Se
+sim, faça o backup abaixo para fora da VPS **e** um snapshot novo (a Hostinger guarda **um** snapshot por VM: o novo
+sobrescreve o anterior). Sem essa decisão registrada (backup feito, ou "não precisa"), não prossiga.
+
+```sh
+D=<destino-do-backup>                                   # diretório com espaço, fora de /srv/coder
+tar -C /srv -czf "$D/coder.tgz" coder
+for V in coder-b8dec1e8-0db7-492a-88d4-70e382da0439-home coder-e7fd6a59-faa3-4fde-a794-4fe7061b08cc-agentes; do
+  docker run --rm -v "$V":/v -v "$D":/b alpine tar -C /v -czf "/b/$V.tgz" .
+done
+ls -l "$D"                                              # esperado: coder.tgz e um .tgz por volume, com tamanho > 0
+```
+
+(Se o `alpine:latest` já não existir, o `docker run` o baixa de novo.) Prova de que os volumes não estão em uso, um por
+um, antes de cada remoção:
+
+```sh
+docker volume ls | grep coder-                          # esperado: os 2 volumes
+docker ps -a --filter volume=coder-b8dec1e8-0db7-492a-88d4-70e382da0439-home       # esperado: só o cabeçalho (nenhum container)
+docker volume rm coder-b8dec1e8-0db7-492a-88d4-70e382da0439-home
+docker ps -a --filter volume=coder-e7fd6a59-faa3-4fde-a794-4fe7061b08cc-agentes    # esperado: só o cabeçalho (nenhum container)
+docker volume rm coder-e7fd6a59-faa3-4fde-a794-4fe7061b08cc-agentes
+du -sh /srv/coder                                       # confira o tamanho do que será apagado
+test "$(realpath /srv/coder)" = /srv/coder && test -d /srv/coder && rm -rf -- /srv/coder
+```
+
+Se um `docker ps -a --filter volume=...` listar um container, **não remova esse volume**: ele ainda está em uso
+(provavelmente `coder-ricardo-teste`, que o 2a remove; nesse caso decida e remova o container antes). Se a guarda do
+`test` falhar (código 1, nada apagado): `/srv/coder` não existe ou é link simbólico; não apague, investigue.
+
+Conferência: `docker volume ls | grep coder-` não imprime nada; `ls /srv/coder` retorna "No such file".
+Perde, **irreversivelmente**: o banco do Coder (usuários, workspaces, templates) e o conteúdo das duas homes de workspace.
+Rollback: só pelo backup/snapshot feito antes (restaurar o snapshot desfaz também tudo o mais feito depois dele).
+
+## 2a. Coder: container parado, imagens e rede — root, DESTRUTIVO (depois do 2b)
 
 Os containers `coder-coder-1` e `coder-database-1` já foram removidos em 2026-10-19. Sobra o container **parado**
-`coder-ricardo-teste` (workspace do Coder), as imagens e a rede.
+`coder-ricardo-teste` (workspace do Coder), as imagens e a rede. Daemon do sistema, conforme a seção acima.
 
 ```sh
 docker ps -a --filter name=coder                        # esperado: só coder-ricardo-teste, parado
@@ -87,26 +144,8 @@ Antes: `docker ps -a` e `docker images`; se `postgres:17`, `alpine:latest` ou `s
 app seu, não os remova. O Docker recusa remover imagem em uso por container.
 
 Conferência: `docker ps -a` vazio; `docker network ls` só com `bridge`, `host` e `none`; `docker images` sem as imagens acima.
-Perde: o container de teste (a home dele vive no volume do bloco 2b, não no container) e imagens rebaixáveis.
-Rollback: as imagens se baixam de novo; o container de teste não se recria (o Coder saiu, PR #7).
-
-## 2b. Dados do Coder: volumes e `/srv/coder` — root, DESTRUTIVO, **irreversível**
-
-Aqui estão os dados reais do Coder: o banco (`/srv/coder`, root 0700) e a home dos workspaces (volumes). **Não há volta
-depois destes comandos.** Antes: decida com o dono se algo daqui importa; se sim, faça backup do diretório e dos volumes
-para fora da VPS (por exemplo `tar` do `/srv/coder` e do conteúdo de cada volume) **e** um snapshot novo (o da Hostinger
-sobrescreve o anterior). Sem essa decisão registrada, não prossiga.
-
-```sh
-docker volume ls | grep coder-                          # esperado: os 2 volumes abaixo
-du -sh /srv/coder                                       # confira o tamanho do que será apagado
-docker volume rm coder-b8dec1e8-0db7-492a-88d4-70e382da0439-home coder-e7fd6a59-faa3-4fde-a794-4fe7061b08cc-agentes
-rm -rf /srv/coder
-```
-
-Conferência: `docker volume ls | grep coder-` não imprime nada; `ls /srv/coder` retorna "No such file".
-Perde, **irreversivelmente**: o banco do Coder (usuários, workspaces, templates) e o conteúdo das duas homes de workspace.
-Rollback: só pelo backup/snapshot feito antes (restaurar o snapshot desfaz também tudo o mais feito depois dele).
+Perde: o container de teste (a home dele provavelmente vive no volume do bloco 2b, não no container) e imagens
+rebaixáveis. Rollback: as imagens se baixam de novo; o container de teste não se recria (o Coder saiu, PR #7).
 
 ## 3. sysbox — root, DESTRUTIVO
 
