@@ -34,5 +34,18 @@ afirma_log "--user enable --now opencode-web.service" "enable --now"
 ! grep -qF "$SENHA" "$T/saida" "$STUB_LOG"; afirma $? "senha fora da saida e do log"
 if [[ $(stat -c %a "$ENV") == 600 && $(cat "$ENV") == "OPENCODE_SERVER_PASSWORD=$SENHA" ]]; then ok "web.env intocado"; else falha "web.env intocado"; fi
 SUM=$(cat "$U" "$D"); roda; afirma_rc $RC 0 "segunda execucao"
-[[ $SUM == "$(cat "$U" "$D")" ]]; afirma $? "idempotente"
+if [[ $SUM == "$(cat "$U" "$D")" ]]; then ok "idempotente"; else falha "idempotente"; fi
+afirma_log "--user try-restart opencode-web.service" "try-restart para pegar unidade ou senha novas"
+
+# sob sudo -u agente -H bash -c o XDG_RUNTIME_DIR vem vazio: o systemctl --user precisa recebe-lo preenchido
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+cat > "$STUBS/systemctl" <<'EOS'
+#!/usr/bin/env bash
+echo "systemctl $* [XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}]" >> "$STUB_LOG"
+[[ -n ${XDG_RUNTIME_DIR:-} ]] || exit 1
+EOS
+chmod +x "$STUBS/systemctl"
+XDG_RUNTIME_DIR='' roda; afirma_rc $RC 0 "XDG_RUNTIME_DIR vazio: o script o preenche"
+uid=$(id -u); afirma_log "[XDG_RUNTIME_DIR=/run/user/$uid]" "systemctl --user recebeu /run/user/<uid>"
+roda_com() { XDG_RUNTIME_DIR=$1 roda; }; roda_com /outro; afirma_log "[XDG_RUNTIME_DIR=/outro]" "valor ja definido e respeitado"
 fim

@@ -40,4 +40,13 @@ bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "nome da tailnet ilegivel: nao falha"
 novo_tmp; ts_stub; stub systemctl 0
 env -u STACK_TESTE bash "$S" >/dev/null 2>&1; rc=$?
 if [[ $EUID -ne 0 ]]; then afirma_rc $rc 1 "sem root: recusa"; nega_log "tailscale serve" "sem root: nao chama serve"; else ok "rodando como root: caso nao-root pulado"; fi
+novo_tmp; ts_stub; stub systemctl 0
+cat > "$STUBS/tailscale" <<'EOS'
+#!/usr/bin/env bash
+echo "tailscale $*" >> "$STUB_LOG"
+[[ $1 == serve ]] && { echo "HTTPS not enabled" >&2; exit 1; }
+exit 0
+EOS
+out=$(bash "$S" 2>&1); afirma_rc $? 1 "serve recusado: falha"
+if [[ $out == *"HTTPS Certificates"* ]]; then ok "diz para habilitar HTTPS Certificates"; else falha "diz para habilitar HTTPS Certificates"; fi
 fim
