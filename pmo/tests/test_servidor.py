@@ -140,6 +140,8 @@ class Servidor(unittest.TestCase):
 class ServidorSocket(unittest.TestCase):
     HOST = "stack.tailnet.ts.net:8443"
     LOGIN = "resper@bekaa.eu"
+    PROPRIO = "100.76.167.6"
+    CLIENTE = "100.99.1.2"
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -158,12 +160,12 @@ class ServidorSocket(unittest.TestCase):
         self.addCleanup(self.srv.shutdown)
 
     def sobe(self, sock, **k):
-        k = {"hosts": (self.HOST, "localhost:8080"), "logins": (self.LOGIN,), **k}
+        k = {"hosts": (self.HOST, "localhost:8080"), "logins": (self.LOGIN,), "ips_proprios": (self.PROPRIO, "fd7a:115c::1"), **k}
         return criar(None, None, self.web, self.painel, self.fila, os.path.join(self.tmp, "aj.json"),
                      socket=sock, classes=os.path.join(self.tmp, "cl.json"), **k)
 
-    def test_sem_hosts_ou_sem_logins_falha_fechado(self):
-        for k in ({"hosts": ()}, {"logins": ()}):
+    def test_sem_hosts_logins_ou_ips_proprios_falha_fechado(self):
+        for k in ({"hosts": ()}, {"logins": ()}, {"ips_proprios": ()}):
             with self.assertRaises(ValueError):
                 self.sobe(os.path.join(self.tmp, "outro.sock"), **k)
 
@@ -174,8 +176,10 @@ class ServidorSocket(unittest.TestCase):
             self.sobe(f)
         self.assertTrue(os.path.isfile(f))
 
-    def test_main_socket_sem_logins_ou_hosts_sai_2(self):
-        for args in (["--socket", "x.sock", "--hosts", "h"], ["--socket", "x.sock", "--logins", "a@b.c"]):
+    def test_main_socket_sem_logins_hosts_ou_ips_proprios_sai_2(self):
+        ok = {"--hosts": "h", "--logins": "a@b.c", "--ips-proprios": "100.1.1.1"}
+        for falta in ok:
+            args = ["--socket", "x.sock"] + [x for k, v in ok.items() if k != falta for x in (k, v)]
             with mock.patch("sys.argv", ["pmo"] + args), mock.patch("sys.stderr", io.StringIO()),                     mock.patch.object(servidor, "criar") as c:
                 with self.assertRaises(SystemExit) as e:
                     servidor.main()
@@ -191,8 +195,9 @@ class ServidorSocket(unittest.TestCase):
     def req(self, metodo, caminho, corpo=None, **cab):
         s = socket.socket(socket.AF_UNIX); s.settimeout(5); s.connect(self.sock)
         c = http.client.HTTPConnection("localhost", timeout=5); c.sock = s
-        h = {"Host": self.HOST, "Content-Type": "application/json", "X-PMO": "1"}
+        h = {"Host": self.HOST, "Content-Type": "application/json", "X-PMO": "1", "X-Forwarded-For": self.CLIENTE}
         h.update({k.replace("_", "-"): v for k, v in cab.items()})
+        h = {k: v for k, v in h.items() if v is not None}
         self.addCleanup(c.close); self.addCleanup(s.close)
         try:
             c.request(metodo, caminho, body=json.dumps(corpo) if corpo is not None else None, headers=h)
@@ -255,6 +260,22 @@ class ServidorSocket(unittest.TestCase):
     def test_post_login_fora_da_lista_recusado(self):
         self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login="outro@x.com"), 403)
         self.assertEqual(self.pedidos(), [])
+
+    def test_xff_do_ip_proprio_recusado(self):
+        # o agente chama a URL da tailnet de dentro da VPS: o serve injeta o login do dono, mas a origem e o proprio no
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        casos = ((self.PROPRIO, "ip proprio"), (None, "xff ausente"), ("1.2.3.4, " + self.PROPRIO, "proxy anexou o proprio"),
+                 ("fd7a:115c::1", "ipv6 proprio"), ("", "xff vazio"))
+        for xff, nome in casos:
+            with self.subTest(nome):
+                self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, X_Forwarded_For=xff), 403)
+                self.assertEqual(self.pedidos(), [])
+
+    def test_xff_do_cliente_tailnet_aceito(self):
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        # o primeiro elemento pode ser forjado: vale o ultimo, que o proxy anexou
+        for xff in (self.CLIENTE, self.PROPRIO + ", " + self.CLIENTE):
+            self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, X_Forwarded_For=xff), 202, xff)
 
     def test_post_host_fora_da_lista_recusado(self):
         self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Host="evil.example", Tailscale_User_Login=self.LOGIN), 403)

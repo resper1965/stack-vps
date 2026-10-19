@@ -10,7 +10,7 @@ RuntimeDirectory=pmo
 RuntimeDirectoryMode=0750
 EnvironmentFile=/etc/pmo/servidor.env
 Environment=PYTHONPATH=/opt
-ExecStart=/usr/bin/python3 -m pmo.servidor --socket /run/pmo/pmo.sock --hosts ${PMO_HOSTS} --logins ${PMO_LOGINS}
+ExecStart=/usr/bin/python3 -m pmo.servidor --socket /run/pmo/pmo.sock --hosts ${PMO_HOSTS} --logins ${PMO_LOGINS} --ips-proprios ${PMO_IPS_PROPRIOS}
 Restart=always
 RestartSec=5
 

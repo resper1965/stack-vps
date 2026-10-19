@@ -4,6 +4,8 @@
 # Idempotente. Uso: sudo -u agente -H bash -c 'cd ~ && /opt/stack-vps/scripts/36-opencode.sh'
 set -euo pipefail
 [[ $(id -un) == agente || ${STACK_TESTE:-} == 1 ]] || { echo "rode como agente"; exit 1; }
+# sob "sudo -u agente -H bash -c" a variavel vem vazia e o systemctl --user nao acha o bus
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 BIN=${OPENCODE_BIN:-$HOME/.opencode/bin/opencode}
 ENV_SENHA=$HOME/.config/opencode/web.env
@@ -20,4 +22,5 @@ install -m 644 "$REPO/opencode/opencode-web.service" "$UNIDADES/opencode-web.ser
 install -m 644 "$REPO/opencode/password.conf" "$UNIDADES/opencode-web.service.d/password.conf"
 systemctl --user daemon-reload
 systemctl --user enable --now opencode-web.service
+systemctl --user try-restart opencode-web.service  # unidade ou senha trocadas valem ja, nao so no proximo boot
 echo "opencode-web ativo em 127.0.0.1:4096"

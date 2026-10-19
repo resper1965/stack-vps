@@ -6,8 +6,10 @@ Roda como pmo. Aceita so o Host da lista (contra DNS rebinding) e, no POST, exig
 Origin ausente ou propria (contra CSRF: forca preflight, que nao e respondido).
 Modo socket (producao): escuta em socket Unix e o tailscale serve faz proxy; o POST exige o cabecalho
 Tailscale-User-Login com login da lista. O socket NAO autentica: quem o abre forja o cabecalho, entao a
-fronteira e o diretorio/grupo pmo (o agente fica fora). Modo TCP (legado/testes): recusa pedido do IP local.
-Uso: python3 -m pmo.servidor --socket /run/pmo/pmo.sock --hosts h1,h2 --logins a@b.c
+fronteira e o diretorio/grupo pmo (o agente fica fora). O POST tambem exige X-Forwarded-For (anexado pelo
+serve) com origem que nao seja um IP do proprio no: o agente na VPS chama a URL da tailnet e o serve injeta o
+login do dono. Modo TCP (legado/testes): recusa pedido do IP local.
+Uso: python3 -m pmo.servidor --socket /run/pmo/pmo.sock --hosts h1,h2 --logins a@b.c --ips-proprios 100.x.y.z
      python3 -m pmo.servidor [--host 100.76.167.6] [--porta 8080]
 """
 import argparse
@@ -54,9 +56,9 @@ class _UnixHTTP(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
 
 
 def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes="/var/lib/pmo/classes.json",
-          *, socket=None, hosts=(), logins=(), saude=None, atalhos=None, timeout=10):
-    if socket and not (hosts and logins):
-        raise ValueError("modo socket exige hosts e logins nao vazios (fail closed)")
+          *, socket=None, hosts=(), logins=(), ips_proprios=(), saude=None, atalhos=None, timeout=10):
+    if socket and not (hosts and logins and ips_proprios):
+        raise ValueError("modo socket exige hosts, logins e ips_proprios nao vazios (fail closed)")
     os.makedirs(fila, mode=0o700, exist_ok=True)
     trava = threading.Lock()
     _timeout = timeout
@@ -135,6 +137,12 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
                 if cliente == self.server.server_address[0] or cliente.startswith("127."):
                     # pedido de dentro da VPS (agente, container) nunca vira acao; so o laptop pela tailnet
                     return self._resposta(403, "recusado: pedido de dentro da VPS")
+            if socket:
+                # o tailscale serve anexa o IP de origem ao fim do X-Forwarded-For (os anteriores o cliente forja);
+                # origem = o proprio no (agente na VPS chamando a URL da tailnet) ou desconhecida nunca vira acao
+                xff = (self.headers.get("X-Forwarded-For") or "").split(",")[-1].strip().strip("[]")
+                if not xff or xff in ips_proprios:
+                    return self._resposta(403, "recusado: origem")
             host = self.headers.get("Host")
             if (not self._host_ok() or self.headers.get("X-PMO") != "1"
                     or (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json"
@@ -194,19 +202,22 @@ def main():
     a.add_argument("--fila", default="/var/lib/pmo/fila")
     a.add_argument("--ajustes", default="/var/lib/pmo/ajustes.json")
     a.add_argument("--classes", default="/var/lib/pmo/classes.json")
-    a.add_argument("--saude", default="/srv/dev/state/health.txt")
+    a.add_argument("--saude", default="/var/lib/stack-vps/health.txt")
     a.add_argument("--socket")
     a.add_argument("--hosts", default="")
     a.add_argument("--logins", default="")
+    a.add_argument("--ips-proprios", default="")
     o = a.parse_args()
     lista = lambda t: tuple(x.strip() for x in t.split(",") if x.strip())  # noqa: E731
-    hosts, logins = lista(o.hosts), lista(o.logins)
+    hosts, logins, ips_proprios = lista(o.hosts), lista(o.logins), lista(o.ips_proprios)
     if o.socket and not logins:
         a.error("--socket exige --logins nao vazio (sem lista, nenhuma acao seria autenticada)")
     if o.socket and not hosts:
         a.error("--socket exige --hosts nao vazio (sem lista, todo pedido seria recusado)")
+    if o.socket and not ips_proprios:
+        a.error("--socket exige --ips-proprios nao vazio (sem os IPs do no, o agente agiria pela propria tailnet)")
     criar(o.host, o.porta, o.web, o.painel, o.fila, o.ajustes, classes=o.classes,
-          socket=o.socket, hosts=hosts, logins=logins, saude=o.saude,
+          socket=o.socket, hosts=hosts, logins=logins, ips_proprios=ips_proprios, saude=o.saude,
           atalhos={"opencode": os.environ.get("PMO_ATALHO_OPENCODE")}).serve_forever()
 
 

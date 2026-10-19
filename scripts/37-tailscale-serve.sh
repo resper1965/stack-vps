@@ -16,8 +16,12 @@ SOCKET_PMO=${SOCKET_PMO:-/run/pmo/pmo.sock}
 
 systemctl is-active --quiet tailscaled || { echo "tailscaled nao esta ativo (rode o 01b-tailscale.sh)"; exit 1; }
 
-tailscale serve --bg --https="$PORTA_OPENCODE" "$ALVO_OPENCODE"
-tailscale serve --bg --https="$PORTA_PMO" "unix:$SOCKET_PMO"
+# pre-requisito do dono: "HTTPS Certificates" habilitado no admin da tailnet (DNS); sem isso o serve recusa
+serve() {
+  tailscale serve --bg "$@" || { echo "tailscale serve recusou. Habilite HTTPS Certificates no admin da tailnet (aba DNS) e rode de novo"; exit 1; }
+}
+serve --https="$PORTA_OPENCODE" "$ALVO_OPENCODE"
+serve --https="$PORTA_PMO" "unix:$SOCKET_PMO"
 
 # O nome da tailnet vem do proprio tailscale; nao se adivinha.
 nome=$(tailscale status --json 2>/dev/null | python3 -c \

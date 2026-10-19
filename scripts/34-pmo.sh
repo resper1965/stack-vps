@@ -4,6 +4,7 @@
 # tailnet via tailscale serve -> socket Unix /run/pmo/pmo.sock (grupo pmo, 0660). Servidor e executor rodam
 # como pmo, sem privilegio; pastas do agente so sao mexidas COMO agente pelo pmo-pasta.
 # Idempotente. Uso: sudo ./34-pmo.sh   (depois do 16 e do 07)
+# shellcheck disable=SC1090  # admin.env e lido da VPS, nao do repositorio
 set -euo pipefail
 [[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
 # o socket nao autentica (quem o abre forja Tailscale-User-Login): se o agente entrar no grupo pmo, a acao
@@ -13,6 +14,18 @@ if id -nG agente | tr ' ' '
   echo "agente esta no grupo pmo: remova (gpasswd -d agente pmo) antes de continuar"; exit 1
 fi
 REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+ADMIN_ENV=${ADMIN_ENV:-/srv/dev/secrets/admin.env}
+
+# pre-requisitos conferidos TODOS antes da primeira escrita (abortar no meio deixaria /opt/pmo trocado)
+faltam=$( [[ -r $ADMIN_ENV ]] || { echo "$ADMIN_ENV(ilegivel)"; exit 0; }
+  set +u; set -a; . "$ADMIN_ENV"
+  for k in PMO_HOSTS PMO_LOGINS GITHUB_TOKEN; do [[ -n ${!k:-} ]] || printf '%s ' "$k"; done )
+IP4=$(tailscale ip -4 2>/dev/null | head -1 || true)
+IP6=$(tailscale ip -6 2>/dev/null | head -1 || true)
+[[ -n $IP4 ]] || faltam+="tailscale-ip-4(tailscale sem IP: rode o 01b-tailscale.sh) "
+[[ -z $faltam ]] || { echo "faltam pre-requisitos, nada foi alterado: $faltam"; exit 1; }
+# IPs do proprio no: o servidor recusa acao cuja origem (X-Forwarded-For) seja um deles
+PMO_IPS_PROPRIOS=$IP4${IP6:+,$IP6}
 
 id pmo >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pmo --shell /usr/sbin/nologin pmo
 install -d -m 755 /opt/pmo
@@ -23,25 +36,24 @@ chown -R pmo:pmo /srv/dev/arquivo
 
 # token do GitHub so do pmo (arquivar/excluir); sai do admin.env sem passar por argumento nem log
 install -d -o root -g pmo -m 750 /etc/pmo
-( umask 027; set -a; . /srv/dev/secrets/admin.env; printf '%s' "${GITHUB_TOKEN:?falta GITHUB_TOKEN no admin.env}" ) > /etc/pmo/token
+( umask 027; set -a; . "$ADMIN_ENV"; printf '%s' "$GITHUB_TOKEN" ) > /etc/pmo/token
 chown root:pmo /etc/pmo/token; chmod 640 /etc/pmo/token
 
-# hosts aceitos e logins da tailnet que podem agir; o servidor le por EnvironmentFile (sem segredo)
-( umask 027; set -a; . /srv/dev/secrets/admin.env
-  printf 'PMO_HOSTS=%s
-PMO_LOGINS=%s
-' "${PMO_HOSTS:?falta PMO_HOSTS no admin.env}" "${PMO_LOGINS:?falta PMO_LOGINS no admin.env}" ) > /etc/pmo/servidor.env
-# opcional: URL https do atalho "Abrir OpenCode" no painel
-( umask 027; set -a; . /srv/dev/secrets/admin.env
-  [[ -z ${PMO_ATALHO_OPENCODE:-} ]] || printf 'PMO_ATALHO_OPENCODE=%s\n' "$PMO_ATALHO_OPENCODE" ) >> /etc/pmo/servidor.env
+# hosts aceitos, logins da tailnet que podem agir, IPs do proprio no e URL do painel (resumo semanal);
+# o servidor le por EnvironmentFile (sem segredo)
+( umask 027; set -a; . "$ADMIN_ENV"
+  printf 'PMO_HOSTS=%s\nPMO_LOGINS=%s\nPMO_IPS_PROPRIOS=%s\nPMO_URL=https://%s/\n' \
+    "$PMO_HOSTS" "$PMO_LOGINS" "$PMO_IPS_PROPRIOS" "${PMO_HOSTS%%,*}"
+  # opcional: URL https do atalho "Abrir OpenCode" no painel
+  [[ -z ${PMO_ATALHO_OPENCODE:-} ]] || printf 'PMO_ATALHO_OPENCODE=%s\n' "$PMO_ATALHO_OPENCODE" ) > /etc/pmo/servidor.env
 chown root:pmo /etc/pmo/servidor.env; chmod 640 /etc/pmo/servidor.env
 usermod -aG pmo dev
 
 # espelho do Linear (opcional): chave e time so do pmo; unidades instaladas SEM habilitar o timer
 # (a primeira carga e manual, depois da previa: pmo.linear --previa)
-if ( set -a; . /srv/dev/secrets/admin.env; [[ -n ${LINEAR_API_KEY:-} && -n ${LINEAR_TEAM_KEY:-} ]] ); then
-  ( umask 027; set -a; . /srv/dev/secrets/admin.env; printf '%s' "$LINEAR_API_KEY" ) > /etc/pmo/linear-token
-  ( umask 027; set -a; . /srv/dev/secrets/admin.env; printf '%s' "$LINEAR_TEAM_KEY" ) > /etc/pmo/linear-team
+if ( set -a; . "$ADMIN_ENV"; [[ -n ${LINEAR_API_KEY:-} && -n ${LINEAR_TEAM_KEY:-} ]] ); then
+  ( umask 027; set -a; . "$ADMIN_ENV"; printf '%s' "$LINEAR_API_KEY" ) > /etc/pmo/linear-token
+  ( umask 027; set -a; . "$ADMIN_ENV"; printf '%s' "$LINEAR_TEAM_KEY" ) > /etc/pmo/linear-team
   chown root:pmo /etc/pmo/linear-token /etc/pmo/linear-team; chmod 640 /etc/pmo/linear-token /etc/pmo/linear-team
   for u in pmo-linear.service pmo-linear.timer; do install -m 644 "$REPO/systemd/$u" /etc/systemd/system/; done
 else
