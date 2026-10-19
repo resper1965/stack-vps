@@ -426,8 +426,7 @@ de novo reescreve o `config.yml` — se a emergência estava ligada, ela desliga
    class H(BaseHTTPRequestHandler):
        def log_message(self, *a): pass
        def do_GET(self):
-           b = "".join(f"{k}: {v}
-" for k, v in self.headers.items()).encode()
+           b = "".join(f"{k}: {v}\n" for k, v in self.headers.items()).encode()
            self.send_response(200); self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
    socketserver.UnixStreamServer(S, H).serve_forever()
    ```
