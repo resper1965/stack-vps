@@ -26,7 +26,7 @@ DeepSeek e Featherless, API da Hostinger.
 | Authentik | **Opcional e externo** (ness.OS, VPS própria, não pronto); entra como provedor OIDC. |
 | Destinos | **Cloudflare, Vercel, GCP e "fora das nuvens"** (VPS, servidor do cliente, on-prem) com **Kamal**. |
 | Painel | **PMO em uma página**, fonte da verdade do **ciclo de vida** dos projetos, + saúde + atalhos. |
-| Linear | **Espelho** do PMO (conta resper@bekaa.eu), sentido único PMO → Linear, nível de projeto. |
+| Linear | **Lista espelhada** do PMO (conta resper@bekaa.eu): um projeto por linha, só o estágio, PMO → Linear. |
 | Avaliação | **promptfoo** no template de agente. |
 | Aviso | Sessão do OpenCode concluída → `alertar.sh` (ntfy/Telegram). |
 
@@ -149,32 +149,25 @@ teste do servidor do PMO ganha o caso do `Host` repassado pelo proxy.
 
 ## 5b. Espelho no Linear (conta resper@bekaa.eu)
 
-**Sentido único: PMO → Linear, no nível de projeto.** O PMO decide; o Linear mostra. Assim não há duas vias
-de escrita para o mesmo dado.
+**O Linear é uma lista: um projeto por linha, cada um no seu estágio.** Nada além disso. Sentido único,
+PMO → Linear; o PMO decide, o Linear mostra.
 
-- **Vínculo:** o campo `classe.linear` que o PMO já guarda liga cada projeto a um projeto do Linear. Projeto
-  sem vínculo não é espelhado; criar o projeto no Linear é ação explícita no PMO ("espelhar no Linear"), com
-  confirmação.
-- **O que espelha:**
-
-  | PMO | Linear (status do projeto) |
-  |---|---|
-  | ideia | Backlog |
-  | em andamento, em revisão | In Progress |
-  | parado, congelado | Paused |
-  | entregue, encerrado | Completed |
-  | descartado | Canceled |
-
-  O próximo passo vai como *project update* quando muda.
-- **Quando:** módulo `pmo/linear.py` roda depois da coleta diária e após cada ação de ciclo de vida; envia só
-  o que mudou. Falha no Linear nunca bloqueia a coleta (mesmo padrão do `ExecStartPre=-` das sessões) e vai
-  para o log e o alerta.
-- **Edição feita direto no Linear** nos campos espelhados é sobrescrita na próxima sincronização e registrada
-  no log. **Issues** (tarefas dentro do projeto) continuam livres no Linear — o PMO não as espelha nem as
-  sobrescreve; os agentes as atualizam pelo MCP `linear`, como o `AGENTS.md` já manda.
-- **Credencial:** chave de API pessoal do Linear no `admin.env`, lida pelo serviço do PMO; nunca no Git nem no
-  `painel.json`.
-- **A confirmar na etapa:** limites do plano do Linear em uso e os nomes exatos dos status do workspace.
+- **Quais projetos:** todos os projetos do PMO que não estão arquivados nem descartados. Cada um vira um
+  projeto do Linear com o mesmo nome; o vínculo fica no campo `classe.linear` que o PMO já guarda.
+- **Único campo espelhado: o estágio**, como status do projeto no Linear, um status por estágio do PMO
+  (ideia, em andamento, em revisão, entregue, encerrado, parado, congelado). Se o workspace não aceitar status
+  de projeto personalizados, usa o mapeamento para os padrões: ideia → Backlog; em andamento e em revisão →
+  In Progress; parado e congelado → Paused; entregue e encerrado → Completed.
+- **Não espelha:** próximo passo, descrição, datas, responsáveis, issues. Arquivar ou descartar no PMO marca o
+  projeto como Canceled no Linear e encerra o espelho dele.
+- **Quando:** `pmo/linear.py` roda depois da coleta diária e após cada ação de ciclo de vida; envia só o que
+  mudou. Falha no Linear nunca bloqueia a coleta (mesmo padrão do `ExecStartPre=-` das sessões) e vai para o
+  log e o alerta. Status alterado à mão no Linear é sobrescrito na corrida seguinte.
+- **Primeira carga:** cria em lote os projetos que faltam no Linear. Roda antes em modo prévia (lista o que
+  criaria) e só grava com confirmação.
+- **Credencial:** chave de API pessoal do Linear (resper@bekaa.eu) no `admin.env`, lida pelo serviço do PMO;
+  nunca no Git nem no `painel.json`.
+- **A confirmar na etapa:** se o workspace aceita status de projeto personalizados e os limites do plano.
 
 ## 6. API da Hostinger
 
