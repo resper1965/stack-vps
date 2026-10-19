@@ -1,6 +1,7 @@
 """Gera o painel.json a partir da coleta; CLI roda a coleta completa."""
 import json
 import os
+import stat
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -11,7 +12,8 @@ from pmo.regras import aplicar_classes, contar
 SAIDA = "/srv/dev/state/pmo/painel.json"
 SESSOES = "/srv/dev/state/pmo/sessoes.json"   # 0600, escrito pelo coletor do próprio agente
 DEFAZAGEM = 2 * 86400
-SAUDE = "/srv/dev/state/health.txt"   # saida do health.sh, gravada pelo vigia-health
+SAUDE = "/var/lib/stack-vps/health.txt"   # saida do health.sh (vigia-health, root); fora do state, que o agente escreve
+SAUDE_MAX = 64 * 1024
 SAUDE_VELHA = 90 * 60   # 1,5x o periodo do stack-health.timer (OnCalendar=hourly)
 _ESTADOS = {"ok": "ok", "FALHA": "falha", "pend": "pend"}
 
@@ -132,12 +134,21 @@ def ler_sessoes(caminho=SESSOES):
 def ler_saude(caminho, agora):
     """health.txt: linha sem indentacao abre secao; '  ok|FALHA|pend texto' e item. Linha estranha e ignorada."""
     vazio = {"gerado_em": None, "velho": True, "itens": []}
-    try:
-        with open(caminho, encoding="utf-8", errors="replace") as f:
-            linhas = f.read().splitlines()
-        mtime = datetime.fromtimestamp(os.stat(caminho).st_mtime, timezone.utc)
+    try:  # o arquivo e lido como pmo/root: sem seguir symlink, so arquivo comum, no maximo SAUDE_MAX (FIFO nao prende)
+        fd = os.open(caminho, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+        try:
+            st = os.fstat(fd)
+            if not stat.S_ISREG(st.st_mode):
+                return vazio
+            bruto = os.read(fd, SAUDE_MAX + 1)
+        finally:
+            os.close(fd)
     except OSError:
         return vazio
+    if len(bruto) > SAUDE_MAX:
+        return vazio
+    linhas = bruto.decode("utf-8", errors="replace").splitlines()
+    mtime = datetime.fromtimestamp(st.st_mtime, timezone.utc)
     itens, secao = [], ""
     for ln in linhas:
         if not ln.strip():

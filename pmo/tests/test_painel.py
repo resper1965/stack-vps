@@ -205,6 +205,20 @@ class Saude(unittest.TestCase):
             self.assertEqual(s["velho"], velho, idade)
             self.assertEqual(len(s["itens"]), 1)
 
+    def test_ler_saude_recusa_symlink_pasta_fifo_e_arquivo_grande(self):
+        vazio = {"gerado_em": None, "velho": True, "itens": []}
+        self.escreve("acesso\n  ok    x\n", 1)
+        link = os.path.join(self.tmp.name, "link.txt")
+        os.symlink(self.f, link)
+        self.assertEqual(ler_saude(link, AGORA), vazio, "symlink nao e seguido")
+        self.assertEqual(ler_saude(self.tmp.name, AGORA), vazio, "pasta")
+        fifo = os.path.join(self.tmp.name, "fifo")
+        os.mkfifo(fifo)
+        self.assertEqual(ler_saude(fifo, AGORA), vazio, "fifo nao prende o painel")
+        self.escreve("acesso\n  ok    x\n" + "  ok    y\n" * 10000, 1)
+        self.assertGreater(os.path.getsize(self.f), 64 * 1024)
+        self.assertEqual(ler_saude(self.f, AGORA), vazio, "arquivo acima de 64 KiB")
+
 
 class Montar(unittest.TestCase):
     def base(self):

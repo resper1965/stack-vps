@@ -7,7 +7,7 @@ HEALTH=${VIGIA_HEALTH:-/usr/local/lib/stack-vps/health.sh}
 ALERTAR=${VIGIA_ALERTAR:-/usr/local/lib/stack-vps/alertar.sh}
 ESTADO=${VIGIA_ESTADO:-/var/lib/stack-vps/health.estado}
 LIMITE=${VIGIA_TIMEOUT:-120}
-SAIDA=${VIGIA_SAIDA:-/srv/dev/state/health.txt}
+SAIDA=${VIGIA_SAIDA:-/var/lib/stack-vps/health.txt}
 mkdir -p "$(dirname "$ESTADO")"; touch "$ESTADO"
 
 saida=$(timeout "$LIMITE" "$HEALTH" 2>&1); rc=$?
