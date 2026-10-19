@@ -318,7 +318,7 @@ de novo reescreve o `config.yml` — se a emergência estava ligada, ela desliga
   (atômico, 0644) a cada corrida.
 - Produces: `ler_saude(caminho: str, agora: datetime) -> dict` em `pmo/painel.py`:
   `{"gerado_em": iso|None, "velho": bool, "itens": [{"secao": str, "estado": "ok"|"falha"|"pend", "texto": str}]}`;
-  `velho` quando o arquivo tem mais de 30 min; ausente/ilegível → `{"gerado_em": None, "velho": True, "itens": []}`.
+  `velho` quando o arquivo tem mais de 90 min (1,5× o período do timer horário do vigia); ausente/ilegível → `{"gerado_em": None, "velho": True, "itens": []}`.
 - `servidor.ler_painel` acrescenta `dados["saude"] = ler_saude(saude, agora)` a cada GET (tempo real, sem esperar a
   coleta diária).
 
