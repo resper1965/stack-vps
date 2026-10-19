@@ -22,10 +22,9 @@ from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import unquote, urlsplit
 
-from pmo.executor import aplicar_ajustes
-from pmo.painel import ler_saude
+from pmo.painel import ler_saude, montar
 from pmo.pasta import NOME
-from pmo.regras import EMPRESAS, ESTAGIOS, TIPOS, aplicar_classes
+from pmo.regras import EMPRESAS, ESTAGIOS, TIPOS
 
 ACOES = {"arquivar", "excluir", "restaurar", "trazer", "descartar", "clonar"}
 
@@ -65,7 +64,7 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
     def ler_painel():
         with open(painel, encoding="utf-8") as f:
             d = json.load(f)
-        d = aplicar_classes(aplicar_ajustes(d, _ler_json(ajustes, {})), _ler_json(classes, {}))
+        d = montar(d, _ler_json(ajustes, {}), _ler_json(classes, {}))
         if saude:  # lido a cada GET: tempo real, sem esperar a coleta diaria
             d["saude"] = ler_saude(saude, datetime.now(timezone.utc))
         if atalhos is not None:

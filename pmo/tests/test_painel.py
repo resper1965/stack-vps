@@ -1,7 +1,7 @@
 import json, os, tempfile, unittest
 from datetime import datetime, timezone
 from datetime import timedelta
-from pmo.painel import gerar, a_destinar, fundir, ler_sessoes, ler_saude
+from pmo.painel import gerar, a_destinar, fundir, ler_sessoes, ler_saude, montar
 
 AGORA = datetime(2026, 10, 6, 6, tzinfo=timezone.utc)
 
@@ -204,6 +204,29 @@ class Saude(unittest.TestCase):
             s = ler_saude(self.f, AGORA)
             self.assertEqual(s["velho"], velho, idade)
             self.assertEqual(len(s["itens"]), 1)
+
+
+class Montar(unittest.TestCase):
+    def base(self):
+        return gerar([reg("o/x"), reg("o/y")], [], None, AGORA)
+
+    def test_montar_aplica_ajuste_e_classe(self):
+        ajustes = {"o/x": {"de": "projetos", "para": "arquivados", "em": "2026-10-06T07:00:00+00:00"}}
+        classes = {"o/y": {"estagio": "congelado", "empresa": "ness", "area": "dev"}}
+        p = montar(self.base(), ajustes, classes)
+        self.assertEqual([x["id"] for x in p["projetos"]], ["o/y"])
+        self.assertEqual([x["id"] for x in p["arquivados"]], ["o/x"])
+        self.assertTrue(p["arquivados"][0]["arquivado"])
+        y = p["projetos"][0]
+        self.assertEqual(y["classe"]["estagio"], "congelado")
+        self.assertEqual(y["estagio"], "congelado")
+        self.assertFalse(y["esquecido"])
+        self.assertEqual(p["contadores"]["projetos"], 1)
+
+    def test_montar_vazio_nao_muda_projetos(self):
+        p = montar(self.base(), {}, {})
+        self.assertEqual([x["id"] for x in p["projetos"]], ["o/x", "o/y"])
+        self.assertEqual(p["arquivados"], [])
 
 
 if __name__ == "__main__":

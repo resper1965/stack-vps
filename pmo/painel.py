@@ -5,7 +5,8 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
-from pmo.regras import contar
+from pmo.executor import aplicar_ajustes
+from pmo.regras import aplicar_classes, contar
 
 SAIDA = "/srv/dev/state/pmo/painel.json"
 SESSOES = "/srv/dev/state/pmo/sessoes.json"   # 0600, escrito pelo coletor do próprio agente
@@ -13,6 +14,11 @@ DEFAZAGEM = 2 * 86400
 SAUDE = "/srv/dev/state/health.txt"   # saida do health.sh, gravada pelo vigia-health
 SAUDE_VELHA = 90 * 60   # 1,5x o periodo do stack-health.timer (OnCalendar=hourly)
 _ESTADOS = {"ok": "ok", "FALHA": "falha", "pend": "pend"}
+
+
+def montar(dados, ajustes, classes):
+    """Painel final: ajustes do executor e depois classes. Servidor e espelho do Linear usam esta, para nao divergirem."""
+    return aplicar_classes(aplicar_ajustes(dados, ajustes), classes)
 
 
 def a_destinar(raiz="/srv/dev/laptop"):
