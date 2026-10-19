@@ -118,6 +118,10 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             return super().do_GET()
 
         def do_POST(self):
+            try:  # le o corpo antes de qualquer resposta: recusar sem ler faz o cliente tomar RST
+                bruto = self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 4096))
+            except ValueError:
+                bruto = b""
             origem = self.headers.get("Origin")
             if not socket and bloquear_local:
                 cliente = self.client_address[0]
@@ -133,8 +137,7 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             if urlsplit(self.path).path != "/acao":
                 return self.send_error(404)
             try:
-                tam = min(int(self.headers.get("Content-Length") or 0), 4096)
-                ped = json.loads(self.rfile.read(tam) or b"null")
+                ped = json.loads(bruto or b"null")
                 acao, alvo = ped["acao"], ped["alvo"]
                 conf = ped.get("confirmacao")
                 assert (acao in ACOES or acao == "classificar") and isinstance(alvo, str) and alvo.isprintable() and len(alvo) < 300

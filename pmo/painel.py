@@ -11,7 +11,7 @@ SAIDA = "/srv/dev/state/pmo/painel.json"
 SESSOES = "/srv/dev/state/pmo/sessoes.json"   # 0600, escrito pelo coletor do próprio agente
 DEFAZAGEM = 2 * 86400
 SAUDE = "/srv/dev/state/health.txt"   # saida do health.sh, gravada pelo vigia-health
-SAUDE_VELHA = 30 * 60
+SAUDE_VELHA = 90 * 60   # 1,5x o periodo do stack-health.timer (OnCalendar=hourly)
 _ESTADOS = {"ok": "ok", "FALHA": "falha", "pend": "pend"}
 
 

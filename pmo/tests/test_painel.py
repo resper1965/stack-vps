@@ -199,10 +199,11 @@ class Saude(unittest.TestCase):
         self.assertEqual(ler_saude(self.f, AGORA), {"gerado_em": None, "velho": True, "itens": []})
 
     def test_ler_saude_velho(self):
-        self.escreve("acesso\n  ok    x\n", 31)
-        s = ler_saude(self.f, AGORA)
-        self.assertTrue(s["velho"])
-        self.assertEqual(len(s["itens"]), 1)
+        for idade, velho in ((1, False), (89, False), (91, True)):
+            self.escreve("acesso\n  ok    x\n", idade)
+            s = ler_saude(self.f, AGORA)
+            self.assertEqual(s["velho"], velho, idade)
+            self.assertEqual(len(s["itens"]), 1)
 
 
 if __name__ == "__main__":
