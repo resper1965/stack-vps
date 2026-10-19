@@ -104,6 +104,19 @@ ntfy (`NTFY_TOPIC`), e-mail (`RESEND_API_KEY`) e Telegram (`TELEGRAM_BOT_TOKEN`,
 configurados no `admin.env`. Canal sem valor e pulado. Teste manual:
 `sudo /usr/local/lib/stack-vps/alertar.sh "teste" "mensagem"`.
 
+## Antes de cada deploy de etapa
+
+```sh
+sudo hostinger.sh snapshot --sim
+```
+
+A Hostinger guarda UM snapshot por VM: o novo substitui o existente (o comando mostra a data do atual
+antes de criar). Sem `--sim`, só mostra o que faria. Credenciais (`HOSTINGER_API_TOKEN`,
+`HOSTINGER_VM_ID`) no `admin.env`.
+
+Fallback, camada 3 (acesso perdido pela tailnet e pelo tunnel): `sudo hostinger.sh reiniciar --sim`; se
+não voltar, `sudo hostinger.sh recuperacao --sim` (imprime uma senha root temporária, uma única vez).
+
 ## Regras que valem para os agentes
 
 - `data/` esta fora do escopo: nao ler, nao escrever.
