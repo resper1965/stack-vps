@@ -7,6 +7,7 @@
 #             hook (do 04), liga sozinho.
 #   Codex     le ~/.agents/skills; o ponytail entra pelo ~/.codex/AGENTS.md, porque os
 #             hooks de plugin no Codex so rodam depois de aprovados a mao em /hooks.
+#   OpenCode  ~/.config/opencode/AGENTS.md, mesmos blocos do Codex (le skills de ~/.claude e ~/.agents).
 #   agy       raiz global ~/.gemini/config: skills em skills/, modos em rules/ (trigger always_on);
 #             ponytail ja vem como plugin do 04.
 set -euo pipefail
@@ -67,6 +68,10 @@ PY
 }
 grava_bloco ~/.codex/AGENTS.md "modos padrao" "$(bloco)"
 grava_bloco ~/.codex/AGENTS.md "instrucoes do agente" "$(instrucoes)"
+# o diretorio ja existe 0700 com a senha web: so garante que existe, sem tocar no resto
+mkdir -p ~/.config/opencode
+grava_bloco ~/.config/opencode/AGENTS.md "modos padrao" "$(bloco)"
+grava_bloco ~/.config/opencode/AGENTS.md "instrucoes do agente" "$(instrucoes)"
 grava_bloco ~/.claude/CLAUDE.md "instrucoes do agente" "$(instrucoes CLAUDE.md)"
 # a conta ionic le o mesmo CLAUDE.md (o 28 so liga o que ja existia quando rodou)
 [[ -e ~/.claude-ionic/CLAUDE.md ]] || ln -s ~/.claude/CLAUDE.md ~/.claude-ionic/CLAUDE.md
@@ -88,7 +93,7 @@ for s in cloudflare supabase github-issues; do [[ -e ~/.claude/skills/$s/SKILL.m
 for p in ponytail@ponytail; do
   claude plugin list 2>/dev/null | grep -A3 "$p" | grep -q enabled || falta+=("plugin:$p")
 done
-for f in ~/.claude/CLAUDE.md ~/.codex/AGENTS.md; do grep -q "^# >>> instrucoes do agente" "$f" || falta+=("instrucoes:$f"); done
+for f in ~/.claude/CLAUDE.md ~/.codex/AGENTS.md ~/.config/opencode/AGENTS.md; do grep -q "^# >>> instrucoes do agente" "$f" || falta+=("instrucoes:$f"); done
 for s in cloudflare github-issues; do [[ -e ~/.gemini/config/skills/$s/SKILL.md ]] || falta+=("agy:$s"); done
 for s in ness-design pentest; do [[ -e ~/.claude/skills/$s/SKILL.md ]] || falta+=("skill-propria:$s"); done
 agy plugin list 2>/dev/null | grep -q '"name": "ponytail"' || falta+=("agy-plugin:ponytail")
