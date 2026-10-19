@@ -410,8 +410,9 @@ de novo reescreve o `config.yml` — se a emergência estava ligada, ela desliga
   `GITHUB_TOKEN`, `HOSTINGER_API_TOKEN`, `HOSTINGER_VM_ID` (e, opcionais, `PMO_ATALHO_OPENCODE`, `LINEAR_*`); formatos em
   `admin.env.example` e na tabela de `docs/srv-dev-README.md`. O `34-pmo.sh` aborta antes de escrever se faltar algo.
 - "HTTPS Certificates" habilitado no admin da tailnet (aba DNS); sem isso o `37-tailscale-serve.sh` falha.
-- No notebook do dono, `*.ts.net` não resolve (sem MagicDNS): linha `100.76.167.6 stack.<tailnet>.ts.net` no arquivo
-  `hosts` do Windows, ou ligar o MagicDNS (`docs/ssh-config.md`).
+- No notebook Windows do dono o MagicDNS já resolve `*.ts.net` (verificado em 19/10): nada a fazer. No WSL ou em
+  máquina sem o resolvedor do Tailscale, use o IP ou uma linha `100.76.167.6 stack.<tailnet>.ts.net` em `hosts`
+  (`docs/ssh-config.md`).
 
 **PORTÃO OBRIGATÓRIO antes de rodar o `34-pmo.sh` com a nova unidade (com aprovação):** o PMO só aceita ação se o
 `tailscale serve` entregar o `X-Forwarded-For`; sem ele, toda ação pelo painel dá 403 (falha fechada).

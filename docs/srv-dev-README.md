@@ -134,10 +134,12 @@ tailnet de dentro da VPS.
 
 ### Acesso do notebook ao painel
 
-`*.ts.net` só resolve por MagicDNS, que o notebook Windows do dono não usa. Antes do primeiro acesso, uma das duas:
-uma linha em `C:\Windows\System32\drivers\etc\hosts` (`100.76.167.6 stack.<tailnet>.ts.net`) ou ligar o MagicDNS
-no notebook. E, no admin da tailnet, habilitar **HTTPS Certificates** (aba DNS): sem isso o `37-tailscale-serve.sh`
-falha.
+`*.ts.net` resolve por MagicDNS, que já funciona no notebook Windows do dono (cliente Tailscale com "Use Tailscale
+DNS settings" ligado, o padrão); não precisa de nenhuma ação lá. No WSL2 (modo NAT) o resolvedor do Windows
+normalmente não é visto: use o IP `100.76.167.6` ou uma linha em `/etc/hosts` do WSL
+(`100.76.167.6 stack.<tailnet>.ts.net`). Outros aparelhos precisam do cliente Tailscale com essa opção ligada e do
+MagicDNS habilitado no admin da tailnet (já está). E, no admin da tailnet, habilitar **HTTPS Certificates** (aba DNS):
+sem isso o `37-tailscale-serve.sh` falha.
 
 Fallback, camada 3 (acesso perdido pela tailnet e pelo tunnel): `sudo hostinger.sh reiniciar --sim`; se
 não voltar, `sudo hostinger.sh recuperacao --sim` (imprime uma senha root temporária, uma única vez).

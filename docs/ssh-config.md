@@ -54,14 +54,15 @@ Host stack-cf
     ServerAliveCountMax 3
 ```
 
-O `HostName` de `stack` é o IP da VPS na tailnet, não o nome: o Windows deste laptop não usa o DNS
-do Tailscale (MagicDNS), então `stack` não resolve. O IP é fixo no painel do Tailscale (Edit machine
-IPv4) e é reaplicado no nó novo quando a VPS é reinstalada.
+O `HostName` de `stack` é o IP da VPS na tailnet, não o nome: o nome curto `stack` não resolve no WSL
+(que não usa o DNS do Tailscale), e o IP funciona em qualquer lugar. O IP é fixo no painel do Tailscale
+(Edit machine IPv4) e é reaplicado no nó novo quando a VPS é reinstalada.
 
-**As URLs `https://stack.<tailnet>.ts.net` (OpenCode) e `:8443` (PMO) têm o mesmo problema:** `*.ts.net` só
-resolve por MagicDNS. No notebook do dono, use uma das duas saídas: (1) uma linha no arquivo
-`C:\Windows\System32\drivers\etc\hosts` (como administrador): `100.76.167.6 stack.<tailnet>.ts.net`; ou
-(2) ligar o MagicDNS no cliente Tailscale do notebook. Pré-requisito do deploy, uma vez: habilitar
+**As URLs `https://stack.<tailnet>.ts.net` (OpenCode) e `:8443` (PMO)** resolvem por MagicDNS. No notebook
+Windows do dono isso já funciona (cliente Tailscale com `CorpDNS` ligado): não precisa de ação. Só onde o
+resolvedor do Tailscale não é visto (WSL2 em modo NAT, por exemplo) use uma linha de `hosts`:
+`100.76.167.6 stack.<tailnet>.ts.net` em `/etc/hosts` (no Windows, `C:\Windows\System32\drivers\etc\hosts`,
+como administrador). Pré-requisito do deploy, uma vez: habilitar
 **HTTPS Certificates** no admin da tailnet (aba DNS); sem isso o `37-tailscale-serve.sh` falha.
 
 No WSL, os mesmos blocos servem no `~/.ssh/config` dele, trocando o `ProxyCommand` por
