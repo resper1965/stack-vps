@@ -62,7 +62,8 @@ import re,sys
 f,m,b=sys.argv[1:4]
 t=open(f,encoding='utf-8').read()
 ini,fim='# >>> '+m+' (29-skills.sh)','# <<< '+m
-t=re.sub(re.escape(ini)+'.*?'+re.escape(fim)+'\n?','',t,flags=re.S).rstrip('\n')
+t=re.sub(re.escape(ini)+'.*?'+re.escape(fim)+'\n?','',t,flags=re.S)
+t=re.sub(r'\n{3,}','\n\n',t).strip('\n')  # sem isso cada execucao deixa linhas em branco onde o bloco estava
 open(f,'w',encoding='utf-8').write((t+'\n\n' if t else '')+b.rstrip('\n')+'\n')
 PY
 }
