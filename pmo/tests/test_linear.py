@@ -98,12 +98,80 @@ class Sincronizar(unittest.TestCase):
     def roda(self, api, p, previa=False, lote=False):
         return sincronizar(api, p, self.v, self.t, previa, lote, "ABC")
 
+    def roda_t(self, api, p, agora, lote=False):
+        return sincronizar(api, p, self.v, self.t, False, lote, "ABC", agora)
+
     def test_previa_nao_chama_escrita(self):
         api = Falsa()
         ops = self.roda(api, painel(), previa=True)
         self.assertEqual(len(ops), 2)
         self.assertEqual([c for c in api.chamadas if isinstance(c, tuple)], [])
         self.assertFalse(os.path.exists(self.v))
+
+    def test_previa_le_status_e_time_e_valida_todos_os_estagios(self):
+        api = Falsa()
+        self.roda(api, painel(), previa=True)
+        self.assertEqual(api.chamadas, ["statuses", "time"], "a prévia valida token, time e status")
+        p = painel(0)
+        p["projetos"] = [{"id": "o/a", "nome": "a", "estagio": "entregue"}, {"id": "o/b", "nome": "b", "estagio": "encerrado"},
+                         {"id": "o/c", "nome": "c", "estagio": "parado"}]
+        with self.assertRaises(ValueError) as c:
+            self.roda(Falsa(), p, previa=True)
+        self.assertIn("entregue", str(c.exception))
+        self.assertIn("encerrado", str(c.exception), "reporta todos de uma vez")
+        self.assertNotIn("parado", str(c.exception))
+        self.assertFalse(os.path.exists(self.v))
+
+    def test_estagio_sem_status_aborta_a_carga_antes_de_escrever(self):
+        p = painel(1)
+        p["projetos"].append({"id": "o/x", "nome": "x", "estagio": "entregue"})
+        api = Falsa()
+        with self.assertRaises(ValueError):
+            self.roda(api, p)
+        self.assertEqual([c for c in api.chamadas if isinstance(c, tuple)], [])
+        self.assertFalse(os.path.exists(self.v))
+
+    def test_nome_longo_e_truncado_no_envio_mas_o_id_nao_muda(self):
+        p = painel(1)
+        p["projetos"][0]["nome"] = "n" * 200
+        api = Falsa()
+        self.roda(api, p)
+        enviado = next(c[1] for c in api.chamadas if isinstance(c, tuple))
+        self.assertEqual(len(enviado), 80)
+        self.assertTrue(enviado.endswith("…"))
+        self.assertIn("o/p0", ler(self.v))
+
+    def test_teto_de_24h_entre_corridas(self):
+        t = [1000.0]
+        agora = lambda: t[0]
+        self.roda_t(Falsa(), painel(15), agora)
+        self.assertEqual(len(ler(self.v)["_meta"]["criacoes"]), 15)
+        t[0] += 3600  # outra corrida na mesma janela: 15 + 6 > 20
+        with self.assertRaises(LoteGrande):
+            self.roda_t(Falsa(), painel(21), agora)
+        self.roda_t(Falsa(), painel(21), agora, lote=True)
+        self.assertEqual(len(ler(self.v)["_meta"]["criacoes"]), 21)
+
+    def test_criacoes_com_mais_de_24h_nao_contam(self):
+        t = [1000.0]
+        agora = lambda: t[0]
+        self.roda_t(Falsa(), painel(15), agora)
+        t[0] += 24 * 3600 + 1
+        api = Falsa()
+        self.roda_t(api, painel(21), agora)  # 6 novas; as 15 antigas expiraram
+        self.assertEqual(len(api.ids), 6)
+        self.assertEqual(len(ler(self.v)["_meta"]["criacoes"]), 6, "as expiradas saem do contador")
+
+    def test_meta_nao_vira_projeto_e_arquivo_antigo_funciona(self):
+        with open(self.v, "w") as f:
+            json.dump({"_meta": {"criacoes": []}}, f)
+        self.assertEqual(self.roda(Falsa(), painel(0)), [])
+        with open(self.v, "w") as f:
+            json.dump({"o/p0": {"linear_id": "L", "enviado": "em andamento"}}, f)  # sem _meta
+        api = Falsa()
+        self.roda(api, painel(2))
+        self.assertEqual(len(api.ids), 1)
+        self.assertEqual(len(ler(self.v)["_meta"]["criacoes"]), 1)
 
     def test_cria_grava_e_nao_repete(self):
         api = Falsa()
@@ -118,7 +186,7 @@ class Sincronizar(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.roda(Falsa(falha_na=2), painel(3))
         v = ler(self.v)
-        self.assertEqual(sorted(v), ["o/p0", "o/p1"])
+        self.assertEqual(sorted(k for k in v if k != "_meta"), ["o/p0", "o/p1"])
         self.assertEqual(v["o/p0"]["enviado"], "em andamento")
         self.assertIsNone(v["o/p1"]["enviado"])
 
@@ -150,7 +218,8 @@ class Sincronizar(unittest.TestCase):
     def test_vinculo_pendente_grava_antes_da_chamada(self):
         api = Falsa(); api.caminho = self.v
         self.roda(api, painel(1))
-        self.assertEqual(api.no_momento, {"o/p0": {"linear_id": api.ids[0], "enviado": None}})
+        self.assertEqual(api.no_momento["o/p0"], {"linear_id": api.ids[0], "enviado": None})
+        self.assertEqual(len(api.no_momento["_meta"]["criacoes"]), 1, "a criação é contada junto com o vínculo pendente")
 
     def test_previa_nao_grava_id(self):
         self.roda(Falsa(), painel(), previa=True)

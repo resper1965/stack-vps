@@ -1,11 +1,17 @@
 """Espelho de mão única PMO -> Linear: uma lista, um projeto por linha, só o ESTÁGIO é enviado.
-Nunca apaga nada no Linear; arquivado vira status do tipo canceled, uma vez."""
+Nunca apaga nada no Linear; arquivado vira status do tipo canceled, uma vez.
+
+Limites conhecidos (desvios conscientes, a tratar depois): projeto excluído, renomeado ou removido do painel fica
+no último status no Linear e o vínculo órfão permanece em linear.json; descartar no PMO NÃO marca Canceled
+(desvio do §5b da spec). Teto de criações: mais de LIMITE_LOTE em 24 h exigem --confirmar-lote; o contador mora em
+linear.json sob a chave reservada "_meta" (os ids reais sempre têm "/", então não colidem)."""
 import argparse
 import fcntl
 import json
 import os
 import sys
 import tempfile
+import time
 import unicodedata
 import uuid
 import urllib.error
@@ -16,6 +22,8 @@ URL = "https://api.linear.app/graphql"
 TIPO_DO_ESTAGIO = {"ideia": "backlog", "em andamento": "started", "em revisão": "started", "parado": "paused",
                    "congelado": "paused", "entregue": "completed", "encerrado": "completed", "arquivado": "canceled"}
 LIMITE_LOTE = 20
+JANELA = 24 * 3600
+MAX_NOME = 80
 TOKEN, TIME = "/etc/pmo/linear-token", "/etc/pmo/linear-team"
 VINCULOS, TRAVA = "/var/lib/pmo/linear.json", "/var/lib/pmo/linear.lock"
 PAINEL, AJUSTES, CLASSES = "/srv/dev/state/pmo/painel.json", "/var/lib/pmo/ajustes.json", "/var/lib/pmo/classes.json"
@@ -63,10 +71,32 @@ def planejar(desejado, vinculos):
     return ops
 
 
-def verificar_lote(ops, confirmar_lote):
+def verificar_lote(ops, confirmar_lote, recentes=0):
     n = sum(1 for o in ops if o["op"] == "criar")
-    if n > LIMITE_LOTE and not confirmar_lote:
-        raise LoteGrande(f"{n} projetos a criar (limite {LIMITE_LOTE}); confira a prévia e use --confirmar-lote")
+    if n + recentes > LIMITE_LOTE and not confirmar_lote:
+        raise LoteGrande(f"{n} projetos a criar e {recentes} criados nas últimas 24 h (limite {LIMITE_LOTE}); "
+                         "confira a prévia e use --confirmar-lote")
+
+
+def _recentes(vinculos, agora):
+    return [t for t in vinculos.get("_meta", {}).get("criacoes", []) if agora - t < JANELA]
+
+
+def _resolver_status(ops, statuses):
+    """Status de cada estágio das operações; todos os que faltam são reportados de uma vez, antes de qualquer escrita."""
+    ids, faltam = {}, []
+    for e in dict.fromkeys(o["estagio"] for o in ops):
+        try:
+            ids[e] = escolher_status(e, statuses)
+        except ValueError:
+            faltam.append(e)
+    if faltam:
+        raise ValueError("sem status no Linear para os estágios: " + ", ".join(faltam))
+    return ids
+
+
+def _nome(nome):
+    return nome if len(nome) <= MAX_NOME else nome[:MAX_NOME - 1] + "…"
 
 
 def _post_http(url, headers, corpo):
@@ -148,27 +178,34 @@ def _trava(caminho):
         os.close(fd)  # fechar solta o flock
 
 
-def sincronizar(api, painel, vinculos_path, trava_path, previa, confirmar_lote, time_key):
+def sincronizar(api, painel, vinculos_path, trava_path, previa, confirmar_lote, time_key, agora=time.time):
     with _trava(trava_path) as livre:
         if not livre:
             return []
         vinculos = _ler_vinculos(vinculos_path)
         ops = planejar(desejado(painel), vinculos)
-        if previa or not ops:
+        if not ops:
             return ops
-        verificar_lote(ops, confirmar_lote)
+        if not previa:
+            verificar_lote(ops, confirmar_lote, len(_recentes(vinculos, agora())))
+        # a prévia também lê: valida token, chave do time e status antes da carga real (sem escrever nada)
         statuses = api.statuses()
         time_id = api.time(time_key) if any(o["op"] == "criar" for o in ops) else None
+        status_de = _resolver_status(ops, statuses)
+        if previa:
+            return ops
         for o in ops:
-            status = escolher_status(o["estagio"], statuses)
+            status = status_de[o["estagio"]]
             if o["op"] == "criar":
                 refeita = "linear_id" in o
                 lid = o.get("linear_id") or str(uuid.uuid4())
                 if not refeita:  # vínculo pendente gravado ANTES da chamada: resposta perdida não duplica
                     vinculos[o["id"]] = {"linear_id": lid, "enviado": None}
+                    agora_ts = agora()
+                    vinculos["_meta"] = {"criacoes": _recentes(vinculos, agora_ts) + [agora_ts]}
                     _gravar(vinculos, vinculos_path)
                 try:
-                    api.criar(o["nome"], time_id, status, lid)
+                    api.criar(_nome(o["nome"]), time_id, status, lid)
                 except RuntimeError as e:
                     if not refeita:
                         raise
