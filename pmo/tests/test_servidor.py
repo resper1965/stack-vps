@@ -1,4 +1,4 @@
-import http.client, json, os, tempfile, threading, unittest
+import http.client, json, os, socket, stat, tempfile, threading, unittest
 from pmo.servidor import criar
 
 
@@ -126,6 +126,65 @@ class Servidor(unittest.TestCase):
         pedidos = [json.load(open(os.path.join(self.fila, f))) for f in os.listdir(self.fila)]
         self.assertIn("ness", [p.get("pasta") for p in pedidos if p["acao"] == "clonar"])
         self.assertEqual(self.req("POST", "/acao", {"acao": "clonar", "alvo": "o/a", "pasta": "../x"})[0], 400)
+
+
+class ServidorSocket(unittest.TestCase):
+    HOST = "stack.tailnet.ts.net:8443"
+    LOGIN = "resper@bekaa.eu"
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        web = os.path.join(self.tmp, "web"); os.makedirs(web)
+        painel = os.path.join(self.tmp, "painel.json")
+        with open(painel, "w") as f:
+            json.dump({"projetos": [{"id": "o/a"}], "arquivados": [], "a_destinar": []}, f)
+        self.fila = os.path.join(self.tmp, "fila")
+        self.sock = os.path.join(self.tmp, "pmo.sock")
+        with open(self.sock, "w"):
+            pass  # socket velho: criar() remove antes do bind
+        self.srv = criar(None, None, web, painel, self.fila, os.path.join(self.tmp, "aj.json"),
+                         socket=self.sock, hosts=(self.HOST, "localhost:8080"), logins=(self.LOGIN,),
+                         classes=os.path.join(self.tmp, "cl.json"))
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.addCleanup(self.srv.server_close)
+        self.addCleanup(self.srv.shutdown)
+
+    def req(self, metodo, caminho, corpo=None, **cab):
+        s = socket.socket(socket.AF_UNIX); s.settimeout(5); s.connect(self.sock)
+        c = http.client.HTTPConnection("localhost", timeout=5); c.sock = s
+        h = {"Host": self.HOST, "Content-Type": "application/json", "X-PMO": "1"}
+        h.update({k.replace("_", "-"): v for k, v in cab.items()})
+        c.request(metodo, caminho, body=json.dumps(corpo) if corpo is not None else None, headers=h)
+        r = c.getresponse(); r.read(); c.close(); return r.status
+
+    def pedidos(self):
+        return [f for f in os.listdir(self.fila) if not f.startswith(".")]
+
+    def test_socket_criado_0660(self):
+        self.assertEqual(stat.S_IMODE(os.stat(self.sock).st_mode), 0o660)
+
+    def test_get_host_da_lista_200(self):
+        self.assertEqual(self.req("GET", "/painel.json"), 200)
+        self.assertEqual(self.req("GET", "/painel.json", Host="localhost:8080"), 200)
+
+    def test_get_host_fora_da_lista_403(self):
+        self.assertEqual(self.req("GET", "/painel.json", Host="evil.example"), 403)
+
+    def test_post_com_login_permitido_202(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN), 202)
+        self.assertEqual(len(self.pedidos()), 1)
+
+    def test_post_sem_login_tailscale_recusado(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_post_login_fora_da_lista_recusado(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login="outro@x.com"), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_post_host_fora_da_lista_recusado(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Host="evil.example", Tailscale_User_Login=self.LOGIN), 403)
+        self.assertEqual(self.pedidos(), [])
 
 
 if __name__ == "__main__":

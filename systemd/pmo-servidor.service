@@ -1,12 +1,16 @@
 [Unit]
-Description=Painel do PMO (so na tailnet)
-After=network-online.target tailscaled.service
+Description=Painel do PMO (socket Unix; a tailnet chega pelo tailscale serve)
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 User=pmo
+Group=pmo
+RuntimeDirectory=pmo
+RuntimeDirectoryMode=0750
+EnvironmentFile=/etc/pmo/servidor.env
 Environment=PYTHONPATH=/opt
-ExecStart=/usr/bin/python3 -m pmo.servidor --host 100.76.167.6 --porta 8080
+ExecStart=/usr/bin/python3 -m pmo.servidor --socket /run/pmo/pmo.sock --hosts ${PMO_HOSTS} --logins ${PMO_LOGINS}
 Restart=always
 RestartSec=5
 
