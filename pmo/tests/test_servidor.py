@@ -103,6 +103,13 @@ class Servidor(unittest.TestCase):
         self.assertEqual(a["classe"], {"empresa": "bekaa", "area": "ORM", "cliente": "t4isb", "tipo": "site", "linear": "BEK", "estagio": "parado", "confirmada": True})
         self.assertEqual(a["estagio"], "parado")
 
+    def test_classificar_congelado_aceito(self):
+        st, _ = self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a", "classe": {"estagio": "congelado"}})
+        self.assertEqual(st, 200)
+        a = next(x for x in json.loads(self.req("GET", "/painel.json")[1])["projetos"] if x["id"] == "o/a")
+        self.assertEqual((a["estagio"], a["classe"]["estagio"]), ("congelado", "congelado"))
+        self.assertEqual(self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a", "classe": {"estagio": ""}})[0], 200)
+
     def test_classificar_recusa_valor_invalido(self):
         for classe in ({"empresa": "acme"}, {"tipo": "foguete"}, {"estagio": "voando"}, {"area": "a\nb"}, {"cliente": "x" * 61}, "lixo"):
             with self.subTest(classe=classe):

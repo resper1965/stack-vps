@@ -4,6 +4,7 @@
 const CORES = {
   "ideia": "var(--e-ideia)", "em andamento": "var(--e-andamento)", "em revisão": "var(--e-revisao)",
   "entregue": "var(--e-entregue)", "encerrado": "var(--e-encerrado)", "parado": "var(--e-parado)",
+  "congelado": "var(--e-congelado)",
 };
 const ESTAGIOS = Object.keys(CORES);
 const TIPOS = ["app", "site", "agente", "dados", "infra", "documento", "conhecimento"];
@@ -123,8 +124,11 @@ function abrir(p) {
       github ? el("a", { class: "bt", href: github, target: "_blank", rel: "noopener" }, "Abrir no GitHub") : null,
       !p.pasta && !p.arquivado ? el("button", { class: "bt primario", onclick: () => clonar(p) }, "Clonar na VPS") : null,
       el("button", { class: "bt", onclick: () => classificar(p) }, "Classificar"),
-      !["parado", "encerrado", "entregue"].includes(estagio(p)) ? el("button", { class: "bt",
+      !["parado", "encerrado", "entregue", "congelado"].includes(estagio(p)) ? el("button", { class: "bt",
         onclick: () => acao("classificar", p.id, null, { classe: classeAtual(p, { estagio: "parado" }) }) }, "Marcar como parado") : null,
+      estagio(p) === "congelado"
+        ? el("button", { class: "bt", onclick: () => acao("classificar", p.id, null, { classe: classeAtual(p, { estagio: "" }) }) }, "Descongelar")
+        : el("button", { class: "bt", onclick: () => acao("classificar", p.id, null, { classe: classeAtual(p, { estagio: "congelado" }) }) }, "Congelar"),
       p.arquivado
         ? el("button", { class: "bt", onclick: () => acao("restaurar", p.id) }, "Restaurar")
         : el("button", { class: "bt perigo", onclick: () => descartar(p) }, "Descartar"))].filter(Boolean));
@@ -257,6 +261,7 @@ function render() {
   add(c.em_andamento, "em andamento", () => { $("f-estagio").value = "em andamento"; filtrar(); });
   add(c.em_revisao, "em revisão", () => { $("f-estagio").value = "em revisão"; filtrar(); });
   add(c.parados, "parados", () => { $("f-estagio").value = "parado"; filtrar(); });
+  add(c.congelados, "congelados", () => { $("f-estagio").value = "congelado"; filtrar(); });
   add(c.prs_abertos, "PRs abertos");
   add(c.ci_vermelho, "CI vermelho", null, true);
   add(c.a_destinar, "a destinar", () => $("secao-destinar").scrollIntoView({ behavior: "smooth" }));
