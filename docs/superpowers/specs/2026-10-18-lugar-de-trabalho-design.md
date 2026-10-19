@@ -20,12 +20,13 @@ DeepSeek e Featherless, API da Hostinger.
 |---|---|
 | Porta de entrada | **OpenCode Web** na VPS `stack`; tudo começa nele. |
 | Acesso | **Tailscale**, via `tailscale serve`; serviços escutam em `127.0.0.1`. Fallback em 3 camadas. |
-| Modelos | **9router** como gateway único (assinaturas e chaves); CLIs oficiais como plano B. Spike antes. |
+| Modelos | **9router** como gateway único (assinaturas e chaves), **hospedado na própria VPS `stack`**, ao lado do OpenCode; CLIs oficiais como plano B. Spike antes. |
 | Projetos | Comando **`/novo-projeto`** no OpenCode; naturezas **sistema, agente, parecer**. |
 | Autenticação | Pacote **`@ness/auth`** extraído do niso; SSO OIDC no v1. |
 | Authentik | **Opcional e externo** (ness.OS, VPS própria, não pronto); entra como provedor OIDC. |
 | Destinos | **Cloudflare, Vercel, GCP e "fora das nuvens"** (VPS, servidor do cliente, on-prem) com **Kamal**. |
-| Painel | **PMO em uma página**: projetos + saúde + atalhos. |
+| Painel | **PMO em uma página**, fonte da verdade do **ciclo de vida** dos projetos, + saúde + atalhos. |
+| Linear | **Espelho** do PMO (conta resper@bekaa.eu), sentido único PMO → Linear, nível de projeto. |
 | Avaliação | **promptfoo** no template de agente. |
 | Aviso | Sessão do OpenCode concluída → `alertar.sh` (ntfy/Telegram). |
 
@@ -63,7 +64,8 @@ do `tailscaled` não derruba os serviços — só o caminho até eles.
 
 ## 2. Camada de modelos (9router)
 
-- Serviço systemd de usuário do `agente` (padrão do `opencode-web.service`), só `127.0.0.1:20128`, versão
+- **Roda na própria VPS `stack`**, no mesmo ambiente do OpenCode e dos projetos — sem máquina separada.
+  Serviço systemd de usuário do `agente` (padrão do `opencode-web.service`), só `127.0.0.1:20128`, versão
   fixada no script; atualizar é trocar a versão e rodar de novo. Novo script substitui `24-modelos.sh`.
 - Consumidores: OpenCode (provedor compatível com OpenAI) e promptfoo. CLIs oficiais mantêm login próprio.
 - Contas: assinaturas por OAuth no 9router; chaves lidas do `agente.env`. Conta Claude ionic só na vertical ionic.
@@ -121,18 +123,58 @@ separado.
   SSO via **Authentik da ness**, que também faz ponte para clientes só com SAML.
 - **Login de emergência:** e-mail e senha só para administradores quando o IdP cair; desligável, sempre na trilha.
 
-## 5. Painel (PMO em uma página)
+## 5. Painel (PMO em uma página) — controle do ciclo de vida
 
-As 8 telas nunca foram implementadas; nada a remover de código. A página tem três blocos:
+As 8 telas nunca foram implementadas; nada a remover de código. O PMO é **a fonte da verdade do ciclo de vida
+de cada projeto**: a visão consolidada de `STATE.md` (escrito pelos agentes ao fim de cada trabalho) mais as
+decisões de gestão que só existem no PMO (`/var/lib/pmo`). A página tem três blocos:
 
-- **Projetos:** o que já existe (coleta, classificação, arquivar/restaurar) + sessões do OpenCode com
-  "copiar `opencode -s <id>`" (PRs #9, #11, #12).
+- **Projetos — ciclo de vida:**
+
+  | Controle | Origem | Estado hoje |
+  |---|---|---|
+  | Estágio (ideia → em andamento → em revisão → entregue / encerrado / parado) e próximo passo | `STATE.md` | coletado |
+  | Classificação (empresa, área, cliente, tipo) | PMO | existe |
+  | Arquivar, restaurar, descartar | PMO (executor) | existe |
+  | **Congelar / descongelar** — suspende alarmes e avaliações, nunca backup nem segurança | PMO | **novo** |
+
+  Mais as sessões do OpenCode com "copiar `opencode -s <id>`" (PRs #9, #11, #12). Os alarmes que já existem
+  (esquecidos, CI vermelho, PRs) ficam como estão, sem expansão; projeto congelado não dispara alarme.
 - **Saúde:** `health.sh`, último backup restic, 9router e OpenCode de pé, Tailscale, e CPU/RAM/disco pela API
   da Hostinger (só leitura).
 - **Atalhos:** OpenCode e painel do 9router.
 
 Ferramentas internas ficam só na tailnet. Quando o Authentik do ness.OS existir, ligá-lo nelas é opcional; o
 teste do servidor do PMO ganha o caso do `Host` repassado pelo proxy.
+
+## 5b. Espelho no Linear (conta resper@bekaa.eu)
+
+**Sentido único: PMO → Linear, no nível de projeto.** O PMO decide; o Linear mostra. Assim não há duas vias
+de escrita para o mesmo dado.
+
+- **Vínculo:** o campo `classe.linear` que o PMO já guarda liga cada projeto a um projeto do Linear. Projeto
+  sem vínculo não é espelhado; criar o projeto no Linear é ação explícita no PMO ("espelhar no Linear"), com
+  confirmação.
+- **O que espelha:**
+
+  | PMO | Linear (status do projeto) |
+  |---|---|
+  | ideia | Backlog |
+  | em andamento, em revisão | In Progress |
+  | parado, congelado | Paused |
+  | entregue, encerrado | Completed |
+  | descartado | Canceled |
+
+  O próximo passo vai como *project update* quando muda.
+- **Quando:** módulo `pmo/linear.py` roda depois da coleta diária e após cada ação de ciclo de vida; envia só
+  o que mudou. Falha no Linear nunca bloqueia a coleta (mesmo padrão do `ExecStartPre=-` das sessões) e vai
+  para o log e o alerta.
+- **Edição feita direto no Linear** nos campos espelhados é sobrescrita na próxima sincronização e registrada
+  no log. **Issues** (tarefas dentro do projeto) continuam livres no Linear — o PMO não as espelha nem as
+  sobrescreve; os agentes as atualizam pelo MCP `linear`, como o `AGENTS.md` já manda.
+- **Credencial:** chave de API pessoal do Linear no `admin.env`, lida pelo serviço do PMO; nunca no Git nem no
+  `painel.json`.
+- **A confirmar na etapa:** limites do plano do Linear em uso e os nomes exatos dos status do workspace.
 
 ## 6. API da Hostinger
 
@@ -176,6 +218,7 @@ confirmação.
 | Authentik (app que usa) | Login de emergência de administrador |
 | Deploy ruim (Kamal) | `kamal rollback` |
 | Mudança ruim na `stack` | Snapshot da Hostinger |
+| Linear | PMO segue normal; espelho reenvia o que mudou na próxima corrida |
 
 ## 10. Ordem de entrega
 
@@ -186,9 +229,10 @@ Cada etapa tem plano e PR próprios; nada vai à VPS sem aprovação explícita.
 | 0 | Sincronizar | Clone local alinhado ao `origin/main`; conferir na VPS o que de #9, #11 e #12 está ativo |
 | 1 | Spikes | 9router (5 perguntas), Kamal (versão, TLS), endpoints da API da Hostinger |
 | 2 | Lugar de trabalho | `tailscale serve`, fallback 1–3, aviso de agente concluído, PMO em uma página, snapshot antes de deploy, remoções |
-| 3 | 9router | Script, serviço, checagem no `vigia-health` (ou modo "duas faixas") |
-| 4 | `@ness/auth` v1 | Repositório próprio, extração com adaptadores D1 e Postgres |
-| 5 | `/novo-projeto` | Templates sistema (4 destinos, Kamal), agente (promptfoo), parecer (Typst) |
+| 3 | PMO: ciclo de vida + Linear | Congelar/descongelar, alarmes respeitando congelado, espelho PMO → Linear |
+| 4 | 9router | Script, serviço na `stack`, checagem no `vigia-health` (ou modo "duas faixas") |
+| 5 | `@ness/auth` v1 | Repositório próprio, extração com adaptadores D1 e Postgres |
+| 6 | `/novo-projeto` | Templates sistema (4 destinos, Kamal), agente (promptfoo), parecer (Typst) |
 
 ## Fora de escopo
 
