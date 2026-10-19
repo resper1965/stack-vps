@@ -42,7 +42,7 @@ DeepSeek e Featherless, API da Hostinger.
      ├─► /novo-projeto → /srv/dev/projetos/<nome>  ou  /srv/dev/pareceres/<nome>
      └─► plugin de aviso → alertar.sh
 
-   PMO 127.0.0.1:8080 (uma página)       Base inalterada: scripts 01–07, 16, restic, vigia-health
+   PMO /run/pmo/pmo.sock (uma página)    Base inalterada: scripts 01–07, 16, restic, vigia-health
 ```
 
 Princípios: uma porta de entrada; nada público por padrão; segredos continuam em `admin.env`, `agente.env`
@@ -50,23 +50,31 @@ e `projetos.env`; a VPS `stack` nunca hospeda sistema de cliente.
 
 ## 1. Acesso e fallback
 
-OpenCode e PMO passam a escutar em `127.0.0.1` e são publicados na tailnet por `tailscale serve`. Assim a queda
-do `tailscaled` não derruba os serviços — só o caminho até eles.
+O OpenCode passa a escutar em `127.0.0.1:4096` e o PMO num **socket Unix** (`/run/pmo/pmo.sock`, grupo `pmo`,
+fora do alcance do `agente`); os dois são publicados na tailnet por `tailscale serve`. Assim a queda do
+`tailscaled` não derruba os serviços — só o caminho até eles.
+
+O socket existe por segurança: o PMO recusa hoje ação vinda de dentro da VPS pelo IP de origem, e com
+`tailscale serve` toda requisição chegaria de `127.0.0.1`. Com o socket, quem não está no grupo `pmo` (o
+`agente`, os containers) nem consegue conectar.
 
 | Camada | Como | Estado padrão |
 |---|---|---|
-| 0. Normal | `https://stack.<tailnet>` via `tailscale serve` | ligado |
-| 1. SSH pelo Cloudflare Tunnel | `ssh stack-cf` com `LocalForward 4096` e `8080` (tunnel já existe, `06-tunnel.sh`) | ligado |
-| 2. Web de emergência | hostname público atrás de Cloudflare Access (e-mail + MFA) para o OpenCode; `stack-emergencia on/off`; ligar e desligar geram alerta | **desligado** |
+| 0. Normal | `https://stack.<tailnet>.ts.net` (OpenCode) e `:8443` (PMO) via `tailscale serve` | ligado |
+| 1. SSH pelo Cloudflare Tunnel | `ssh stack-cf` com `LocalForward 4096 127.0.0.1:4096` e `LocalForward 8080 /run/pmo/pmo.sock` (tunnel já existe, `06-tunnel.sh`) | ligado |
+| 2. Web de emergência | `emergencia.esper.ws` atrás de Cloudflare Access (código por e-mail, sessão de 1 h) + senha do próprio OpenCode; `stack-emergencia on/off` liga e desliga só a rota no tunnel; ligar e desligar geram alerta | **desligado** |
 | 3. Hostinger | console pelo navegador; reinício ou modo de recuperação pela API da Hostinger | sob demanda |
 
-`vigia-health` ganha checagem do Tailscale da `stack`; o alerta sai por ntfy/Telegram, que não dependem da tailnet.
+O `health.sh` já checa o Tailscale ("tailscale fora da tailnet") e o `vigia-health` já alerta por
+ntfy/Telegram, que não dependem da tailnet; entram as checagens do OpenCode e do PMO.
 
 ## 2. Camada de modelos (9router)
 
 - **Roda na própria VPS `stack`**, no mesmo ambiente do OpenCode e dos projetos — sem máquina separada.
   Serviço systemd de usuário do `agente` (padrão do `opencode-web.service`), só `127.0.0.1:20128`, versão
   fixada no script; atualizar é trocar a versão e rodar de novo. Novo script substitui `24-modelos.sh`.
+- O comando `modelo` **fica** (a skill de pentest depende dele) e passa a falar com o 9router; o catálogo
+  `docs/modelos.tsv` vira nomes de modelo do 9router.
 - Consumidores: OpenCode (provedor compatível com OpenAI) e promptfoo. CLIs oficiais mantêm login próprio.
 - Contas: assinaturas por OAuth no 9router; chaves lidas do `agente.env`. Conta Claude ionic só na vertical ionic.
 - Segurança: senha do painel vem do ambiente e o script **recusa subir sem ela**; painel só na tailnet;
@@ -153,7 +161,8 @@ teste do servidor do PMO ganha o caso do `Host` repassado pelo proxy.
 PMO → Linear; o PMO decide, o Linear mostra.
 
 - **Quais projetos:** todos os projetos do PMO que não estão arquivados nem descartados. Cada um vira um
-  projeto do Linear com o mesmo nome; o vínculo fica no campo `classe.linear` que o PMO já guarda.
+  projeto do Linear com o mesmo nome; o vínculo técnico (id do projeto no Linear e último estágio enviado)
+  fica em `/var/lib/pmo/linear.json`. O campo `classe.linear` do painel continua sendo o rótulo livre que já é.
 - **Único campo espelhado: o estágio**, como status do projeto no Linear, um status por estágio do PMO
   (ideia, em andamento, em revisão, entregue, encerrado, parado, congelado). Se o workspace não aceitar status
   de projeto personalizados, usa o mapeamento para os padrões: ideia → Backlog; em andamento e em revisão →
@@ -185,7 +194,7 @@ Token no `admin.env`; endpoints a confirmar no spike.
 |---|---|
 | `30-sysbox`, `31-rede-containers`, `33-runners`, restos de `compose/` e `coder/` | Coder já saiu (#7); sem equipe em container |
 | `22-openrig`, `23-papeis`, `openrig/` | Dupla principal/revisor vira sessões do OpenCode |
-| `24-modelos`, comando `modelo`, Continue | Substituídos pelo 9router |
+| `24-modelos`, Continue | Substituídos pelo 9router (o comando `modelo` fica, apontado ao 9router) |
 | Perfil `azure` | Fora dos 4 destinos |
 
 Antes de cada remoção, confirmar que nada mais chama o script. Desinstalação na VPS tem roteiro próprio e pede
