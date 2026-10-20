@@ -1,0 +1,12 @@
+[Unit]
+Description=Conta ci sem acesso a tailnet nem ao metadata
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/stack-vps/39-ci-rede.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
