@@ -36,7 +36,7 @@ DNS do `dns-repair` e as varreduras de segurança (CodeQL, Security, DefectDojo,
 
 | Tema | Decisão |
 |---|---|
-| Runners | **Containers efêmeros na `stack`, isolados**, sob uma conta de sistema `ci`; só repositórios **privados das organizações**, escolhidos um a um |
+| Runners | **Containers efêmeros na `stack`, isolados**, sob uma conta de sistema `ci`; só repositórios **privados** de organizações; as 3 organizações são plano Free, então o runner de organização atende **todos** os privados dela (ver spike) |
 | Conta pessoal `resper1965` | **Sem runner por enquanto.** CI local (abaixo). Repositórios que importarem podem ser movidos a uma organização depois, a pedido |
 | CI local | Todo projeto tem um comando único de CI; o agente o roda antes de commit e de PR; padrão dos projetos novos |
 | Jobs agendados parados | Viram **timers systemd** na VPS, com alerta de falha e presença no bloco Saúde |
@@ -47,11 +47,13 @@ DNS do `dns-repair` e as varreduras de segurança (CodeQL, Security, DefectDojo,
 - **Conta `ci`:** usuário de sistema, sem sudo, **sem leitura de `/srv/dev/secrets`**, com Docker rootless próprio (separado do
   Docker do `agente` e do Docker do sistema).
 - **Rede:** regra de firewall por UID da conta `ci` negando destino `100.64.0.0/10` (tailnet) e `169.254.169.254` (metadata), e
-  nada publicado. Substitui o `31-rede-containers` (que protegia só o Docker do sistema, via `DOCKER-USER`). *A confirmar no spike:
-  que o tráfego de um Docker rootless sai com o UID da conta `ci` e que a regra o pega (nftables `meta skuid`).*
-- **Runners:** efêmeros, imagem do runner oficial do GitHub (ou `myoung34/github-runner`, como antes), um grupo de runners por
-  organização restrito aos repositórios privados escolhidos, rótulo `[self-hosted, stack]`. Organizações: `nessenergy`,
-  `bekaa-trusted-advisors`, `forense-io`.
+  nada publicado. Substitui o `31-rede-containers` (que protegia só o Docker do sistema, via `DOCKER-USER`). *Confirmado no spike (`docs/spikes/2026-10-19-ci-runners.md`): o tráfego de um
+  Docker rootless sai com o UID da conta e a regra o recusa, inclusive para containers criados pelo job.*
+- **Runners:** efêmeros, imagem do runner oficial do GitHub (ou `myoung34/github-runner`, como antes), o grupo `Default` de cada
+  organização (as 3 são Free: não existe grupo restrito a repositórios escolhidos), rótulo `[self-hosted, stack]`. O supervisor recusa iniciar
+  se o grupo permitir repositório público ou se a organização permitir workflows de fork em repositórios privados. **Organizações do nível
+  de organização: `bekaa-trusted-advisors` (piloto) e `forense-io`.** `nessenergy` (43 privados, inclusive de cliente) fica de fora; se precisar,
+  só runner por repositório (exige token com `repo`) e aprovação explícita.
 - **Registro sem vazar o token:** o runner antigo recebia o token de organização (`ACCESS_TOKEN`, com `admin:org`) como variável de ambiente do
   container, e o código de um PR consegue ler isso. Aqui, um **supervisor** que roda fora do container (como a conta `ci`) guarda o token
   num arquivo `0400` e, para cada runner, chama a API `generate-jitconfig` da organização (configuração de uso único, já com o rótulo e o

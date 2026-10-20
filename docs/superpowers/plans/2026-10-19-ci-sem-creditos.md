@@ -26,7 +26,12 @@ configuração **JIT** (uso único) por runner e inicia um container efêmero qu
   (stubs no PATH, `STACK_TESTE=1`). Python só com a biblioteca padrão; testes em `ci/tests/` (o `tests/run.sh` passa a descobri-los).
 - Segredo nunca em argumento de linha de comando, variável de ambiente de container, log, `painel.json` ou Git. O token de organização
   (`RUNNER_TOKEN`) nunca entra num container.
-- Runner **só** para repositórios **privados** das organizações, escolhidos um a um; PR vindo de fork nunca roda em runner.
+- Runner **só** para repositórios **privados**. As organizações são plano Free: o grupo `Default` atende todos os privados da organização (não há grupo
+  restrito). Nível de organização só em `bekaa-trusted-advisors` (piloto) e `forense-io`; **`nessenergy` fora** (spike). PR de fork nunca roda em runner
+  (a organização tem de ter workflows de fork desligados em repositórios privados, e o grupo não pode aceitar repositório público).
+- **O container do runner não recebe o socket do Docker por padrão** (config `docker_socket: false`). Um job com o socket monta qualquer caminho legível por
+  qualquer conta no host (`/srv/dev/projetos`, `/srv/dev/state`: 755 hoje; há um `.env` legível — spike). Habilitar só depois de o Ricardo apertar essas
+  permissões, e por repositório.
 - Repositórios de cliente (`nessenergy/Alupdatalake`, `nessenergy/sitealupar`): nenhuma mudança sem aprovação explícita; ficam por último.
 - Testes de bash/Python rodam na VPS ou no WSL (`bash tests/run.sh`); baseline conhecido: o passo shellcheck do `run.sh` falha só com 28
   avisos SC2319 antigos de 4 arquivos de teste.
@@ -40,8 +45,8 @@ configuração **JIT** (uso único) por runner e inicia um container efêmero qu
 3. **A conta `ci` não lê `/srv/dev/secrets`, nem o home do `agente`/`dev`, nem entra em `sudo`/`docker`/`agente`/`pmo`.** Teste na Task 2.
 4. **O supervisor não cria containers sem fim** se a API cair, se o token for revogado ou se o número de runners já estiver completo;
    backoff e teto. Testes na Task 4.
-5. **Runner de repositório público ou de fork**: o grupo de runners é criado restrito a repositórios privados escolhidos; o supervisor recusa
-   iniciar se o grupo estiver aberto a todos. Teste na Task 4.
+5. **Runner de repositório público ou de fork**: o supervisor recusa iniciar se o grupo permitir repositório público
+   (`allows_public_repositories`) ou se a organização permitir workflows de fork em repositórios privados. Teste na Task 4.
 
 ## Mapa de arquivos
 
@@ -61,6 +66,10 @@ configuração **JIT** (uso único) por runner e inicia um container efêmero qu
 ## Etapa 1 — Spike (resposta, não código)
 
 ### Task 1: Spike dos runners isolados (com aprovação, na VPS)
+
+> **CONCLUÍDA em 2026-10-19** — resultados e decisão em `docs/spikes/2026-10-19-ci-runners.md`: isolamento confirmado. Mudanças: grupo
+> restrito não existe nas organizações Free (o `Default` atende todos os privados), `nessenergy` fica fora do nível de organização, Docker em job
+> é opt-in, conta criada com `useradd --system`. O texto abaixo é o roteiro original.
 
 Resultado: `docs/spikes/2026-10-19-ci-runners.md` com **Pergunta | Resposta | Evidência** e uma linha **Decisão**. Tudo reversível e
 em diretório/conta descartáveis; nenhuma conta GitHub é alterada sem aprovação.
@@ -148,14 +157,15 @@ Mesmo modelo do `16-agente.sh` (leia-o primeiro): root, idempotente, `STACK_TEST
 
 **Interfaces (assinaturas exatas):**
 - `class Github:` `__init__(self, token: str, post=urllib_post, get=urllib_get)`; `grupo(self, org: str, nome: str) -> dict` (id, `visibility`,
-  `allows_public_repositories`); `jitconfig(self, org: str, grupo_id: int, nome: str, rotulos: list[str]) -> str` (devolve `encoded_jit_config`);
+  `allows_public_repositories`); `permissoes_fork(self, org: str) -> dict` (`run_workflows_from_fork_pull_requests`, de
+  `GET /orgs/{org}/actions/permissions/fork-pr-workflows-private-repos`); `jitconfig(self, org: str, grupo_id: int, nome: str, rotulos: list[str]) -> str` (devolve `encoded_jit_config`);
   `runners(self, org: str) -> list[dict]`. Erros → `RuntimeError` **sem** o token na mensagem.
 - `def planejar(configuracao: dict, ativos: dict[str, int]) -> list[tuple[str, int]]` — `configuracao = {org: {"grupo": str, "quantidade": int}}`,
   `ativos = {org: n}` → `[(org, faltam)]` só com `faltam > 0`.
 - `class Docker:` `iniciar(self, nome: str, imagem: str, jit: str, cpus: str, memoria: str) -> None`; `ativos(self, rotulo: str) -> dict[str, int]`;
   `parar_todos(self) -> None`. Todas as chamadas usam `subprocess.run([...])` com lista de argumentos, **nunca** `shell=True`.
-- `def ciclo(cfg: dict, gh: Github, dk: Docker, estado_path: str, agora: float) -> dict` — um passe: valida o grupo (recusa se
-  `visibility == "all"` ou `allows_public_repositories`), calcula `planejar`, inicia no máximo `LIMITE_POR_CICLO = 4` runners, grava o estado
+- `def ciclo(cfg: dict, gh: Github, dk: Docker, estado_path: str, agora: float) -> dict` — um passe: valida o grupo e a organização (recusa se
+  `allows_public_repositories` **ou** `run_workflows_from_fork_pull_requests`; a visibilidade `all` do grupo `Default` é aceita), calcula `planejar`, inicia no máximo `LIMITE_POR_CICLO = 4` runners, grava o estado
   (`/srv/ci/status.json`, atômico) e devolve o resumo.
 - `def main(argv=None) -> int` — lê `/srv/ci/config.json` (`{"imagem", "cpus", "memoria", "orgs": {…}}`) e o token de `/srv/ci/token`;
   laço com `sleep(INTERVALO = 30)`; backoff exponencial até 10 min em erro; `--uma-vez` roda um ciclo (usado por teste e pelo health).
@@ -164,8 +174,8 @@ Mesmo modelo do `16-agente.sh` (leia-o primeiro): root, idempotente, `STACK_TEST
   - `test_container_recebe_so_a_configuracao_jit` — o Docker falso registra o argv e o ambiente de `iniciar`; afirmar que o token **não aparece**
     em nenhum argumento, variável de ambiente ou arquivo, e que o jit config aparece uma única vez (**Review Focus 1**);
   - `test_planejar_calcula_o_que_falta` e `test_planejar_nao_inicia_alem_da_quantidade`;
-  - `test_recusa_grupo_aberto_a_todos` e `test_recusa_grupo_com_repositorio_publico` — `ciclo` levanta `RuntimeError`, nada é iniciado
-    (**Review Focus 5**);
+  - `test_recusa_grupo_com_repositorio_publico` e `test_recusa_organizacao_que_roda_workflow_de_fork` — `ciclo` levanta `RuntimeError`, nada
+    é iniciado; `test_aceita_grupo_default_com_visibilidade_all` — o caso das organizações Free passa (**Review Focus 5**);
   - `test_api_caindo_nao_cria_container` e `test_backoff_cresce_e_tem_teto` (**Review Focus 4**);
   - `test_limite_por_ciclo` — 10 faltando, só `LIMITE_POR_CICLO` iniciados;
   - `test_erro_da_api_nao_vaza_o_token`;
@@ -182,7 +192,7 @@ Mesmo modelo do `16-agente.sh` (leia-o primeiro): root, idempotente, `STACK_TEST
 - Test: `tests/test-40-ci-runners.sh`
 
 **Interfaces:**
-- Consumes: Tasks 2–4; `RUNNER_TOKEN` e a lista de organizações do `admin.env` (`CI_ORGS=nessenergy:grupo:3,bekaa-trusted-advisors:grupo:3`).
+- Consumes: Tasks 2–4; `RUNNER_TOKEN` e a lista de organizações do `admin.env` (`CI_ORGS=bekaa-trusted-advisors:Default:3,forense-io:Default:3`; `nessenergy` não entra no nível de organização).
 - Produces: `/srv/ci/token` (0400, `ci:ci`, copiado do `admin.env` por subshell/umask, nunca por argv), `/srv/ci/config.json` (0640),
   a unidade `stack-ci-runners.service` (`User=ci`, `ExecStart=/usr/bin/python3 -m ci.runners`, `Restart=on-failure`, `PYTHONPATH=/opt`),
   instalada e **só habilitada com `--habilitar`**.
@@ -219,9 +229,12 @@ Não é código: é o roteiro executado com o Ricardo, passo a passo.
 - [ ] Snapshot da Hostinger. `git` do `/opt/stack-vps` na versão mergeada.
 - [ ] `sudo ./scripts/38-ci-conta.sh` → `sudo ./scripts/39-ci-rede.sh --instalar` → prova da rede **como `ci`** (alcança `1.1.1.1`, **não** alcança
   `100.76.167.6` nem `169.254.169.254`, IPv4 e IPv6) → `sudo ./scripts/40-ci-runners.sh` → conferir o `config.json` → `sudo ./scripts/40-ci-runners.sh --habilitar`.
-- [ ] Grupo de runners criado por você (ou por mim, com aprovação) na organização piloto: **repositórios selecionados, só privados, sem forks**.
+- [ ] Organização piloto: **`bekaa-trusted-advisors`**, grupo `Default` (Free: sem grupo restrito); conferir que ele não aceita repositório público e que a
+  organização tem workflows de fork desligados em privados (o supervisor também confere).
 - [ ] Piloto: **um repositório privado de organização que não seja de cliente**; um PR trocando `runs-on` para `[self-hosted, stack]`; rodar o workflow e conferir
   no log do job: `id` é a conta do runner, `env` não contém token, o runner some do GitHub ao terminar.
+- [ ] **Antes de qualquer repositório pedir Docker no job** (`docker_socket: true`): decisão do Ricardo sobre apertar `/srv/dev`, `/srv/dev/projetos` e
+  `/srv/dev/state` para 750 (dono e grupo corretos; afeta `dev`, `pmo` e os agentes) e sobre o `.env` legível; teste: a conta `ci` não lista nem lê.
 - [ ] Só depois: `docs/AGENTS.md` descreve o CI da stack como disponível (Task 7, Step 1) e abrimos os outros repositórios, **um PR por vez**.
 - **Rollback:** `sudo systemctl disable --now stack-ci-runners.service`; remover runners órfãos na organização; a conta e a regra de rede podem ficar.
 
