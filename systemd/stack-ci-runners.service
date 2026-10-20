@@ -1,0 +1,27 @@
+[Unit]
+Description=Runners efêmeros do GitHub Actions (conta ci)
+After=network-online.target stack-ci-rede.service user@%U.service
+# falha fechado: sem o isolamento de rede aplicado nao ha runner
+Requires=stack-ci-rede.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ci
+Group=ci
+WorkingDirectory=/srv/ci
+Environment=PYTHONPATH=/opt
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=DOCKER_HOST=unix:///run/user/%U/docker.sock
+ExecStart=/usr/bin/python3 -m ci.runners --config /srv/ci/config.json --token-file /srv/ci/token --status /srv/ci/status.json
+Restart=on-failure
+RestartSec=30
+NoNewPrivileges=yes
+# o resto do sistema fica somente leitura; o supervisor so escreve o status.json em /srv/ci
+ProtectSystem=strict
+ReadWritePaths=/srv/ci
+PrivateTmp=yes
+# sem ProtectHome: yes/tmpfs esconderiam /run/user, onde fica o socket do Docker rootless (o CLI nao funcionaria)
+
+[Install]
+WantedBy=multi-user.target
