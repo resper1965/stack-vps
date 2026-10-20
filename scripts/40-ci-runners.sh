@@ -47,11 +47,11 @@ fi
 if [[ $modo == --status ]]; then
   est=$(systemctl is-active "$UNIDADE" 2>/dev/null || true)
   echo "unidade: ${est:-desconhecido}"
-  if [[ -f $CI_DIR/status.json ]]; then
+  if [[ -f $CI_DIR/status.json && ! -L $CI_DIR/status.json ]]; then   # root nao segue link plantado pela conta ci
     # so contagens (o supervisor nunca grava segredo); o arquivo e da conta ci, entao sem caracteres de controle
     head -c 4096 "$CI_DIR/status.json" | tr -d '\000-\010\013-\037\177'; echo
   else
-    echo "status.json ausente (o supervisor ainda nao rodou)"
+    echo "status.json ausente ou indisponivel (o supervisor ainda nao rodou, ou nao e arquivo regular)"
   fi
   exit 0
 fi
@@ -117,13 +117,21 @@ coloca 0640 "$stage/config.json" "$CI_DIR/config.json"
 # codigo do root: a conta ci le e executa, mas nao altera
 install -d -m 755 -o root -g root "$CI_OPT"
 install -m 644 -o root -g root "$REPO/ci/__init__.py" "$REPO/ci/runners.py" "$CI_OPT/"
-install -m 644 "$REPO/systemd/$UNIDADE" "$CI_UNIT/"
+# %U numa unidade de sistema seria o UID 0: grava o UID numerico da conta ci
+sed "s/@CI_UID@/$uid/g" "$REPO/systemd/$UNIDADE" > "$stage/$UNIDADE"
+install -m 644 "$stage/$UNIDADE" "$CI_UNIT/$UNIDADE"
 systemctl daemon-reload
 
 # a imagem tem ~2 GB: o pull a frio estouraria o timeout de 120 s do supervisor
 if [[ $CI_PULAR_PULL != 1 ]]; then
-  ci_run DOCKER_HOST="unix://$CI_RUN_USER/$uid/docker.sock" docker pull "$IMAGEM" >/dev/null ||
-    { echo "docker pull $IMAGEM falhou; arquivos instalados, unidade NAO habilitada"; exit 1; }
+  ci_run DOCKER_HOST="unix://$CI_RUN_USER/$uid/docker.sock" timeout 900 docker pull "$IMAGEM" >/dev/null ||
+    { echo "docker pull $IMAGEM falhou ou passou de 900 s; arquivos instalados, unidade NAO habilitada"; exit 1; }
+fi
+
+# o supervisor le config e token uma vez, ao subir: unidade ativa precisa reiniciar para ver a rotacao
+if systemctl is-active --quiet "$UNIDADE"; then
+  systemctl restart "$UNIDADE"
+  echo "ci-runners: unidade ativa reiniciada para carregar token/config novos"
 fi
 
 if [[ $modo == --habilitar ]]; then

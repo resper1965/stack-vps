@@ -25,6 +25,7 @@ EOS
 T=$(dirname "$STUB_LOG"); echo "systemctl $*" >> "$STUB_LOG"
 case "$*" in
   *"is-active --quiet stack-ci-rede.service"*) [[ ! -e $T/rede-parada ]] ;;
+  *"is-active --quiet stack-ci-runners.service"*) [[ -e $T/runners-ativo ]] ;;
   "is-active stack-ci-runners.service") echo active ;;
 esac
 EOS
@@ -118,7 +119,7 @@ afirma_log "install -d -m 755 -o root -g root $CI_OPT" "diretorio do pacote 0755
 igual "$(stat -c %a "$CI_UNIT/stack-ci-runners.service")" 644 "unidade 0644"
 afirma_log "systemctl daemon-reload" "daemon-reload"
 afirma_log "docker pull ghcr.io/actions/actions-runner:latest" "pull da imagem"
-afirma_log "XDG_RUNTIME_DIR=$T/run/4242 DOCKER_HOST=unix://$T/run/4242/docker.sock docker pull" "pull como ci com socket e runtime dir"
+afirma_log "XDG_RUNTIME_DIR=$T/run/4242 DOCKER_HOST=unix://$T/run/4242/docker.sock timeout 900 docker pull" "pull como ci com socket e runtime dir"
 afirma_log "sudo -u ci env XDG_RUNTIME_DIR=$T/run/4242 systemctl --user is-active --quiet docker" "confere o docker rootless do ci"
 nega_log "enable" "sem --habilitar: nao habilita"; nega_log "start" "sem --habilitar: nao inicia"
 nega_log "stack-ci-rede" "sem --habilitar: nao exige a rede"
@@ -194,11 +195,12 @@ bash "$S" --status >/dev/null 2>&1; afirma_rc $? 0 "--status nao exige pre-requi
 bash "$S" --parar >/dev/null 2>&1; afirma_rc $? 0 "--parar nao exige pre-requisitos"
 
 # unidade
-U=$RAIZ_REPO/systemd/stack-ci-runners.service
-for l in "Description=Runners efêmeros do GitHub Actions (conta ci)" "After=network-online.target stack-ci-rede.service user@%U.service" \
-         "Requires=stack-ci-rede.service" "Wants=network-online.target" "Type=simple" "User=ci" "Group=ci" "WorkingDirectory=/srv/ci" \
-         "Environment=PYTHONPATH=/opt" "Environment=XDG_RUNTIME_DIR=/run/user/%U" "Environment=DOCKER_HOST=unix:///run/user/%U/docker.sock" \
-         "ExecStart=/usr/bin/python3 -m ci.runners --config /srv/ci/config.json --token-file /srv/ci/token --status /srv/ci/status.json" \
+# a unidade INSTALADA (com o UID numerico no lugar do molde)
+mundo; bash "$S" >/dev/null 2>&1; U=$CI_UNIT/stack-ci-runners.service
+for l in "Description=Runners efêmeros do GitHub Actions (conta ci)" "After=network-online.target stack-ci-rede.service user@4242.service" \
+         "Requires=stack-ci-rede.service" "Wants=network-online.target" "Type=simple" "User=ci" "Group=ci" "WorkingDirectory=/" \
+         "Environment=PYTHONPATH=/opt" "Environment=XDG_RUNTIME_DIR=/run/user/4242" "Environment=DOCKER_HOST=unix:///run/user/4242/docker.sock" \
+         "ExecStart=/usr/bin/python3 -P -m ci.runners --config /srv/ci/config.json --token-file /srv/ci/token --status /srv/ci/status.json" \
          "Restart=on-failure" "RestartSec=30" "NoNewPrivileges=yes" "ProtectSystem=strict" "ReadWritePaths=/srv/ci" "PrivateTmp=yes" \
          "WantedBy=multi-user.target"; do
   if grep -qxF "$l" "$U"; then ok "unidade: $l"; else falha "unidade: $l"; fi
@@ -206,10 +208,27 @@ done
 if grep -iE '^Environment=.*(proxy|token)' "$U" >/dev/null; then falha "unidade: Environment com proxy/TOKEN"; else ok "unidade: sem proxy nem TOKEN no ambiente"; fi
 if grep -E '^ProtectHome=' "$U" >/dev/null; then falha "unidade: ProtectHome esconderia /run/user"; else ok "unidade: sem ProtectHome"; fi
 if command -v systemd-analyze >/dev/null 2>&1; then
-  novo_tmp; cp "$U" "$T/stack-ci-runners.service"; chmod 644 "$T/stack-ci-runners.service"   # /mnt/c vem com permissao larga
-  v=$(systemd-analyze verify "$T/stack-ci-runners.service" 2>&1 | grep -v -e 'stack-ci-rede' -e '/usr/bin/python3' -e 'User=ci' -e 'Unit .* not found' || true)
+  v=$(systemd-analyze verify "$U" 2>&1 | grep -v -e 'stack-ci-rede' -e '/usr/bin/python3' -e 'User=ci' -e 'Unit .* not found' || true)
   if [[ -z $v ]]; then ok "systemd-analyze verify"; else falha "systemd-analyze verify ($v)"; fi
 fi
+
+if grep -qE '%U|%u|@CI_UID@' "$U"; then falha "unidade instalada ainda tem %U ou @CI_UID@"; else ok "unidade instalada sem %U nem @CI_UID@"; fi
+mundo; echo 1777 > "$T/uid"; bash "$S" >/dev/null 2>&1
+if grep -qxF "Environment=DOCKER_HOST=unix:///run/user/1777/docker.sock" "$CI_UNIT/stack-ci-runners.service"; then ok "unidade segue o uid do ci"; else falha "unidade nao seguiu o uid 1777"; fi
+if grep -qE '%U|@CI_UID@' "$RAIZ_REPO/systemd/stack-ci-runners.service" && grep -q '@CI_UID@' "$RAIZ_REPO/systemd/stack-ci-runners.service"; then ok "molde do repositorio usa @CI_UID@"; else falha "molde do repositorio"; fi
+
+# rotacao: unidade ativa reinicia; inativa nao mexe
+mundo; : > "$T/runners-ativo"
+bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "unidade ativa: instala"
+afirma_log "systemctl restart stack-ci-runners.service" "unidade ativa: reinicia"
+mundo
+bash "$S" >/dev/null 2>&1
+nega_log "restart" "unidade inativa: sem restart"; nega_log "start" "unidade inativa: sem start"; nega_log "enable" "unidade inativa: sem enable"
+
+# --status como root nao segue link plantado pela conta ci
+mundo; echo MARCADOR-SEGREDO > "$T/alvo"; ln -s "$T/alvo" "$CI_DIR/status.json"
+out=$(bash "$S" --status 2>&1); afirma_rc $? 0 "--status com link simbolico"
+if [[ $out != *MARCADOR-SEGREDO* && $out == *indisponivel* ]]; then ok "status: link nao seguido"; else falha "status: link seguido ($out)"; fi
 
 # producao: override de ambiente e ignorado (guard extraido do script, como no teste do 38/39)
 guard=$(sed -n '/^# >>> normaliza/,/^# <<< normaliza/p' "$S")
