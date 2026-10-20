@@ -7,6 +7,7 @@ import stat
 import tempfile
 import unittest
 import urllib.error
+import urllib.request
 from unittest import mock
 
 from ci import runners
@@ -38,19 +39,40 @@ class GithubFalso:
 
 
 class DockerFalso:
-    def __init__(self, ativos=None, falha=False):
-        self.iniciados, self._ativos, self.falha, self.parou = [], ativos or {}, falha, False
+    def __init__(self, ativos=None, falha=False, morre=False):
+        self.iniciados, self.falha, self.morre, self.parou = [], falha, morre, False
+        self.vivos = {o: [f"stack-{o}-{k:08x}" for k in range(n)] for o, n in (ativos or {}).items()}
+
+    def nomes(self, rotulo):
+        return list(self.vivos.get(rotulo, []))
 
     def ativos(self, rotulo):
-        return {rotulo: self._ativos.get(rotulo, 0)}
+        return {rotulo: len(self.nomes(rotulo))}
 
     def iniciar(self, nome, imagem, jit, cpus, memoria):
         if self.falha:
             raise RuntimeError("docker run falhou (1): boom")
         self.iniciados.append(nome)
+        if not self.morre:
+            self.vivos.setdefault(nome[6:-9], []).append(nome)
 
     def parar_todos(self):
         self.parou = True
+
+
+class DockerSim(DockerFalso):
+    """Cada container vive `vida` segundos (a duração do job) e some."""
+
+    def __init__(self, vida):
+        super().__init__()
+        self.vida, self.t, self.cont = vida, 0.0, []
+
+    def nomes(self, rotulo):
+        return [n for n, fim in self.cont if fim > self.t and n[6:-9] == rotulo]
+
+    def iniciar(self, nome, imagem, jit, cpus, memoria):
+        self.iniciados.append(nome)
+        self.cont.append((nome, self.t + self.vida))
 
 
 def cfg(**orgs):
@@ -144,7 +166,7 @@ class DockerReal(unittest.TestCase):
     def test_ativos_conta_por_rotulo(self):
         def run(args, **k):
             self.assertIn("label=stack-ci=acme", args)
-            return mock.Mock(returncode=0, stdout="aaa\nbbb\n", stderr="")
+            return mock.Mock(returncode=0, stdout="stack-acme-0a1b2c3d\nstack-acme-0a1b2c3e\nlixo\n", stderr="")
         with mock.patch("ci.runners.subprocess.run", run):
             self.assertEqual(Docker(ambiente={}).ativos("acme"), {"acme": 2})
 
@@ -425,7 +447,7 @@ class Endurecimento(Base):
                 Github(TOKEN).permissoes_fork("acme")
 
     def test_saida_do_docker_nao_utf8(self):
-        r = mock.Mock(returncode=0, stdout=b"\xff\xfeab\n", stderr=b"")
+        r = mock.Mock(returncode=0, stdout=b"stack-acme-0a1b2c3d\n\xff\xfeab\n", stderr=b"")
         with mock.patch("ci.runners.subprocess.run", return_value=r):
             self.assertEqual(Docker(ambiente={}).ativos("acme"), {"acme": 1})
         r = mock.Mock(returncode=1, stdout=b"", stderr=b"\xff\xfe erro")
@@ -494,7 +516,7 @@ class Endurecimento(Base):
                 return super().grupo(org, nome)
         gh, dk, mem = Misto(), DockerFalso({"boa": 9}), {}
         for t in range(0, 360, 30):
-            dk._ativos["boa"] = 9
+            dk.vivos["boa"] = dk.vivos["boa"][-9:]  # o runner mais antigo terminou o job
             antes = len(dk.iniciados)
             r = ciclo(cfg(ruim=1, boa=10), gh, dk, self.estado, float(t), memoria=mem)
             self.assertEqual(len(dk.iniciados), antes + 1, t)
@@ -503,15 +525,76 @@ class Endurecimento(Base):
         self.assertEqual(Misto.tentativas, 3)  # t = 0, 60, 180
         self.assertEqual(set(r["orgs"]), {"ruim", "boa"})
 
-    def test_laco_de_reinicio_para_de_criar_jit_e_avisa(self):
-        gh, dk, mem = GithubFalso(), DockerFalso(), {}
+    def test_laco_de_reinicio_morte_precoce_para_de_criar_jit(self):
+        gh, dk, mem = GithubFalso(), DockerFalso(morre=True), {}
         erros = []
         for t in range(0, 600, 30):
             erros.append(ciclo(cfg(acme=1), gh, dk, self.estado, float(t), memoria=mem)["erro"])
-        self.assertEqual(len(gh.jits), 7)
-        self.assertTrue(any(e and "acme: runners reiniciando em laço (7 inícios em 10 min)" in e for e in erros))
+        self.assertEqual(len(gh.jits), 5)
+        self.assertTrue(any(e and "acme: runners morrem logo após iniciar (5 seguidos); parado por 15 min" in e
+                            for e in erros))
         ciclo(cfg(acme=1), gh, dk, self.estado, 2000.0, memoria=mem)
-        self.assertEqual(len(gh.jits), 8)
+        self.assertEqual(len(gh.jits), 6)
+
+    def test_carga_legitima_de_jobs_curtos_nao_dispara(self):
+        for q, vida in ((1, 45), (2, 90), (5, 180)):
+            gh, dk, mem = GithubFalso(), DockerSim(vida), {}
+            for t in range(0, 3600, 30):
+                dk.t = float(t)
+                r = ciclo(cfg(acme=q), gh, dk, self.estado, float(t), memoria=mem)
+                self.assertIsNone(r["erro"], (q, vida, t))
+            self.assertGreater(len(gh.jits), 20)
+
+    def test_runner_que_sobrevive_zera_o_contador(self):
+        gh, dk, mem = GithubFalso(), DockerFalso(morre=True), {}
+        for t in (0.0, 30.0, 60.0):
+            ciclo(cfg(acme=1), gh, dk, self.estado, t, memoria=mem)
+        self.assertEqual(mem["acme"]["precoces"], 2)
+        dk.vivos["acme"] = [dk.iniciados[-1]]
+        ciclo(cfg(acme=1), gh, dk, self.estado, 90.0, memoria=mem)
+        self.assertEqual(mem["acme"]["precoces"], 2)  # ainda com menos de 40 s de vida
+        ciclo(cfg(acme=1), gh, dk, self.estado, 120.0, memoria=mem)
+        self.assertEqual(mem["acme"]["precoces"], 0)
+
+    def test_morte_tardia_nao_conta(self):
+        gh, dk, mem = GithubFalso(), DockerSim(60), {}
+        for t in range(0, 900, 30):
+            dk.t = float(t)
+            self.assertIsNone(ciclo(cfg(acme=1), gh, dk, self.estado, float(t), memoria=mem)["erro"])
+            self.assertEqual(mem["acme"]["precoces"], 0)
+
+    def test_relogio_de_parede_para_tras_nao_estende_o_backoff(self):
+        class Gh(GithubFalso):
+            n = 0
+
+            def grupo(self, org, nome):
+                Gh.n += 1
+                raise RuntimeError("HTTP 500: x")
+        gh, dk, mem = Gh(), DockerFalso(), {}
+        ciclo(cfg(), gh, dk, self.estado, 1000.0, memoria=mem, mono=0.0)
+        ciclo(cfg(), gh, dk, self.estado, 500.0, memoria=mem, mono=30.0)  # em espera
+        self.assertEqual(Gh.n, 1)
+        ciclo(cfg(), gh, dk, self.estado, 400.0, memoria=mem, mono=61.0)  # relógio voltou; monotônico venceu
+        self.assertEqual(Gh.n, 2)
+
+    def test_opener_nao_usa_proxy_do_ambiente(self):
+        with mock.patch.dict(os.environ, {"https_proxy": "http://127.0.0.1:9", "HTTPS_PROXY": "http://127.0.0.1:9"}):
+            ab = runners._abridor
+            # sem ProxyHandler efetivo: nenhum tratador de proxy registrado para https/http
+            usados = [h for esq in ("https", "http") for h in ab.handle_open.get(esq, [])]
+        self.assertTrue(usados)
+        self.assertFalse(any(isinstance(h, urllib.request.ProxyHandler) for h in usados))
+        self.assertFalse(any(isinstance(h, urllib.request.ProxyHandler) for h in ab.handlers))
+
+    def test_limpa_remove_controles_c1_e_separadores(self):
+        self.assertEqual(runners._limpa("a\u0085b c d\x1be"), "a b c d e")
+
+    def test_docker_redige_o_jit_antes_de_truncar(self):
+        r = mock.Mock(returncode=1, stdout=b"", stderr=("x" * 190 + JIT).encode())
+        with mock.patch("ci.runners.subprocess.run", return_value=r):
+            with self.assertRaises(RuntimeError) as c:
+                Docker(ambiente={}).iniciar("stack-acme-0a1b2c3d", "img", JIT, "2", "4g")
+        self.assertNotIn(JIT[:6], str(c.exception))
 
     def test_docker_socket_exige_ciencia_do_risco(self):
         base = {**cfg(), "docker_socket": True}

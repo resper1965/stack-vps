@@ -5,7 +5,10 @@ ambiente do processo `docker` (nunca no argv, em arquivo ou log). Código de ter
 cada ciclo recusa a organização se o grupo aceita repositório público ou se ela roda workflow de fork (falha fechado:
 só `False` exato passa). A validação da organização roda sempre que ela está com runners faltando (não a cada ciclo
 se nada falta). Falhas têm backoff por organização e um laço de reinício (container que morre ao nascer) pausa a
-criação de JIT para aquela organização."""
+criação de JIT para aquela organização.
+
+Operação: a unidade systemd não deve definir variáveis de proxy (o opener ignora proxies de qualquer forma, para o
+token nunca passar por um intermediário); DOCKER_HOST só é exigido com docker_socket."""
 import argparse
 import json
 import os
@@ -28,7 +31,8 @@ LIMITE_POR_CICLO = 4
 INTERVALO = 30
 BACKOFF_ORG = 60
 TETO_BACKOFF = 600
-JANELA_LACO = 600
+MORTE_PRECOCE = 40  # s: runner legítimo leva ~10 s para subir e fica vivo esperando/rodando um job
+SEGUIDOS_LACO = 5
 PAUSA_LACO = 900
 VAR_JIT = "ACTIONS_RUNNER_INPUT_JITCONFIG"
 AMBIENTE_PERMITIDO = ("PATH", "HOME", "DOCKER_HOST", "XDG_RUNTIME_DIR")
@@ -50,7 +54,8 @@ def _log(msg):
 
 def _limpa(texto, n=200):
     """Sem caracteres de controle (nem quebra de linha) e com tamanho limitado: vai a log e status.json."""
-    return "".join(" " if ord(c) < 32 or ord(c) == 127 else c for c in str(texto))[:n]
+    return "".join(" " if ord(c) < 32 or 127 <= ord(c) <= 159 or ord(c) in (0x2028, 0x2029) else c
+                   for c in str(texto))[:n]
 
 
 def _txt(x):
@@ -76,7 +81,7 @@ class _SemRedirecionamento(urllib.request.HTTPRedirectHandler):
         raise RuntimeError("redirecionamento recusado")
 
 
-_abridor = urllib.request.build_opener(_SemRedirecionamento)
+_abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}), _SemRedirecionamento)
 
 
 def _mensagem(e):
@@ -185,9 +190,10 @@ class Docker:
         except (OSError, subprocess.SubprocessError) as e:
             erro = f"docker {args[1]}: {type(e).__name__}"
         if r is not None and r.returncode != 0:
-            err = _limpa(_txt(r.stderr).strip())
+            err = _txt(r.stderr).strip()
             if segredo:
                 err = err.replace(segredo, "***")
+            err = _limpa(err)  # redige antes de truncar: um segredo cortado ao meio não seria mais encontrado
             erro = f"docker {args[1]} falhou ({r.returncode}): {err}"
         if erro:
             raise RuntimeError(erro)
@@ -205,9 +211,12 @@ class Docker:
         args += ["-e", VAR_JIT, imagem, "./run.sh"]
         self._run(args, {VAR_JIT: jit}, jit)
 
+    def nomes(self, rotulo):
+        out = self._run(["docker", "ps", "--filter", f"label=stack-ci={rotulo}", "--format", "{{.Names}}"])
+        return [ln for ln in out.splitlines() if RE_NOME.fullmatch(ln)]
+
     def ativos(self, rotulo):
-        out = self._run(["docker", "ps", "--filter", f"label=stack-ci={rotulo}", "--format", "{{.ID}}"])
-        return {rotulo: len([ln for ln in out.splitlines() if ln.strip()])}
+        return {rotulo: len(self.nomes(rotulo))}
 
     def parar_todos(self):
         ids = self._run(["docker", "ps", "-q", "--filter", "label=stack-ci"]).split()
@@ -256,37 +265,57 @@ def _formatar(e, segredos):
     return msg if isinstance(e, RuntimeError) else f"{type(e).__name__}: {msg}"
 
 
-def ciclo(cfg, gh, dk, estado_path, agora, memoria=None):
-    """Um passe. `memoria` guarda o estado por organização (backoff, inícios recentes) entre ciclos."""
+def _observar_mortes(m, vivos, t):
+    """Container que já sumiu na primeira observação (idade < MORTE_PRECOCE) é sinal de laço de reinício;
+    um que viveu o bastante, ou ainda vive, zera o contador."""
+    for nome, t0 in list(m["recem"].items()):
+        idade = t - t0
+        if nome in vivos:
+            if idade >= MORTE_PRECOCE:
+                del m["recem"][nome]
+                m["precoces"] = 0
+        else:
+            del m["recem"][nome]
+            m["precoces"] = m["precoces"] + 1 if idade < MORTE_PRECOCE else 0
+
+
+def ciclo(cfg, gh, dk, estado_path, agora, memoria=None, mono=None):
+    """Um passe. `memoria` guarda o estado por organização (backoff, mortes precoces) entre ciclos; os tempos desse
+    estado usam `mono` (relógio monotônico, padrão `agora`), e `agora` só vai para o status.json."""
     memoria = {} if memoria is None else memoria
+    t = agora if mono is None else mono
     orgs, erros, iniciados = {}, [], 0
     for org, o in cfg["orgs"].items():
-        m = memoria.setdefault(org, {"falhas": 0, "proximo": 0.0, "inicios": [], "pausa_ate": 0.0,
+        m = memoria.setdefault(org, {"falhas": 0, "proximo": 0.0, "recem": {}, "precoces": 0, "pausa_ate": 0.0,
                                      "ativos": 0, "ultimo": ""})
-        if agora < m["proximo"]:
-            erros.append(f"{org}: em espera por {int(m['proximo'] - agora)} s após falha ({m['ultimo']})")
+        if t < m["proximo"]:
+            erros.append(f"{org}: em espera por {int(m['proximo'] - t)} s após falha ({m['ultimo']})")
             orgs[org] = {"ativos": m["ativos"], "esperados": o["quantidade"]}
             continue
         ativos, jit, falha = m["ativos"], None, None
         try:
-            ativos = dk.ativos(org).get(org, 0)
+            vivos = dk.nomes(org)
+            ativos = len(vivos)
+            _observar_mortes(m, vivos, t)
+            if m["pausa_ate"] and t >= m["pausa_ate"]:
+                m["pausa_ate"], m["precoces"] = 0.0, 0
             faltam = dict(planejar({org: o}, {org: ativos})).get(org, 0)
             if faltam:
-                m["inicios"] = [t for t in m["inicios"] if agora - t < JANELA_LACO]
-                msg = f"{org}: runners reiniciando em laço ({len(m['inicios'])} inícios em 10 min)"
-                if agora < m["pausa_ate"]:
-                    raise LacoDeReinicio(msg.split(": ", 1)[1])
-                if len(m["inicios"]) > max(3 * o["quantidade"] + 3, 6):
-                    m["pausa_ate"] = agora + PAUSA_LACO
-                    _log(msg)
-                    raise LacoDeReinicio(msg.split(": ", 1)[1])
+                msg = (f"runners morrem logo após iniciar ({m['precoces']} seguidos); parado por "
+                       f"{PAUSA_LACO // 60} min")
+                if t < m["pausa_ate"]:
+                    raise LacoDeReinicio(msg)
+                if m["precoces"] >= SEGUIDOS_LACO:
+                    m["pausa_ate"] = t + PAUSA_LACO
+                    _log(f"{org}: {msg}")
+                    raise LacoDeReinicio(msg)
                 if iniciados < LIMITE_POR_CICLO:
                     gid = validar_org(gh, org, o["grupo"])
                     for _ in range(min(faltam, LIMITE_POR_CICLO - iniciados)):
                         nome = f"stack-{org}-{secrets.token_hex(4)}"
                         jit = gh.jitconfig(org, gid, nome, ROTULOS)
                         dk.iniciar(nome, cfg["imagem"], jit, cfg["cpus"], cfg["memoria"])  # se falhar, o JIT expira
-                        m["inicios"].append(agora)
+                        m["recem"][nome] = t
                         iniciados += 1
                         ativos += 1
                         _log(f"{org} {nome}")
@@ -297,7 +326,7 @@ def ciclo(cfg, gh, dk, estado_path, agora, memoria=None):
         m["ativos"] = ativos
         if falha:
             m["falhas"] += 1
-            m["proximo"] = agora + espera_org(m["falhas"])
+            m["proximo"] = t + espera_org(m["falhas"])
             m["ultimo"] = falha
             erros.append(f"{org}: {falha}")
         else:
@@ -411,7 +440,7 @@ def main(argv=None):
     try:
         while True:
             try:
-                erro = bool(ciclo(cfg, gh, dk, o.status, time.time(), memoria)["erro"])
+                erro = bool(ciclo(cfg, gh, dk, o.status, time.time(), memoria, time.monotonic())["erro"])
             except Exception as e:  # noqa: BLE001 — o laço sobrevive; só o tipo vai ao log, nunca dados
                 _log(f"erro no ciclo: {type(e).__name__}")
                 erro = True
