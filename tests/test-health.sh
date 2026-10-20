@@ -82,13 +82,13 @@ status_com() {
   printf '{"atualizado": %s, "runners": %s, "erro": %s, "orgs": {}}' "$(python3 -c "import time;print(time.time()-$1)")" "$2" "$3" > "$HEALTH_CI_STATUS"; }
 ci_prepara() {
   novo_tmp; prepara; export STUB_CI_CAT=0 STUB_CI_ACTIVE=0 STUB_CI_ENABLED=0
-  export HEALTH_CI_STATUS=$T/status.json HEALTH_CI_REDE=$T/rede.sh
+  export STACK_TESTE=1 HEALTH_CI_STATUS=$T/status.json HEALTH_CI_REDE=$T/rede.sh
   printf '#!/usr/bin/env bash\necho ativa\n' > "$HEALTH_CI_REDE"; chmod +x "$HEALTH_CI_REDE"
   status_com 0 3 null
 }
 ci_sec() { sed -n '/^ci$/,/^disco$/p' <<<"$saida"; }
 
-novo_tmp; prepara; unset STUB_CI_CAT; roda
+novo_tmp; prepara; unset STACK_TESTE STUB_CI_CAT; roda
 ! grep -qx 'ci' <<<"$saida"; afirma "$?" "ci: unidade ausente, sem secao"
 ! grep -qE 'runners|conta ci' <<<"$saida"; afirma "$?" "ci: unidade ausente, sem nenhuma linha de ci"
 
@@ -102,6 +102,11 @@ status_com 5 0 null; roda; tem "ok    runners (0)"; afirma "$?" "ci: zero runner
 ci_prepara; printf '#!/usr/bin/env bash\necho inativa\nexit 1\n' > "$HEALTH_CI_REDE"; roda
 tem "FALHA isolamento de rede da conta ci inativo"; afirma "$?" "ci: isolamento inativo: FALHA"
 afirma_rc "$rc" 1 "ci: isolamento inativo: rc 1"
+ci_prepara; printf '#!/usr/bin/env bash
+echo ativa
+exit 1
+' > "$HEALTH_CI_REDE"; roda
+tem "FALHA isolamento de rede da conta ci inativo"; afirma "$?" "ci: ativa com rc 1: FALHA"
 rm "$HEALTH_CI_REDE"; roda
 tem "FALHA isolamento de rede da conta ci inativo (sem 39-ci-rede.sh)"; afirma "$?" "ci: script de rede ausente: FALHA"
 

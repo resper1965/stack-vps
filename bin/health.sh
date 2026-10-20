@@ -58,12 +58,13 @@ if [[ -x $hs ]]; then
 fi
 
 unit_ci=stack-ci-runners.service
-if systemctl cat "$unit_ci" >/dev/null 2>&1 || [[ -e /etc/systemd/system/$unit_ci ]]; then
+if systemctl cat "$unit_ci" >/dev/null 2>&1; then
   echo "ci"
   # tudo que vem de /srv/ci e da conta ci (nao confiavel): so contagens formatadas aqui sao impressas
-  rede=${HEALTH_CI_REDE:-/usr/local/lib/stack-vps/39-ci-rede.sh}
+  rede=/usr/local/lib/stack-vps/39-ci-rede.sh
+  [[ ${STACK_TESTE:-} == 1 ]] && rede=${HEALTH_CI_REDE:-$rede}
   if [[ ! -x $rede ]]; then bad "isolamento de rede da conta ci inativo (sem 39-ci-rede.sh)"
-  elif [[ $("$rede" --status 2>/dev/null) == ativa ]]; then ok "isolamento de rede da conta ci"
+  elif out=$(timeout 10 "$rede" --status 2>/dev/null) && [[ $out == ativa ]]; then ok "isolamento de rede da conta ci"
   else bad "isolamento de rede da conta ci inativo"; fi
   if systemctl is-active --quiet "$unit_ci"; then
     ci_status=${HEALTH_CI_STATUS:-/srv/ci/status.json}
@@ -78,7 +79,7 @@ try:
     d = json.loads(bruto.decode("utf-8"))
     if not isinstance(d, dict): raise ValueError
     a, n, e = d["atualizado"], d["runners"], d["erro"]
-    if isinstance(a, bool) or not isinstance(a, (int, float)) or not math.isfinite(a): raise ValueError
+    if isinstance(a, bool) or not isinstance(a, (int, float)) or not 0 < a < 4e9: raise ValueError
     if isinstance(n, bool) or not isinstance(n, int) or not 0 <= n <= 1000000: raise ValueError
     if e is not None and not isinstance(e, str): raise ValueError
     idade = time.time() - a
