@@ -7,19 +7,20 @@
 # Toda chamada ao iptables usa -w 10 (lock do xtables); falha de lock ou de listagem aborta, nunca
 # e lida como "regra ausente".
 # Uso: sudo ./39-ci-rede.sh [--instalar | --remover | --status]
-# Sobrescreviveis nos testes (so com STACK_TESTE=1): CI_REDE_LIB, CI_REDE_UNIT.
+# Sobrescreviveis nos testes (so com STACK_TESTE=1): CI_REDE_LIB, CI_REDE_UNIT, CI_RUN_USER.
 set -euo pipefail
 [[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
 
 # Em producao o ambiente herdado (sudo -E, export vazado) e ignorado: atribui sem ler.
 # >>> normaliza
 if [[ ${STACK_TESTE:-} != 1 ]]; then
-  CI_REDE_LIB=/usr/local/lib/stack-vps; CI_REDE_UNIT=/etc/systemd/system
+  CI_REDE_LIB=/usr/local/lib/stack-vps; CI_REDE_UNIT=/etc/systemd/system; CI_RUN_USER=/run/user
 fi
 # <<< normaliza
 
 CI_REDE_LIB=${CI_REDE_LIB:-/usr/local/lib/stack-vps}
 CI_REDE_UNIT=${CI_REDE_UNIT:-/etc/systemd/system}
+CI_RUN_USER=${CI_RUN_USER:-/run/user}
 REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 
 TAILNET_V4=100.64.0.0/10
@@ -97,6 +98,14 @@ case $modo in
 esac
 
 if [[ $modo == --remover ]]; then
+  # sem a rede os runners (ou containers orfaos) sairiam para a tailnet: exige --parar antes
+  recusa() { echo "$1; pare os runners antes: 40-ci-runners.sh --parar"; exit 1; }
+  ! systemctl is-active --quiet stack-ci-runners.service || recusa "stack-ci-runners ativa"
+  if cuid=$(id -u ci 2>/dev/null) && [[ $cuid =~ ^[1-9][0-9]*$ ]]; then
+    cd /
+    ids=$(sudo -u ci env XDG_RUNTIME_DIR="$CI_RUN_USER/$cuid" DOCKER_HOST="unix://$CI_RUN_USER/$cuid/docker.sock"       docker ps -q --filter label=stack-ci) || recusa "nao consegui listar os containers do ci"
+    [[ -z $ids ]] || recusa "ha containers de runner (stack-ci) rodando"
+  fi
   rc=0; remove_familia iptables || rc=1; remove_familia ip6tables || rc=1
   if (( rc == 0 )); then echo "ci-rede: removida"; else echo "ci-rede: remocao incompleta"; fi
   exit "$rc"

@@ -61,7 +61,7 @@ DNS do `dns-repair` e as varreduras de segurança (CodeQL, Security, DefectDojo,
   efêmero. Nunca em argumento de linha de comando, log ou Git (mesmo padrão do `alertar.sh`).
 - **Scripts e supervisor:** `scripts/38-ci-conta.sh`, `39-ci-rede.sh` e `40-ci-runners.sh` mais o supervisor `ci/runners.py` (unidade
   `stack-ci-runners.service`) substituem o `33-runners.sh` e o `compose/runners.yml` antigos (que rodavam no Docker do sistema com sysbox e
-  estão no histórico do `main`). Token e config ficam em `/etc/stack-ci` (root:ci 0750; a conta `ci` só lê); só o `status.json` fica em `/srv/ci`.
+  estão no histórico do `main`). Token e config ficam em `/etc/stack-ci` (root:ci 0750; config `root:ci 0640` (a conta só lê); token `ci:ci 0400` (a conta é dona do arquivo, mas nem o root o lê depois)); só o `status.json` fica em `/srv/ci`.
 - **Saúde:** `health.sh` confere o isolamento de rede, a unidade e o `status.json` dos runners da conta `ci`; falha vira alerta. Ele **não** consulta o
   Docker rootless diretamente: um Docker parado só aparece pelo campo `erro` do `status.json` (ou por `status.json` velho).
 - **Segurança de uso:** só repositórios privados (runner self-hosted em repositório público é risco de execução de código de

@@ -39,6 +39,7 @@ if ! id ci &>/dev/null; then
   mkdir -p "$(dirname "$CI_HOME")"
   useradd -m -U -s /usr/sbin/nologin -d "$CI_HOME" ci
 fi
+usermod -s /usr/sbin/nologin ci   # idempotente; conta pre-existente pode ter shell de login
 install -d -m 700 -o ci -g ci "$CI_HOME"
 
 # faixa de 65536 ids sem intersectar nenhuma existente; o useradd pode ja ter atribuido uma

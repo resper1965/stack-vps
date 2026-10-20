@@ -49,12 +49,13 @@ para_containers() {
     echo "AVISO: conta ci nao encontrada; containers (se houver) nao foram parados"; return 0
   fi
   cd /
-  sudo -u ci env XDG_RUNTIME_DIR="$CI_RUN_USER/$u" DOCKER_HOST="unix://$CI_RUN_USER/$u/docker.sock"     sh -c 'docker ps -q --filter label=stack-ci | xargs -r docker stop >/dev/null' ||
+  sudo -u ci env XDG_RUNTIME_DIR="$CI_RUN_USER/$u" DOCKER_HOST="unix://$CI_RUN_USER/$u/docker.sock"     sh -c 'ids=$(docker ps -q --filter label=stack-ci) || exit 1; [ -z "$ids" ] || docker stop $ids >/dev/null' ||
     echo "AVISO: nao consegui parar os containers dos runners; confira com: sudo -u ci docker ps"
 }
 
 if [[ $modo == --parar ]]; then
-  systemctl disable --now "$UNIDADE"
+  # unidade ausente nao pode impedir a parada dos containers
+  systemctl disable --now "$UNIDADE" || echo "AVISO: systemctl disable --now $UNIDADE falhou (unidade ausente?); parando os containers mesmo assim"
   para_containers
   echo "ci-runners: parado e desabilitado (arquivos mantidos)"; exit 0
 fi

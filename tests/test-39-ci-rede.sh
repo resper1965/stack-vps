@@ -11,7 +11,19 @@ mundo() {
   export CI_REDE_LIB=$T/lib CI_REDE_UNIT=$T/unit
   mkdir -p "$T/fw" "$CI_REDE_LIB" "$CI_REDE_UNIT"; echo 4242 > "$T/uid"
   for c in iptables ip6tables; do echo "-j ufw-before-output" > "$T/fw/$c.OUTPUT"; done
-  stub systemctl; stub install
+  stub install
+  cat > "$STUBS/systemctl" <<'EOS'
+#!/usr/bin/env bash
+T=$(dirname "$STUB_LOG"); echo "systemctl $*" >> "$STUB_LOG"
+case "$*" in *"is-active --quiet stack-ci-runners.service"*) [[ -e $T/runners-ativo ]] ;; esac
+EOS
+  cat > "$STUBS/sudo" <<'EOS'
+#!/usr/bin/env bash
+T=$(dirname "$STUB_LOG"); echo "sudo $*" >> "$STUB_LOG"
+[[ ! -e $T/docker-falha ]] || exit 1
+cat "$T/containers" 2>/dev/null; exit 0
+EOS
+  chmod +x "$STUBS/systemctl" "$STUBS/sudo"
   cat > "$STUBS/iptables" <<'EOS'
 #!/usr/bin/env bash
 T=$(dirname "$STUB_LOG"); c=$(basename "$0")
@@ -145,6 +157,16 @@ mundo; bash "$S" >/dev/null 2>&1
 bash "$S" --remover >/dev/null 2>&1
 bash "$S" --remover >/dev/null 2>&1; afirma_rc $? 0 "--remover repetido: tolerante"
 touch "$T/sem-ci"; bash "$S" --remover >/dev/null 2>&1; afirma_rc $? 0 "--remover funciona sem a conta ci"
+
+# remover recusa com runners ativos ou containers stack-ci (fail-closed), sem tocar no firewall
+for caso in runners-ativo containers docker-falha; do
+  mundo; bash "$S" >/dev/null 2>&1; : > "$STUB_LOG"
+  if [[ $caso == containers ]]; then echo abc123 > "$T/containers"; else : > "$T/$caso"; fi
+  out=$(bash "$S" --remover 2>&1); rc=$?
+  afirma_rc $rc 1 "--remover com $caso: recusa"
+  if [[ $out == *"pare os runners antes: 40-ci-runners.sh --parar"* ]]; then ok "$caso: mensagem manda parar"; else falha "$caso: mensagem ($out)"; fi
+  nega_log " -F " "$caso: firewall intocado"; nega_log " -D " "$caso: salto mantido"
+done
 
 # status
 mundo

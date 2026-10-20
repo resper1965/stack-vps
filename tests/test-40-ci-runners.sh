@@ -27,6 +27,7 @@ case "$*" in
   *"is-active --quiet stack-ci-rede.service"*) [[ ! -e $T/rede-parada ]] ;;
   *"is-active --quiet stack-ci-runners.service"*) [[ -e $T/runners-ativo ]] ;;
   "is-active stack-ci-runners.service") echo active ;;
+  "disable --now"*) [[ ! -e $T/disable-falha ]] ;;
 esac
 EOS
   cat > "$STUBS/sudo" <<'EOS'
@@ -41,7 +42,7 @@ EOS
   cat > "$STUBS/docker" <<'EOS'
 #!/usr/bin/env bash
 T=$(dirname "$STUB_LOG"); echo "docker $*" >> "$STUB_LOG"
-case $1 in ps) cat "$T/ociosos" 2>/dev/null ;; esac
+case $1 in ps) [[ ! -e $T/ps-falha ]] || exit 1; cat "$T/ociosos" 2>/dev/null ;; esac
 EOS
   cat > "$STUBS/install" <<'EOS'
 #!/usr/bin/env bash
@@ -184,6 +185,19 @@ afirma_log "docker stop abc123 def456" "--parar: para os ociosos"
 mundo
 bash "$S" --parar >/dev/null 2>&1
 if grep -q '^docker stop' "$STUB_LOG"; then falha "--parar sem containers: docker stop chamado"; else ok "--parar sem containers: nada a parar"; fi
+
+# docker ps falha: AVISO (nao some no pipe) e nenhum stop; systemctl disable falha: containers parados mesmo assim
+mundo; : > "$T/ps-falha"; printf 'abc123
+' > "$T/ociosos"
+out=$(bash "$S" --parar 2>&1); afirma_rc $? 0 "--parar com docker ps falho"
+if [[ $out == *AVISO* ]]; then ok "docker ps falho: avisa"; else falha "docker ps falho: sem AVISO ($out)"; fi
+if grep -q '^docker stop' "$STUB_LOG"; then falha "docker ps falho: parou algo"; else ok "docker ps falho: nao para nada"; fi
+mundo; printf 'abc123
+' > "$T/ociosos"
+: > "$T/disable-falha"
+out=$(bash "$S" --parar 2>&1); afirma_rc $? 0 "--parar com disable falho"
+if grep -q '^docker stop abc123' "$STUB_LOG"; then ok "disable falho: containers parados mesmo assim"; else falha "disable falho: containers nao parados"; fi
+if [[ $out == *AVISO* ]]; then ok "disable falho: avisa"; else falha "disable falho: sem AVISO"; fi
 
 # pull falha: rc 1, unidade nao habilitada (mesmo com --habilitar)
 mundo; : > "$T/pull-falha"
