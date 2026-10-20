@@ -191,6 +191,15 @@ class Saude(unittest.TestCase):
         self.assertFalse(s["velho"])
         self.assertTrue(s["gerado_em"].startswith("2026-10-06T05:55:00"))
 
+    def test_ler_saude_secao_ci(self):
+        self.escreve("hostinger\n  ok    x\nci\n  ok    isolamento de rede da conta ci\n  FALHA runners sem atualização há 4 min\n"
+                     "  pend  runners instalados, mas não habilitados\ndisco\n  ok    /srv em 10%\n", 1)
+        itens = [i for i in ler_saude(self.f, AGORA)["itens"] if i["secao"] == "ci"]
+        self.assertEqual([(i["estado"], i["texto"]) for i in itens], [
+            ("ok", "isolamento de rede da conta ci"),
+            ("falha", "runners sem atualização há 4 min"),
+            ("pend", "runners instalados, mas não habilitados")])
+
     def test_ler_saude_ausente(self):
         self.assertEqual(ler_saude(self.f, AGORA), {"gerado_em": None, "velho": True, "itens": []})
 
