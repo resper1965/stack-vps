@@ -52,7 +52,7 @@ else ok "rodando como root: caso nao-root pulado"; fi
 
 mundo
 bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "cria a conta"
-afirma_log "useradd -m -U -s /bin/bash -d $CI_HOME ci" "usuario comum, grupo proprio, home em CI_HOME"
+afirma_log "useradd -m -U -s /usr/sbin/nologin -d $CI_HOME ci" "usuario comum sem shell de login, grupo proprio, home em CI_HOME"
 nega_log " -G" "sem grupos extras"; nega_log "--system" "nao e conta de sistema"
 afirma_log "install -d -m 700 -o ci -g ci $CI_HOME" "home 0700 de ci:ci"
 afirma_log "loginctl enable-linger ci" "linger ligado"

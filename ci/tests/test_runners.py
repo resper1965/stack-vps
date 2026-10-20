@@ -40,7 +40,7 @@ class GithubFalso:
 
 class DockerFalso:
     def __init__(self, ativos=None, falha=False, morre=False):
-        self.iniciados, self.falha, self.morre, self.parou = [], falha, morre, False
+        self.iniciados, self.falha, self.morre = [], falha, morre
         self.vivos = {o: [f"stack-{o}-{k:08x}" for k in range(n)] for o, n in (ativos or {}).items()}
 
     def nomes(self, rotulo):
@@ -55,9 +55,6 @@ class DockerFalso:
         self.iniciados.append(nome)
         if not self.morre:
             self.vivos.setdefault(nome[6:-9], []).append(nome)
-
-    def parar_todos(self):
-        self.parou = True
 
 
 class DockerSim(DockerFalso):
@@ -669,7 +666,6 @@ class Main(Base):
         dk = DockerFalso()
         anterior = signal.getsignal(signal.SIGTERM)
         self.assertEqual(self.rodar(Gh(), dk), 0)
-        self.assertFalse(dk.parou)
         self.assertEqual(len(dk.iniciados), 1)  # o ciclo em curso terminou antes de sair
         self.assertIs(signal.getsignal(signal.SIGTERM), anterior)
 

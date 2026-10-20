@@ -16,11 +16,11 @@ WorkingDirectory=/
 Environment=PYTHONPATH=/opt
 Environment=XDG_RUNTIME_DIR=/run/user/@CI_UID@
 Environment=DOCKER_HOST=unix:///run/user/@CI_UID@/docker.sock
-ExecStart=/usr/bin/python3 -P -m ci.runners --config /srv/ci/config.json --token-file /srv/ci/token --status /srv/ci/status.json
+ExecStart=/usr/bin/python3 -P -m ci.runners --config /etc/stack-ci/config.json --token-file /etc/stack-ci/token --status /srv/ci/status.json
 Restart=on-failure
 RestartSec=30
 NoNewPrivileges=yes
-# o resto do sistema fica somente leitura; o supervisor so escreve o status.json em /srv/ci
+# o resto do sistema fica somente leitura (inclusive /etc/stack-ci: config e token); o supervisor so escreve o status.json em /srv/ci
 ProtectSystem=strict
 ReadWritePaths=/srv/ci
 PrivateTmp=yes

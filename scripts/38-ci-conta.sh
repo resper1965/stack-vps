@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Conta "ci": dona dos runners do GitHub. Usuario comum (UID >= 1000, grupo proprio, sem grupo nenhum
-# extra), Docker rootless proprio e home 0700 — sem sudo, sem docker do sistema e sem ler segredo do
+# extra, shell nologin), Docker rootless proprio e home 0700 — sem sudo, sem docker do sistema e sem ler segredo do
 # dev/agente. Idempotente. Uso: sudo ./38-ci-conta.sh   (depois do 16-agente.sh, que cria o perfil AppArmor)
 # Sobrescreviveis nos testes (so com STACK_TESTE=1): CI_HOME, CI_SUBUID_FILE, CI_SUBGID_FILE,
 # CI_APPARMOR, CI_RUN_USER, CI_SEGREDOS, CI_VERIFICA.
@@ -37,7 +37,7 @@ fi
 
 if ! id ci &>/dev/null; then
   mkdir -p "$(dirname "$CI_HOME")"
-  useradd -m -U -s /bin/bash -d "$CI_HOME" ci
+  useradd -m -U -s /usr/sbin/nologin -d "$CI_HOME" ci
 fi
 install -d -m 700 -o ci -g ci "$CI_HOME"
 

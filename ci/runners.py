@@ -42,9 +42,9 @@ RE_MEMORIA = re.compile(r"[0-9]+[mMgG]")
 RE_IMAGEM = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/:@-]*")
 RE_TOKEN = re.compile(r"[A-Za-z0-9_]{20,255}")
 RE_NOME = re.compile(r"stack-(" + RE_ORG.pattern + r")-[0-9a-f]{8}")
-CAMINHOS = {"config": "/srv/ci/config.json", "token": "/srv/ci/token", "status": "/srv/ci/status.json"}
+CAMINHOS = {"config": "/etc/stack-ci/config.json", "token": "/etc/stack-ci/token", "status": "/srv/ci/status.json"}
 AVISO_SOCKET = ("WARNING: docker_socket ativo. Jobs com o socket do Docker podem ler o token da organização "
-                "(/srv/ci/token) e as configurações JIT dos runners vizinhos; use só com repositórios totalmente "
+                "(/etc/stack-ci/token) e as configurações JIT dos runners vizinhos; use só com repositórios totalmente "
                 "confiáveis.")
 
 
@@ -217,11 +217,6 @@ class Docker:
 
     def ativos(self, rotulo):
         return {rotulo: len(self.nomes(rotulo))}
-
-    def parar_todos(self):
-        ids = self._run(["docker", "ps", "-q", "--filter", "label=stack-ci"]).split()
-        if ids:
-            self._run(["docker", "stop", *ids])
 
 
 def validar_org(gh, org, nome_grupo):
