@@ -14,7 +14,10 @@ mundo() {
   stub systemctl; stub install
   cat > "$STUBS/iptables" <<'EOS'
 #!/usr/bin/env bash
-T=$(dirname "$STUB_LOG"); c=$(basename "$0"); echo "$c $*" >> "$STUB_LOG"
+T=$(dirname "$STUB_LOG"); c=$(basename "$0")
+[[ $1 == -w && $2 == 10 ]] || { echo "$c $*" >> "$T/sem-w"; exit 99; }
+shift 2; echo "$c $*" >> "$STUB_LOG"
+[[ $c == ip6tables && -e $T/sem-ip6 ]] && exit 127
 op=$1; ch=${2:-}; f=$T/fw/$c.$ch; shift 2 2>/dev/null
 case $op in
   -N) [[ ! -e $f ]] || exit 1; : > "$f" ;;
@@ -22,9 +25,9 @@ case $op in
   -A) [[ -e $f ]] || exit 1; echo "$*" >> "$f" ;;
   -I) [[ $1 == 1 && -e $f ]] || exit 1; shift; { echo "$*"; cat "$f"; } > "$f.n"; mv "$f.n" "$f" ;;
   -D) [[ -e $f && $1 =~ ^[0-9]+$ ]] || exit 1; sed -i "${1}d" "$f" ;;
-  -S) echo "-P $ch ACCEPT"; [[ -e $f ]] && sed "s/^/-A $ch /" "$f" ;;
+  -S) [[ ! -e $T/falha-S ]] || exit 4; echo "-P $ch ACCEPT"; [[ -e $f ]] && sed "s/^/-A $ch /" "$f" ;;
   -F) [[ -e $f ]] || exit 1; : > "$f" ;;
-  -X) [[ -e $f ]] || exit 1; rm "$f" ;;
+  -X) [[ -e $f && ! -e $T/falha-X ]] || exit 1; rm "$f" ;;
 esac
 EOS
   cp "$STUBS/iptables" "$STUBS/ip6tables"
@@ -34,6 +37,8 @@ T=$(dirname "$STUB_LOG"); [[ -e $T/sem-ci ]] && exit 1; cat "$T/uid"
 EOS
   chmod +x "$STUBS/iptables" "$STUBS/ip6tables" "$STUBS/id"
 }
+# toda chamada ao firewall usou -w 10 (o stub grava em sem-w as que nao usaram)
+com_w() { if [[ ! -e $T/sem-w ]]; then ok "$1: todas as chamadas com -w 10"; else falha "$1: chamada sem -w ($(head -1 "$T/sem-w"))"; fi; }
 fw() { for f in "$T"/fw/*; do echo "== $(basename "$f")"; cat "$f"; done; }
 # estado final de uma saida do script: texto exato
 igual() { if [[ $1 == "$2" ]]; then ok "$3"; else falha "$3 ($1)"; fi; }
@@ -59,6 +64,7 @@ sem_dono=$(grep -E '^ip6?tables -[IA] ' "$STUB_LOG" | grep -v -e '--uid-owner' |
 if [[ -z $sem_dono ]]; then ok "nenhuma regra fora da cadeia sem --uid-owner"; else falha "regra sem --uid-owner: $sem_dono"; fi
 igual "$(grep -cE '^ip6?tables -I OUTPUT' "$STUB_LOG")" 2 "so dois saltos inseridos"
 nega_log "-F OUTPUT" "nao limpa o OUTPUT"
+com_w "aplica"
 
 antes=$(fw)
 : > "$STUB_LOG"
@@ -73,10 +79,47 @@ for c in iptables ip6tables; do
     "-m owner --uid-owner 4242 -m comment --comment stack-ci -j STACK-CI" > "$T/fw/$c.OUTPUT"
 done
 bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "salto fora do lugar: corrige"
+if (( $(grep -n '^iptables -I OUTPUT' "$STUB_LOG" | head -1 | cut -d: -f1) < $(grep -n '^iptables -D OUTPUT' "$STUB_LOG" | head -1 | cut -d: -f1) )); then ok "insere o salto certo antes de apagar os outros"; else falha "ordem insere/apaga"; fi
+com_w "salto fora do lugar"
 for c in iptables ip6tables; do
   igual "$(grep -c -e '-j STACK-CI$' "$T/fw/$c.OUTPUT") $(sed -n 1p "$T/fw/$c.OUTPUT") $(grep -c -e '-j ufw-before-output' "$T/fw/$c.OUTPUT")" \
     "1 -m owner --uid-owner 4242 -m comment --comment stack-ci -j STACK-CI 1" "$c: um salto, na posicao 1, uid atual; ufw intacto"
 done
+
+# salto certo ja na posicao 1 mais uma copia no fim: so apaga, nao insere
+mundo
+printf '%s
+' "-m owner --uid-owner 4242 -m comment --comment stack-ci -j STACK-CI" "-j ufw-before-output"   "-m owner --uid-owner 4242 -m comment --comment stack-ci -j STACK-CI" > "$T/fw/iptables.OUTPUT"
+bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "salto duplicado: corrige"
+nega_log "iptables -I OUTPUT" "duplicado: nao insere de novo"; afirma_log "iptables -D OUTPUT 3" "duplicado: apaga so a copia"
+
+# UID invalido ou de sistema: recusa sem nenhuma chamada (uid 0 cortaria o proprio root)
+for v in 0 999 "" abc -5 007; do
+  mundo; printf '%s
+' "$v" > "$T/uid"
+  out=$(bash "$S" 2>&1); rc=$?
+  afirma_rc $rc 1 "uid '$v': recusa"; nega_log "tables" "uid '$v': nenhuma chamada ao firewall"
+  if [[ $out == *"UID invalido"* ]]; then ok "uid '$v': mensagem clara"; else falha "uid '$v': mensagem ($out)"; fi
+done
+for v in 1000 4242; do
+  mundo; echo $v > "$T/uid"
+  bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "uid $v: aceito"; afirma_log "--uid-owner $v " "uid $v: regra com o uid"
+done
+
+# listagem falha (lock/timeout, rc 4): aborta e nao insere nada
+mundo; : > "$T/falha-S"
+out=$(bash "$S" 2>&1); afirma_rc $? 1 "-S falha: aborta"
+if [[ $out == *"lock do xtables"* ]]; then ok "-S falha: mensagem clara"; else falha "-S falha: mensagem ($out)"; fi
+nega_log " -I " "-S falha: nada inserido"; nega_log " -A " "-S falha: nada anexado"; nega_log " -D " "-S falha: nada apagado"
+out=$(bash "$S" --status 2>&1); afirma_rc $? 1 "-S falha: status nao diz ativa"
+if [[ $out != *ativa* || $out == *inativa* ]]; then ok "-S falha: status nao afirma ativa"; else falha "status: $out"; fi
+bash "$S" --remover >/dev/null 2>&1; afirma_rc $? 1 "-S falha: --remover aborta"; nega_log " -F " "-S falha: nada limpo"
+
+# ip6tables indisponivel: v4 aplicado, v6 nao, falha fechado com aviso
+mundo; : > "$T/sem-ip6"
+out=$(bash "$S" 2>&1); afirma_rc $? 1 "sem ip6tables: falha"
+if [[ $out == *"ip6tables indisponível; v4 aplicado, v6 NÃO"* ]]; then ok "sem ip6tables: aviso explicito"; else falha "aviso ip6tables ($out)"; fi
+afirma_log "iptables -I OUTPUT 1" "sem ip6tables: v4 ficou aplicado"; nega_log "ip6tables -I" "sem ip6tables: nada no v6"
 
 # sem a conta ci: nada e inserido
 mundo; : > "$T/sem-ci"
@@ -94,6 +137,12 @@ afirma_log "iptables -F STACK-CI" "v4: esvazia a cadeia"; afirma_log "ip6tables 
 nega_log "-F OUTPUT" "nao limpa o OUTPUT"
 if grep -E ' -[FX] ' "$STUB_LOG" | grep -vqE ' -[FX] STACK-CI$'; then falha "mexeu em cadeia que nao e nossa"; else ok "so mexe em STACK-CI"; fi
 if [[ $(cat "$T/fw/iptables.OUTPUT") == "-j ufw-before-output" && ! -e $T/fw/iptables.STACK-CI && ! -e $T/fw/ip6tables.STACK-CI ]]; then ok "estado: OUTPUT so com o ufw, cadeias sumiram"; else falha "estado depois do --remover"; fi
+com_w "remover"
+mundo; bash "$S" >/dev/null 2>&1; : > "$T/falha-X"
+out=$(bash "$S" --remover 2>&1); afirma_rc $? 1 "-X falha (cadeia referenciada): rc 1"
+if [[ $out != *"removida"* || $out == *"incompleta"* ]] && [[ $out == *"ainda referenciada"* ]]; then ok "nao diz removida quando -X falhou"; else falha "mensagem do -X ($out)"; fi
+mundo; bash "$S" >/dev/null 2>&1
+bash "$S" --remover >/dev/null 2>&1
 bash "$S" --remover >/dev/null 2>&1; afirma_rc $? 0 "--remover repetido: tolerante"
 touch "$T/sem-ci"; bash "$S" --remover >/dev/null 2>&1; afirma_rc $? 0 "--remover funciona sem a conta ci"
 
@@ -120,6 +169,7 @@ bash "$S" --instalar >/dev/null 2>&1; afirma_rc $? 0 "--instalar"
 afirma_log "install -m 755 $S $CI_REDE_LIB/39-ci-rede.sh" "copia o script (0755)"
 afirma_log "install -m 644 $RAIZ_REPO/systemd/stack-ci-rede.service $CI_REDE_UNIT/" "copia a unidade (0644)"
 afirma_log "systemctl daemon-reload" "daemon-reload"; afirma_log "systemctl enable stack-ci-rede.service" "enable"
+com_w "instalar"
 nega_log "--now" "sem --now (as regras acabaram de ser aplicadas)"; nega_log "systemctl start" "sem start"
 if (( $(grep -n 'iptables -I OUTPUT' "$STUB_LOG" | head -1 | cut -d: -f1) < $(grep -n '^install ' "$STUB_LOG" | head -1 | cut -d: -f1) )); then ok "aplica antes de instalar"; else falha "ordem aplica/instala"; fi
 mundo; touch "$T/sem-ci"
@@ -129,7 +179,7 @@ mundo; bash "$S" --bobagem >/dev/null 2>&1; afirma_rc $? 2 "argumento desconheci
 # unidade
 U=$RAIZ_REPO/systemd/stack-ci-rede.service
 for l in "Type=oneshot" "RemainAfterExit=yes" "After=network-online.target docker.service" "Wants=network-online.target" \
-         "ExecStart=/usr/local/lib/stack-vps/39-ci-rede.sh" "WantedBy=multi-user.target"; do
+         "Restart=on-failure" "RestartSec=15" "ExecStart=/usr/local/lib/stack-vps/39-ci-rede.sh" "WantedBy=multi-user.target"; do
   if grep -qxF "$l" "$U"; then ok "unidade: $l"; else falha "unidade: $l"; fi
 done
 

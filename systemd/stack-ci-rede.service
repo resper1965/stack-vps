@@ -5,6 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+Restart=on-failure
+RestartSec=15
 ExecStart=/usr/local/lib/stack-vps/39-ci-rede.sh
 RemainAfterExit=yes
 
