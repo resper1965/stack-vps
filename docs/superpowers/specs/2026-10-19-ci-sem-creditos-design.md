@@ -52,8 +52,11 @@ DNS do `dns-repair` e as varreduras de segurança (CodeQL, Security, DefectDojo,
 - **Runners:** efêmeros, imagem do runner oficial do GitHub (ou `myoung34/github-runner`, como antes), um grupo de runners por
   organização restrito aos repositórios privados escolhidos, rótulo `[self-hosted, stack]`. Organizações: `nessenergy`,
   `bekaa-trusted-advisors`, `forense-io`.
-- **Registro:** token de organização (`admin:org`) em arquivo `0600` legível só pela conta `ci`; nunca em argumento, log ou Git
-  (mesmo padrão do `alertar.sh`).
+- **Registro sem vazar o token:** o runner antigo recebia o token de organização (`ACCESS_TOKEN`, com `admin:org`) como variável de ambiente do
+  container, e o código de um PR consegue ler isso. Aqui, um **supervisor** que roda fora do container (como a conta `ci`) guarda o token
+  num arquivo `0400` e, para cada runner, chama a API `generate-jitconfig` da organização (configuração de uso único, já com o rótulo e o
+  grupo) e passa **só essa configuração** ao container. O container nunca vê o token; a configuração JIT serve para um único runner
+  efêmero. Nunca em argumento de linha de comando, log ou Git (mesmo padrão do `alertar.sh`).
 - **Script e compose:** `scripts/33-runners.sh` e `compose/runners.yml` voltam **adaptados** à conta `ci` e ao Docker rootless
   (a versão antiga rodava no Docker do sistema com sysbox, e está no histórico do `main`).
 - **Saúde:** `health.sh` confere que os runners da conta `ci` estão de pé e que o Docker rootless dela responde; falha vira alerta.
