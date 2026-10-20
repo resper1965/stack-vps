@@ -10,7 +10,7 @@ import urllib.error
 from unittest import mock
 
 from ci import runners
-from ci.runners import (Docker, Github, LIMITE_POR_CICLO, ciclo, planejar, proxima_espera, TETO_BACKOFF)
+from ci.runners import (Docker, Github, LIMITE_POR_CICLO, ciclo, espera_org, planejar, TETO_BACKOFF)
 
 TOKEN = "ghp_SEGREDOSEGREDO123"
 JIT = "JITCONFIGBASE64=="
@@ -187,7 +187,7 @@ class GithubApi(unittest.TestCase):
     def test_erro_http_real_traz_status_e_mensagem_sem_token(self):
         corpo = io.BytesIO(json.dumps({"message": "Bad credentials"}).encode())
         e = urllib.error.HTTPError("https://api.github.com/x", 401, "x", {}, corpo)
-        with mock.patch("ci.runners.urllib.request.urlopen", side_effect=e) as u:
+        with mock.patch("ci.runners._abridor.open", side_effect=e) as u:
             with self.assertRaises(RuntimeError) as c:
                 Github(TOKEN).runners("acme")
         self.assertEqual(str(c.exception), "HTTP 401: Bad credentials")
@@ -279,7 +279,8 @@ class Ciclo(Base):
         self.assertIsNone(r["erro"])
 
     def test_estado_atomico_e_sem_token(self):
-        gh = Github(TOKEN, get=lambda u, c: {"runner_groups": [{"id": 1, "name": "Default"}],
+        gh = Github(TOKEN, get=lambda u, c: {"runner_groups": [{"id": 1, "name": "Default",
+                                                                 "allows_public_repositories": False}],
                                              "run_workflows_from_fork_pull_requests": False},
                     post=lambda u, c, b: {"encoded_jit_config": JIT})
         r = ciclo(cfg(acme=1), gh, DockerFalso(), self.estado, 123.5)
@@ -302,13 +303,10 @@ class Ciclo(Base):
 
 class Backoff(unittest.TestCase):
     def test_backoff_cresce_e_tem_teto(self):
-        e, vistos = runners.INTERVALO, []
-        for _ in range(8):
-            e = proxima_espera(e, True)
-            vistos.append(e)
-        self.assertEqual(vistos[:3], [60, 120, 240])
+        vistos = [espera_org(n) for n in range(1, 12)]
+        self.assertEqual(vistos[:4], [60, 120, 240, 480])
         self.assertEqual(max(vistos), TETO_BACKOFF)
-        self.assertEqual(proxima_espera(TETO_BACKOFF, False), runners.INTERVALO)
+        self.assertEqual(vistos[-1], TETO_BACKOFF)
 
 
 class Config(Base):
@@ -324,7 +322,11 @@ class Config(Base):
                  {**ok, "orgs": {"a": {"grupo": "Default", "quantidade": True}}},
                  {**ok, "orgs": {"a": {"grupo": "Default", "quantidade": -1}}},
                  {**ok, "orgs": {"a": {"grupo": "", "quantidade": 1}}},
-                 {**ok, "orgs": {"a": {"grupo": "Default"}}}]
+                 {**ok, "orgs": {"a": {"grupo": "Default"}}},
+                 {**ok, "cpus": "0"}, {**ok, "cpus": "."}, {**ok, "memoria": "0g"}, {**ok, "cpus": "1.2.3"},
+                 {**ok, "orgs": {"Acme": {"grupo": "D", "quantidade": 1}, "acme": {"grupo": "D", "quantidade": 1}}},
+                 {**ok, "docker_socket": True},
+                 {**ok, "docker_socket": True, "docker_socket_ciente_do_risco": False}]
         token = self.caminho("token", TOKEN)
         for ruim in ruins:
             self.assertEqual(runners.main(["--config", self.escrever(ruim), "--token-file", token,
@@ -359,6 +361,14 @@ class Token(Base):
         with self.assertRaises(ValueError):
             runners.ler_token(link)
 
+    def test_token_de_outro_dono_ou_fora_do_formato(self):
+        with mock.patch("ci.runners.os.geteuid", return_value=os.geteuid() + 1):
+            with self.assertRaises(ValueError):
+                runners.ler_token(self.caminho("t", TOKEN, 0o600))
+        for conteudo in ("ghp_curto", "ghp_" + "é" * 30, "a" * 300, "a" * 5000):
+            with self.assertRaises(ValueError, msg=conteudo[:10]):
+                runners.ler_token(self.caminho("t2", conteudo, 0o600))
+
     def test_token_nao_regular_recusado(self):
         with self.assertRaises(ValueError):
             runners.ler_token(self.dir.name)
@@ -375,6 +385,181 @@ class Token(Base):
                                "--token-file", self.caminho("t", TOKEN, 0o644), "--uma-vez"])
         self.assertEqual(rc, 2)
         self.assertNotIn(TOKEN, saida.getvalue())
+
+
+class Endurecimento(Base):
+    def gh_real(self, grupos_por_org):
+        def get(url, cab):
+            if "runner-groups" in url:
+                org = url.split("/orgs/")[1].split("/")[0]
+                return grupos_por_org[org]
+            return {"run_workflows_from_fork_pull_requests": False}
+        return Github(TOKEN, get=get, post=lambda u, c, b: {"encoded_jit_config": JIT})
+
+    def test_resposta_sem_id_nao_derruba_as_outras_orgs(self):
+        ok = {"runner_groups": [{"id": 1, "name": "Default", "allows_public_repositories": False}]}
+        gh = self.gh_real({"ruim": {"runner_groups": [{"name": "Default"}]}, "boa": ok})
+        dk = DockerFalso()
+        r = ciclo(cfg(ruim=1, boa=1), gh, dk, self.estado, 1.0)
+        self.assertEqual(len(dk.iniciados), 1)
+        self.assertIn("ruim", r["erro"])
+        self.assertEqual(json.load(open(self.estado))["orgs"]["boa"]["ativos"], 1)
+
+    def test_runner_groups_null(self):
+        gh = Github(TOKEN, get=lambda u, c: {"runner_groups": None})
+        with self.assertRaises(RuntimeError):
+            gh.grupo("acme", "Default")
+        for ruim in ([1], [{"id": "1", "name": "x"}], [{"id": True, "name": "x"}], [{"id": 1, "name": None}]):
+            with self.assertRaises(RuntimeError):
+                Github(TOKEN, get=lambda u, c, r=ruim: {"runner_groups": r}).grupo("acme", "x")
+
+    def test_corpo_json_nao_dict(self):
+        with self.assertRaises(RuntimeError):
+            Github(TOKEN, get=lambda u, c: []).permissoes_fork("acme")
+        with self.assertRaises(RuntimeError):
+            Github(TOKEN, get=lambda u, c: {"runners": "x"}).runners("acme")
+        with self.assertRaises(RuntimeError):
+            Github(TOKEN, post=lambda u, c, b: {"encoded_jit_config": 5}).jitconfig("acme", 1, "n", [])
+        with mock.patch("ci.runners._abridor.open", return_value=io.BytesIO(b"[1]")):
+            with self.assertRaises(RuntimeError):
+                Github(TOKEN).permissoes_fork("acme")
+
+    def test_saida_do_docker_nao_utf8(self):
+        r = mock.Mock(returncode=0, stdout=b"\xff\xfeab\n", stderr=b"")
+        with mock.patch("ci.runners.subprocess.run", return_value=r):
+            self.assertEqual(Docker(ambiente={}).ativos("acme"), {"acme": 1})
+        r = mock.Mock(returncode=1, stdout=b"", stderr=b"\xff\xfe erro")
+        with mock.patch("ci.runners.subprocess.run", return_value=r):
+            with self.assertRaises(RuntimeError):
+                Docker(ambiente={}).ativos("acme")
+
+    def test_status_json_atualizado_mesmo_com_erro_inesperado(self):
+        class Quebra(GithubFalso):
+            def grupo(self, org, nome):
+                raise KeyError("id")
+        r = ciclo(cfg(), Quebra(), DockerFalso(), self.estado, 55.0)
+        d = json.load(open(self.estado))
+        self.assertEqual(d["atualizado"], 55.0)
+        self.assertIn("KeyError", d["erro"])
+        self.assertEqual(r["erro"], d["erro"])
+
+    def test_grupo_sem_campo_publico_e_recusado(self):
+        class Gh:
+            def grupo(self, org, nome):
+                return {"id": 1}
+
+            def permissoes_fork(self, org):
+                return {"run_workflows_from_fork_pull_requests": False}
+        with self.assertRaises(RuntimeError):
+            runners.validar_org(Gh(), "acme", "Default")
+
+    def test_permissoes_sem_campo_fork_e_recusado(self):
+        class Gh:
+            def grupo(self, org, nome):
+                return {"id": 1, "allows_public_repositories": False}
+
+            def permissoes_fork(self, org):
+                return {}
+        with self.assertRaises(RuntimeError):
+            runners.validar_org(Gh(), "acme", "Default")
+
+    def test_campos_com_tipo_errado_sao_recusados(self):
+        for pub, fork in ((None, False), ("false", False), (0, False), (True, False),
+                          (False, None), (False, "false"), (False, 0), (False, True)):
+            class Gh:
+                def grupo(self, org, nome, pub=pub):
+                    return {"id": 1, "allows_public_repositories": pub}
+
+                def permissoes_fork(self, org, fork=fork):
+                    return {"run_workflows_from_fork_pull_requests": fork}
+            with self.assertRaises(RuntimeError, msg=(pub, fork)):
+                runners.validar_org(Gh(), "acme", "Default")
+
+        class Ok:
+            def grupo(self, org, nome):
+                return {"id": 9, "allows_public_repositories": False}
+
+            def permissoes_fork(self, org):
+                return {"run_workflows_from_fork_pull_requests": False}
+        self.assertEqual(runners.validar_org(Ok(), "acme", "Default"), 9)
+
+    def test_org_recusada_nao_atrasa_as_outras_ao_longo_dos_ciclos(self):
+        class Misto(GithubFalso):
+            tentativas = 0
+
+            def grupo(self, org, nome):
+                if org == "ruim":
+                    Misto.tentativas += 1
+                    raise RuntimeError("HTTP 403: nope")
+                return super().grupo(org, nome)
+        gh, dk, mem = Misto(), DockerFalso({"boa": 9}), {}
+        for t in range(0, 360, 30):
+            dk._ativos["boa"] = 9
+            antes = len(dk.iniciados)
+            r = ciclo(cfg(ruim=1, boa=10), gh, dk, self.estado, float(t), memoria=mem)
+            self.assertEqual(len(dk.iniciados), antes + 1, t)
+            self.assertIn("ruim", r["erro"])
+            self.assertNotIn("boa:", r["erro"])
+        self.assertEqual(Misto.tentativas, 3)  # t = 0, 60, 180
+        self.assertEqual(set(r["orgs"]), {"ruim", "boa"})
+
+    def test_laco_de_reinicio_para_de_criar_jit_e_avisa(self):
+        gh, dk, mem = GithubFalso(), DockerFalso(), {}
+        erros = []
+        for t in range(0, 600, 30):
+            erros.append(ciclo(cfg(acme=1), gh, dk, self.estado, float(t), memoria=mem)["erro"])
+        self.assertEqual(len(gh.jits), 7)
+        self.assertTrue(any(e and "acme: runners reiniciando em laço (7 inícios em 10 min)" in e for e in erros))
+        ciclo(cfg(acme=1), gh, dk, self.estado, 2000.0, memoria=mem)
+        self.assertEqual(len(gh.jits), 8)
+
+    def test_docker_socket_exige_ciencia_do_risco(self):
+        base = {**cfg(), "docker_socket": True}
+        with self.assertRaises(ValueError) as c:
+            runners.carregar_config(self.caminho("c.json", json.dumps(base)))
+        self.assertIn("token", str(c.exception))
+        ok = runners.carregar_config(self.caminho("d.json", json.dumps({**base,
+                                                                         "docker_socket_ciente_do_risco": True})))
+        self.assertTrue(ok["docker_socket"])
+
+    def test_docker_socket_avisa_alto(self):
+        c = {**cfg(acme=1), "docker_socket": True, "docker_socket_ciente_do_risco": True}
+        saida = io.StringIO()
+        with mock.patch("ci.runners._novo_github", return_value=GithubFalso()), \
+                mock.patch("ci.runners._novo_docker", return_value=DockerFalso()), \
+                contextlib.redirect_stderr(saida):
+            rc = runners.main(["--config", self.caminho("c.json", json.dumps(c)), "--status", self.estado,
+                               "--token-file", self.caminho("t", TOKEN, 0o600), "--uma-vez"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(saida.getvalue().count("WARNING"), 1)
+        self.assertIn("token", saida.getvalue())
+        self.assertNotIn(TOKEN, saida.getvalue())
+
+    def test_cadeia_de_excecoes_nao_guarda_o_token(self):
+        def get(url, cab):
+            raise RuntimeError(f"HTTP 401: {TOKEN}")
+        with self.assertRaises(RuntimeError) as c:
+            Github(TOKEN, get=get).permissoes_fork("acme")
+        e = c.exception
+        while e is not None:
+            self.assertNotIn(TOKEN, str(e))
+            self.assertIsNone(e.__cause__)
+            e = e.__context__
+
+    def test_mensagem_da_api_e_sanitizada(self):
+        corpo = io.BytesIO(json.dumps({"message": "x\n\x1b[31m" + "A" * 500}).encode())
+        e = urllib.error.HTTPError("https://api.github.com/x", 500, "x", {}, corpo)
+        with mock.patch("ci.runners._abridor.open", side_effect=e):
+            with self.assertRaises(RuntimeError) as c:
+                Github(TOKEN).runners("acme")
+        m = str(c.exception)
+        self.assertTrue(m.isprintable())
+        self.assertLessEqual(len(m), 220)
+
+    def test_redirecionamento_e_recusado(self):
+        h = runners._SemRedirecionamento()
+        with self.assertRaises(RuntimeError):
+            h.redirect_request(mock.Mock(), None, 302, "Found", {}, "https://evil.example/")
 
 
 class Main(Base):
