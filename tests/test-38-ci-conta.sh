@@ -9,8 +9,8 @@ echo "38-ci-conta"
 mundo() {
   novo_tmp
   export CI_HOME=$T/srv/ci CI_SUBUID_FILE=$T/subuid CI_SUBGID_FILE=$T/subgid
-  export CI_APPARMOR=$T/rootlesskit CI_RUN_USER=$T/run CI_VERIFICA=0
-  mkdir -p "$CI_RUN_USER/1001"
+  export CI_APPARMOR=$T/rootlesskit CI_RUN_USER=$T/run CI_VERIFICA=0 CI_SEGREDOS=$T/segredos
+  mkdir -p "$CI_RUN_USER/1001" "$CI_SEGREDOS"; : > "$CI_SEGREDOS/agente.env"; : > "$CI_SEGREDOS/admin.env"; echo 1001 > "$T/uid"
   printf 'dev:100000:65536\nagente:165536:65536\n' > "$CI_SUBUID_FILE"
   cp "$CI_SUBUID_FILE" "$CI_SUBGID_FILE"
   echo ci > "$T/grupos"; : > "$CI_APPARMOR"
@@ -24,7 +24,7 @@ EOS
 T=$(dirname "$STUB_LOG")
 case "$1" in
   -nG) cat "$T/grupos" ;;
-  -u) echo 1001 ;;
+  -u) cat "$T/uid" ;;
   *) [[ -e $T/existe ]] ;;
 esac
 EOS
@@ -37,7 +37,11 @@ case "$*" in
   *"test ! -r"*) [[ ! -e $T/legivel ]] ;;
 esac
 EOS
-  chmod +x "$STUBS/useradd" "$STUBS/id" "$STUBS/sudo"
+  cat > "$STUBS/getent" <<'EOS'
+#!/usr/bin/env bash
+echo "ci:x:1001:1001::$(cat "$(dirname "$STUB_LOG")/home" 2>/dev/null || echo "$CI_HOME"):/bin/bash"
+EOS
+  chmod +x "$STUBS/useradd" "$STUBS/id" "$STUBS/sudo" "$STUBS/getent"
 }
 
 mundo
@@ -87,5 +91,35 @@ out=$(bash "$S" 2>&1); afirma_rc $? 1 "segredo legivel: falha fechado"
 if [[ $out == *agente.env* ]]; then ok "diz qual segredo vazou"; else falha "diz qual segredo vazou"; fi
 mundo; export CI_VERIFICA=1
 bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "segredos ilegiveis: passa"
-afirma_log "test ! -r /srv/dev/secrets/admin.env" "confere o admin.env"
+afirma_log "test ! -r $CI_SEGREDOS/admin.env" "confere o admin.env"
+
+# producao: override de ambiente e ignorado. O guard e extraido do script (sem root nao ha como
+# chegar nele rodando o script inteiro sem STACK_TESTE).
+guard=$(sed -n '/^# >>> normaliza/,/^# <<< normaliza/p' "$S")
+if [[ -n $guard ]]; then ok "guard encontrado"; else falha "guard encontrado"; fi
+r=$(env -u STACK_TESTE CI_HOME=/ CI_VERIFICA=0 CI_SUBUID_FILE=/x CI_SUBGID_FILE=/x CI_APPARMOR=/x CI_RUN_USER=/x CI_SEGREDOS=/x \
+  bash -c "$guard"$'
+echo "$CI_HOME $CI_VERIFICA $CI_SUBUID_FILE $CI_SUBGID_FILE $CI_APPARMOR $CI_RUN_USER $CI_SEGREDOS"')
+if [[ $r == "/srv/ci 1 /etc/subuid /etc/subgid /etc/apparmor.d/usr.bin.rootlesskit /run/user /srv/dev/secrets" ]]; then ok "sem STACK_TESTE: overrides ignorados"; else falha "sem STACK_TESTE: overrides ignorados ($r)"; fi
+r=$(STACK_TESTE=1 CI_HOME=/t CI_VERIFICA=0 bash -c "$guard"$'
+echo "$CI_HOME $CI_VERIFICA"')
+if [[ $r == "/t 0" ]]; then ok "com STACK_TESTE=1: overrides valem"; else falha "com STACK_TESTE=1 ($r)"; fi
+
+# bordas
+mundo; printf 'dev:100000:65536\nagente:165536:65536' > "$CI_SUBUID_FILE"
+bash "$S" >/dev/null 2>&1
+if [[ $(sed -n 2p "$CI_SUBUID_FILE") == agente:165536:65536 && $(sed -n 3p "$CI_SUBUID_FILE") == ci:231072:65536 ]]; then ok "subuid sem newline final: nao corrompe"; else falha "subuid sem newline final"; fi
+mundo; echo 'x:4294901760:65536' >> "$CI_SUBUID_FILE"
+bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "subuid estourando 2^32: recusa"
+mundo; rmdir "$CI_RUN_USER/1001"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$STUBS/sleep"; chmod +x "$STUBS/sleep"
+out=$(bash "$S" 2>&1); afirma_rc $? 1 "sem /run/user/<uid>: falha"
+if [[ $out == *"nao apareceu"* ]]; then ok "mensagem de timeout"; else falha "mensagem de timeout"; fi
+mundo; export CI_VERIFICA=1; rm "$CI_SEGREDOS/admin.env"
+out=$(bash "$S" 2>&1); afirma_rc $? 1 "segredo inexistente: falha fechado"
+if [[ $out == *admin.env* ]]; then ok "diz qual segredo falta"; else falha "diz qual segredo falta"; fi
+mundo; : > "$T/existe"; echo 999 > "$T/uid"
+bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "ci com UID < 1000: recusa"; nega_log "loginctl" "UID baixo: nada mudou"
+mundo; : > "$T/existe"; echo /home/ci > "$T/home"
+bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "ci com home diferente: recusa"; nega_log "install" "home diferente: nada mudou"
 fim
