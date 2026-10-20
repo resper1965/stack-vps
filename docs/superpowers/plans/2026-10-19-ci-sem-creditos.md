@@ -69,7 +69,7 @@ configuração **JIT** (uso único) por runner e inicia um container efêmero qu
 
 > **CONCLUÍDA em 2026-10-19** — resultados e decisão em `docs/spikes/2026-10-19-ci-runners.md`: isolamento confirmado. Mudanças: grupo
 > restrito não existe nas organizações Free (o `Default` atende todos os privados), `nessenergy` fica fora do nível de organização, Docker em job
-> é opt-in, conta criada com `useradd --system`. O texto abaixo é o roteiro original.
+> é opt-in, conta criada como usuário **comum** (UID ≥ 1000) sem o grupo `users`. O texto abaixo é o roteiro original.
 
 Resultado: `docs/spikes/2026-10-19-ci-runners.md` com **Pergunta | Resposta | Evidência** e uma linha **Decisão**. Tudo reversível e
 em diretório/conta descartáveis; nenhuma conta GitHub é alterada sem aprovação.
@@ -119,7 +119,7 @@ Mesmo modelo do `16-agente.sh` (leia-o primeiro): root, idempotente, `STACK_TEST
 
 - [ ] **Step 1 — testes (stubs de `useradd`, `usermod`, `loginctl`, `id`, `getent`, `systemctl`, `install`):**
   - `test_recusa_quando_nao_e_root` (rc 1, nenhuma escrita);
-  - `test_cria_usuario_sem_grupos_privilegiados` — o script chama `useradd` com `--system`, home `/srv/ci`, shell `/bin/bash` (Docker rootless
+  - `test_cria_usuario_sem_grupos_privilegiados` — o script chama `useradd -m -U -s /bin/bash -d /srv/ci ci` (usuário comum, UID ≥ 1000, grupo primário próprio; **não** `--system` nem `adduser`: o spike só testou usuário comum, e o systemd user manager/linger e o Docker rootless não foram verificados com UID de sistema), sem `-G` (Docker rootless
     precisa de sessão), e **nunca** com `-G sudo,docker,agente,pmo`;
   - `test_falha_se_ci_estiver_em_grupo_privilegiado` — `id -nG ci` stubado contendo `sudo` → rc 1 com mensagem (Review Focus 3);
   - `test_subuid_nao_colide_com_o_agente` — faixa escolhida não intersecta a do `agente` (`/etc/subuid` de fixture);
