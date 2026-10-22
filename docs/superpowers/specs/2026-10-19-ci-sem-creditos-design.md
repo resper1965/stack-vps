@@ -117,4 +117,4 @@ consertar o pagamento do GitHub (solução mais barata para a conta pessoal, e �
   runners vizinhos; o supervisor só aceita com `docker_socket_ciente_do_risco: true` e vale apenas para repositórios totalmente confiáveis.
 - **`RUNNER_TOKEN` é um PAT clássico com `admin:org` das 3 organizações e passa a ficar legível pela conta `ci`** (`/etc/stack-ci/token`, 0400).
   Um escape do container ou do Docker rootless até a conta `ci` dá `admin:org`, **inclusive em `nessenergy`**. Mitigação futura, a verificar:
-  PAT fine-grained por organização (um por organização, só o escopo de runners). **Decisão do Ricardo pendente.**
+  PAT fine-grained por organização (um por organização, só o escopo de runners). **Decisão do Ricardo (2026-10-22): manter o PAT atual no piloto** (opção mais simples), aceitando este risco; revisar antes de abrir runners em mais organizações.
