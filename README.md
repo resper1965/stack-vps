@@ -35,6 +35,8 @@ Testes: `bash tests/run.sh` (precisa de `shellcheck`).
 | 28 | `28-contas-claude.sh` | duas contas Claude: bekaa (`~/.claude`, padrão) e ionic (`~/.claude-ionic`, vertical ionic); `claude-bekaa`/`claude-ionic` forçam |
 | 29 | `29-skills.sh` | skills de Cloudflare, Supabase, Vercel e GitHub nos três agentes; ponytail em `full` por padrão |
 | 36 | `36-opencode.sh` | unidade `opencode-web` (OpenCode só em `127.0.0.1:4096`); exige `~/.config/opencode/web.env` 0600 com `OPENCODE_SERVER_PASSWORD`, criado por você — não instala o OpenCode |
+| 41 | `41-9router.sh` | 9router (faixa 1: só chaves de API, versão fixa) em `127.0.0.1:20128`; recusa senha fraca; **ainda não instalado na VPS** |
+| 42 | `42-novo-projeto.py` | gerador usado pelo comando `/novo-projeto` do OpenCode (templates `sistema`, `agente` e `parecer` em `templates/`); o comando `opencode/command/novo-projeto.md` é instalado pelo `36-opencode.sh`; **ainda não instalado na VPS** |
 
 Notas:
 
@@ -47,7 +49,7 @@ Notas:
 | # | Script | O que faz |
 |---|---|---|
 | 34 | `34-pmo.sh` | painel do PMO em `https://stack.<tailnet>.ts.net:8443` (só tailnet; precisa do 37; nos computadores com o cliente Tailscale (MagicDNS ligado por padrão) abre pelo nome, ver `docs/ssh-config.md`): coleta diária, alarme de esquecidos, descartar/restaurar |
-| 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36; exige "HTTPS Certificates" habilitado no admin da tailnet |
+| 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36; exige "HTTPS Certificates" habilitado no admin da tailnet; o 9router (20128) também sai na tailnet por ele, quando existir |
 
 
 ## Outros
@@ -56,6 +58,7 @@ Notas:
 |---|---|
 | `14-backup.sh` / `15-restore.sh` | backup restic no R2 (desligado até a decisão pós-migração) |
 | `20-laptop-github.sh` | envia o trabalho do laptop ao GitHub, com bloqueio de segredo e documento de cliente (roda no WSL) |
+| `health.sh` | tem seção do 9router, que só aparece se a unidade existir |
 | `alertar.sh`, `vigia-health.sh` | alertas por ntfy, e-mail e Telegram na mudança de estado do `health.sh` |
 
 ## Convenção
