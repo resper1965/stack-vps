@@ -118,15 +118,15 @@ table.m td code { white-space: nowrap; }
           <text class="svgt s" x="506" y="98" text-anchor="middle">admin (sudo, systemd)</text>
           <!-- containers -->
           <rect class="svgbox" x="418" y="114" width="176" height="42" rx="8"/>
-          <text class="svgt b" x="506" y="132" text-anchor="middle">containers (sysbox)</text>
-          <text class="svgt s" x="506" y="148" text-anchor="middle">runners · Postgres</text>
+          <text class="svgt b" x="506" y="132" text-anchor="middle">containers (Docker)</text>
+          <text class="svgt s" x="506" y="148" text-anchor="middle">Postgres de teste</text>
           <!-- secrets tiers -->
           <rect class="svgbox" x="232" y="170" width="362" height="40" rx="8"/>
           <text class="svgt b" x="413" y="188" text-anchor="middle">/srv/dev/secrets</text>
           <text class="svgt s" x="413" y="204" text-anchor="middle">admin · agente · projetos — nunca no Git</text>
           <!-- panel -->
           <rect class="svgbox" x="232" y="224" width="362" height="36" rx="8"/>
-          <text class="svgt" x="413" y="246" text-anchor="middle">painel do PMO · :8080 (só VPN)</text>
+          <text class="svgt" x="413" y="246" text-anchor="middle">painel do PMO · :8443 (só tailnet)</text>
           <!-- external -->
           <path class="svgln" d="M612 90 H712"/>
           <rect class="svgbox" x="712" y="64" width="138" height="40" rx="8"/>
@@ -161,7 +161,7 @@ table.m td code { white-space: nowrap; }
         <tr><td>SSH principal</td><td><code>ssh stack</code></td><td>entra como <code>dev</code> pela tailnet</td></tr>
         <tr><td>SSH de reserva</td><td><code>ssh stack-cf</code></td><td>pelo túnel Cloudflare, se a tailnet cair</td></tr>
         <tr><td>VS Code</td><td><code>code --remote ssh-remote+stack-agente</code></td><td>Remote-SSH como <code>agente</code>; Jupyter vem pela extensão</td></tr>
-        <tr><td>Painel do PMO</td><td><code>http://100.76.167.6:8080</code></td><td>dashboard dos projetos (só VPN)</td></tr>
+        <tr><td>Painel do PMO</td><td><code>https://stack.&lt;tailnet&gt;.ts.net:8443</code></td><td>dashboard dos projetos (só tailnet)</td></tr>
       </table>
       <div class="box"><b>Primeira vez na VPS:</b> <code>claude /login</code>, <code>gcloud auth login</code> +
       <code>application-default login</code>, <code>codex login</code>, e autenticar o MCP do Linear com <code>/mcp</code>.</div>
@@ -170,7 +170,7 @@ table.m td code { white-space: nowrap; }
     <section id="agentes">
       <h2><span class="n">3</span> Agentes & modelos</h2>
       <p>O dia a dia de desenvolvimento é com <b>Claude Code</b> e <b>Codex</b>. Os modelos do comando
-      <code>modelo</code> e o Continue no VS Code são para <b>teste de segurança</b>, não para o dev comum.</p>
+      <code>modelo</code> são para <b>teste de segurança</b>, não para o dev comum.</p>
 
       <h3>Agentes</h3>
       <div class="cards">
@@ -182,14 +182,11 @@ table.m td code { white-space: nowrap; }
           <p>Featherless não entra no Codex (só fala a Responses API).</p></div>
         <div class="card"><h4>Antigravity (<code>agy</code>) <span class="tag dev">dev</span></h4>
           <p>CLI de agente. Login headless copiando o token OAuth de uma máquina já logada.</p></div>
-        <div class="card"><h4>OpenRig (<code>rig-dupla</code>) <span class="tag dev">dev</span></h4>
-          <p>Dupla principal/revisor: Claude Code escreve, Codex revisa o <code>STATE.md</code>. Só conhece esses dois.</p></div>
       </div>
 
       <h3>Comando <code>modelo</code> — teste de segurança <span class="tag sec">segurança</span></h3>
       <p>OpenRouter e Featherless por uma CLI única. Chaves lidas por referência do <code>agente.env</code>, nunca
-      escritas em arquivo. Use por pipe: <code>cat caso/nmap.txt | modelo glm "priorize por risco"</code>.
-      <code>modelo --continue</code> gera o <code>~/.continue/config.yaml</code> do VS Code.</p>
+      escritas em arquivo. Use por pipe: <code>cat caso/nmap.txt | modelo glm "priorize por risco"</code>.</p>
       <table class="m">
         <tr><th>Apelido</th><th>Modelo</th><th>Uso</th></tr>
         <tr><td><code>auto</code></td><td>openrouter/auto</td><td>uso geral; o OpenRouter escolhe</td></tr>
@@ -228,7 +225,7 @@ table.m td code { white-space: nowrap; }
         <tr><td><code>gh</code></td><td>CLI do GitHub; credencial lida em runtime pelo <code>git-credential-stack</code></td></tr>
         <tr><td><code>gitleaks</code></td><td>varredura de segredo antes do push (o agente roda no fluxo de envio)</td></tr>
         <tr><td><code>make</code>, <code>gcloud</code></td><td>no sistema; o Alupdata usa ambos</td></tr>
-        <tr><td>Docker rootless</td><td>containers do <code>agente</code> sem privilégio; sysbox para Docker-in-Docker</td></tr>
+        <tr><td>Docker rootless</td><td>containers do <code>agente</code> sem privilégio</td></tr>
         <tr><td>Postgres descartável</td><td><code>25-testes.sh</code>: em memória, só <code>127.0.0.1</code>, para testes</td></tr>
       </table>
     </section>
@@ -257,7 +254,7 @@ table.m td code { white-space: nowrap; }
           <text class="svgt s" x="484" y="54">lê o GITHUB_TOKEN em runtime — nunca no .gitconfig</text>
           <path class="svgln acc" d="M428 104 H470"/>
           <rect class="svgbox" x="470" y="78" width="382" height="52" rx="8"/>
-          <text class="svgt" x="484" y="100">comando modelo / Continue</text>
+          <text class="svgt" x="484" y="100">comando modelo</text>
           <text class="svgt s" x="484" y="118">lê FEATHERLESS/OpenRouter por referência</text>
           <path class="svgln" d="M428 168 H470"/>
           <rect class="svgbox" x="470" y="142" width="382" height="52" rx="8"/>
@@ -274,7 +271,7 @@ table.m td code { white-space: nowrap; }
 
     <section id="pmo">
       <h2><span class="n">7</span> PMO & verticais</h2>
-      <p>O painel (<code>:8080</code>, só VPN) mostra todos os projetos das organizações, com estágio, tecnologias
+      <p>O painel (<code>:8443</code>, só tailnet) mostra todos os projetos das organizações, com estágio, tecnologias
       e alerta de esquecidos. A coleta roda diária pela API do GitHub.</p>
       <ul>
         <li><b>Classificar</b> — empresa, área, cliente, tipo e estágio. Grava na hora em <code>classes.json</code>.</li>
@@ -290,8 +287,7 @@ table.m td code { white-space: nowrap; }
       <h2><span class="n">8</span> Equipe</h2>
       <table class="m">
         <tr><th>Peça</th><th>O que é</th></tr>
-        <tr><td>Runners</td><td>GitHub Actions self-hosted, efêmeros, rótulo <code>stack</code>
-          (<code>runs-on: [self-hosted, stack]</code>). Hoje em <code>bekaa-trusted-advisors</code> e <code>nessenergy</code>.</td></tr>
+        <tr><td>PMO</td><td>painel do que está em andamento, coleta diária e alarme de esquecidos (<code>34-pmo.sh</code>).</td></tr>
       </table>
     </section>
 

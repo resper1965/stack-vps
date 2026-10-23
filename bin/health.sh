@@ -11,6 +11,20 @@ if systemctl is-active --quiet tailscaled && ip4=$(tailscale ip -4 2>/dev/null |
 else bad "tailscale fora da tailnet"; fi
 if systemctl is-active --quiet cloudflared; then ok "cloudflared ativo (reserva)"
 else bad "cloudflared parado"; fi
+if grep -q 'hostname: emergencia\.' "${STACK_CF_DIR:-/etc/cloudflared}/config.yml" 2>/dev/null; then bad "web de emergência ligada (stack-emergencia off)"
+else ok "web de emergência desligada"; fi
+oc=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${HEALTH_OPENCODE_URL:-http://127.0.0.1:4096/}" 2>/dev/null)
+case $oc in 200|302|401) ok "opencode web" ;; *) bad "opencode web" ;; esac
+pmo_env=${HEALTH_PMO_ENV:-/etc/pmo/servidor.env}
+if [[ ! -f $pmo_env ]]; then printf '  pend  %s\n' "painel do PMO sem /etc/pmo/servidor.env (34-pmo.sh ainda não rodou)"
+else
+  # sem source: o arquivo e do servico, aqui so lemos a chave
+  pmo_host=$(sed -n 's/^PMO_HOSTS=//p' "$pmo_env" | head -1 | cut -d, -f1 | tr -d ' "'"'"'')
+  pc=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 --unix-socket "${HEALTH_PMO_SOCKET:-/run/pmo/pmo.sock}" -H "Host: $pmo_host" http://localhost/ 2>/dev/null)
+  if [[ $pc == 200 ]]; then ok "painel do PMO"; else bad "painel do PMO"; fi
+fi
+# unidade inexistente (espelho nao instalado) nao conta como falhada
+if systemctl is-failed --quiet pmo-linear.service; then bad "espelho do Linear (pmo-linear.service falhou)"; fi
 
 echo "docker"
 if systemctl is-active --quiet docker; then ok "docker ativo, $(timeout 10 docker ps -q 2>/dev/null | wc -l) container(s)"
@@ -34,6 +48,14 @@ else ok "sem reboot pendente"; fi
 wl=/srv/dev/state/weekly.log
 if [[ -f $wl ]] && (( ($(date +%s) - $(stat -c %Y "$wl")) / 86400 <= 8 )); then ok "rotina semanal em dia"
 else bad "rotina semanal sem rodar ha mais de 8 dias"; fi
+
+hs=${HEALTH_HOSTINGER:-/usr/local/bin/hostinger.sh}
+if [[ -x $hs ]]; then
+  echo "hostinger"
+  # API externa fora do ar nao e falha do ambiente: so pend, sem fail
+  if linha=$("$hs" metricas 2>/dev/null); then printf '%s\n' "$linha"
+  else printf '  pend  %s\n' "hostinger indisponível"; fi
+fi
 
 echo "disco"
 use=$(df --output=pcent /srv | tail -1 | tr -dc '0-9')

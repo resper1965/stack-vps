@@ -7,6 +7,7 @@
 #             hook (do 04), liga sozinho.
 #   Codex     le ~/.agents/skills; o ponytail entra pelo ~/.codex/AGENTS.md, porque os
 #             hooks de plugin no Codex so rodam depois de aprovados a mao em /hooks.
+#   OpenCode  ~/.config/opencode/AGENTS.md, mesmos blocos do Codex (le skills de ~/.claude e ~/.agents).
 #   agy       raiz global ~/.gemini/config: skills em skills/, modos em rules/ (trigger always_on);
 #             ponytail ja vem como plugin do 04.
 set -euo pipefail
@@ -61,12 +62,17 @@ import re,sys
 f,m,b=sys.argv[1:4]
 t=open(f,encoding='utf-8').read()
 ini,fim='# >>> '+m+' (29-skills.sh)','# <<< '+m
-t=re.sub(re.escape(ini)+'.*?'+re.escape(fim)+'\n?','',t,flags=re.S).rstrip('\n')
+t=re.sub(re.escape(ini)+'.*?'+re.escape(fim)+'\n?','',t,flags=re.S)
+t=re.sub(r'\n{3,}','\n\n',t).strip('\n')  # sem isso cada execucao deixa linhas em branco onde o bloco estava
 open(f,'w',encoding='utf-8').write((t+'\n\n' if t else '')+b.rstrip('\n')+'\n')
 PY
 }
 grava_bloco ~/.codex/AGENTS.md "modos padrao" "$(bloco)"
 grava_bloco ~/.codex/AGENTS.md "instrucoes do agente" "$(instrucoes)"
+# o diretorio ja existe 0700 com a senha web: so garante que existe, sem tocar no resto
+mkdir -p ~/.config/opencode
+grava_bloco ~/.config/opencode/AGENTS.md "modos padrao" "$(bloco)"
+grava_bloco ~/.config/opencode/AGENTS.md "instrucoes do agente" "$(instrucoes)"
 grava_bloco ~/.claude/CLAUDE.md "instrucoes do agente" "$(instrucoes CLAUDE.md)"
 # a conta ionic le o mesmo CLAUDE.md (o 28 so liga o que ja existia quando rodou)
 [[ -e ~/.claude-ionic/CLAUDE.md ]] || ln -s ~/.claude/CLAUDE.md ~/.claude-ionic/CLAUDE.md
@@ -78,15 +84,6 @@ grava_bloco ~/.claude/CLAUDE.md "instrucoes do agente" "$(instrucoes CLAUDE.md)"
 env -u CLAUDE_CONFIG_DIR claude mcp add --scope user --transport http linear https://mcp.linear.app/mcp >/dev/null 2>&1 || true
 CLAUDE_CONFIG_DIR=~/.claude-ionic claude mcp add --scope user --transport http linear https://mcp.linear.app/mcp >/dev/null 2>&1 || true
 
-# Continue (VS Code na VPS): modelos do catalogo docs/modelos.tsv. A chave e lida do agente.env por atalho,
-# sem copia: trocou la, vale aqui.
-mkdir -p ~/.continue
-ln -sfn /srv/dev/secrets/agente.env ~/.continue/.env
-modelo --continue > ~/.continue/config.yaml
-CS=$(find ~/.vscode-server/cli/servers -maxdepth 4 -path "*/server/bin/code-server" 2>/dev/null | head -1)
-if [[ -n $CS ]]; then "$CS" --install-extension continue.continue >/dev/null 2>&1 || echo "AVISO: Continue nao instalou"
-else echo "AVISO: abra o VS Code na VPS uma vez e rode de novo, para instalar o Continue"; fi
-
 # conferencia: nada do que foi pedido pode ter ficado de fora
 falta=()
 for s in cloudflare supabase deploy-to-vercel github-issues github-actions-hardening; do
@@ -97,7 +94,7 @@ for s in cloudflare supabase github-issues; do [[ -e ~/.claude/skills/$s/SKILL.m
 for p in ponytail@ponytail; do
   claude plugin list 2>/dev/null | grep -A3 "$p" | grep -q enabled || falta+=("plugin:$p")
 done
-for f in ~/.claude/CLAUDE.md ~/.codex/AGENTS.md; do grep -q "^# >>> instrucoes do agente" "$f" || falta+=("instrucoes:$f"); done
+for f in ~/.claude/CLAUDE.md ~/.codex/AGENTS.md ~/.config/opencode/AGENTS.md; do grep -q "^# >>> instrucoes do agente" "$f" || falta+=("instrucoes:$f"); done
 for s in cloudflare github-issues; do [[ -e ~/.gemini/config/skills/$s/SKILL.md ]] || falta+=("agy:$s"); done
 for s in ness-design pentest; do [[ -e ~/.claude/skills/$s/SKILL.md ]] || falta+=("skill-propria:$s"); done
 agy plugin list 2>/dev/null | grep -q '"name": "ponytail"' || falta+=("agy-plugin:ponytail")

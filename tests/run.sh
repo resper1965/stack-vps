@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Roda o shellcheck e todos os tests/test-*.sh. Sai com 1 se algo falhar.
+[[ $(uname -s) == Linux ]] || { echo "rode na VPS ou no WSL"; exit 2; }
 cd "$(dirname "$0")/.." || exit 1
 shopt -s nullglob   # scripts/lib/ so passa a existir na Task 8
 rc=0

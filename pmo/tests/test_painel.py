@@ -1,6 +1,7 @@
 import json, os, tempfile, unittest
 from datetime import datetime, timezone
-from pmo.painel import gerar, a_destinar, fundir, ler_sessoes
+from datetime import timedelta
+from pmo.painel import gerar, a_destinar, fundir, ler_sessoes, ler_saude, montar
 
 AGORA = datetime(2026, 10, 6, 6, tzinfo=timezone.utc)
 
@@ -167,6 +168,79 @@ class LerSessoes(unittest.TestCase):
         self.assertIsNone(ler_sessoes(caminho))
         open(caminho, "w").write('{"sessoes": []}')
         self.assertEqual(ler_sessoes(caminho), {"sessoes": []})
+
+
+class Saude(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.f = os.path.join(self.tmp.name, "health.txt")
+
+    def escreve(self, texto, idade_min=0):
+        with open(self.f, "w") as fh:
+            fh.write(texto)
+        t = (AGORA - timedelta(minutes=idade_min)).timestamp()
+        os.utime(self.f, (t, t))
+
+    def test_ler_saude_agrupa_por_secao(self):
+        self.escreve("acesso\n  ok    tailscale na tailnet\n  FALHA cloudflared parado\nbackup\n  pend  backup restic desligado\nlixo solto\n  ??? x\n", 5)
+        s = ler_saude(self.f, AGORA)
+        self.assertEqual(s["itens"], [
+            {"secao": "acesso", "estado": "ok", "texto": "tailscale na tailnet"},
+            {"secao": "acesso", "estado": "falha", "texto": "cloudflared parado"},
+            {"secao": "backup", "estado": "pend", "texto": "backup restic desligado"}])
+        self.assertFalse(s["velho"])
+        self.assertTrue(s["gerado_em"].startswith("2026-10-06T05:55:00"))
+
+    def test_ler_saude_ausente(self):
+        self.assertEqual(ler_saude(self.f, AGORA), {"gerado_em": None, "velho": True, "itens": []})
+
+    def test_ler_saude_vazio(self):
+        self.escreve("")
+        self.assertEqual(ler_saude(self.f, AGORA), {"gerado_em": None, "velho": True, "itens": []})
+
+    def test_ler_saude_velho(self):
+        for idade, velho in ((1, False), (89, False), (91, True)):
+            self.escreve("acesso\n  ok    x\n", idade)
+            s = ler_saude(self.f, AGORA)
+            self.assertEqual(s["velho"], velho, idade)
+            self.assertEqual(len(s["itens"]), 1)
+
+    def test_ler_saude_recusa_symlink_pasta_fifo_e_arquivo_grande(self):
+        vazio = {"gerado_em": None, "velho": True, "itens": []}
+        self.escreve("acesso\n  ok    x\n", 1)
+        link = os.path.join(self.tmp.name, "link.txt")
+        os.symlink(self.f, link)
+        self.assertEqual(ler_saude(link, AGORA), vazio, "symlink nao e seguido")
+        self.assertEqual(ler_saude(self.tmp.name, AGORA), vazio, "pasta")
+        fifo = os.path.join(self.tmp.name, "fifo")
+        os.mkfifo(fifo)
+        self.assertEqual(ler_saude(fifo, AGORA), vazio, "fifo nao prende o painel")
+        self.escreve("acesso\n  ok    x\n" + "  ok    y\n" * 10000, 1)
+        self.assertGreater(os.path.getsize(self.f), 64 * 1024)
+        self.assertEqual(ler_saude(self.f, AGORA), vazio, "arquivo acima de 64 KiB")
+
+
+class Montar(unittest.TestCase):
+    def base(self):
+        return gerar([reg("o/x"), reg("o/y")], [], None, AGORA)
+
+    def test_montar_aplica_ajuste_e_classe(self):
+        ajustes = {"o/x": {"de": "projetos", "para": "arquivados", "em": "2026-10-06T07:00:00+00:00"}}
+        classes = {"o/y": {"estagio": "congelado", "empresa": "ness", "area": "dev"}}
+        p = montar(self.base(), ajustes, classes)
+        self.assertEqual([x["id"] for x in p["projetos"]], ["o/y"])
+        self.assertEqual([x["id"] for x in p["arquivados"]], ["o/x"])
+        self.assertTrue(p["arquivados"][0]["arquivado"])
+        y = p["projetos"][0]
+        self.assertEqual(y["classe"]["estagio"], "congelado")
+        self.assertEqual(y["estagio"], "congelado")
+        self.assertFalse(y["esquecido"])
+        self.assertEqual(p["contadores"]["projetos"], 1)
+
+    def test_montar_vazio_nao_muda_projetos(self):
+        p = montar(self.base(), {}, {})
+        self.assertEqual([x["id"] for x in p["projetos"]], ["o/x", "o/y"])
+        self.assertEqual(p["arquivados"], [])
 
 
 if __name__ == "__main__":

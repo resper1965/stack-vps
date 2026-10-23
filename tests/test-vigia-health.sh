@@ -3,7 +3,7 @@
 . "$(dirname "$0")/lib.sh"
 S=$RAIZ_REPO/scripts/vigia-health.sh
 echo "vigia-health"
-prepara() { export VIGIA_ESTADO=$T/estado VIGIA_ALERTAR=$STUBS/alertar VIGIA_HEALTH=$STUBS/health VIGIA_TIMEOUT=3; stub alertar; }
+prepara() { export VIGIA_ESTADO=$T/estado VIGIA_ALERTAR=$STUBS/alertar VIGIA_HEALTH=$STUBS/health VIGIA_TIMEOUT=3 VIGIA_SAIDA=$T/saida/health.txt; stub alertar; }
 health() { # health <rc> <linhas...>
   local rc=$1; shift
   { echo '#!/usr/bin/env bash'; for l in "$@"; do printf 'echo %q\n' "$l"; done; echo "exit $rc"; } > "$STUBS/health"
@@ -26,4 +26,12 @@ bash "$S" >/dev/null 2>&1; afirma_log "alertar stack: FALHA" "entrega falhou: te
 
 novo_tmp; prepara; printf '#!/usr/bin/env bash\nsleep 30\n' > "$STUBS/health"; chmod +x "$STUBS/health"
 bash "$S" >/dev/null 2>&1; afirma_log "health travou" "health travado: vira falha (I-D)"
+
+novo_tmp; prepara; health 1 "acesso" "  FALHA disco"
+bash "$S" >/dev/null 2>&1
+if [[ -f $VIGIA_SAIDA ]] && grep -q "FALHA disco" "$VIGIA_SAIDA" && [[ $(stat -c %a "$VIGIA_SAIDA") == 644 ]]   && (( $(find "$(dirname "$VIGIA_SAIDA")" -type f | wc -l) == 1 )); then ok "grava health.txt (0644, atomico, sem sobra)"
+else falha "grava health.txt (0644, atomico, sem sobra)"; fi
+novo_tmp; prepara; : > "$T/x"; export VIGIA_SAIDA=$T/x/health.txt; health 1 "  FALHA nova"
+bash "$S" >/dev/null 2>&1
+afirma_log "alertar stack: FALHA" "saida ilegivel: so avisa, alerta segue"
 fim

@@ -141,6 +141,27 @@ class EstagioPeloPainel(unittest.TestCase):
         self.assertEqual((p["contadores"]["esquecidos"], p["contadores"]["parados"]), (1, 1))
 
 
+class Congelado(unittest.TestCase):
+    def test_congelado_nao_e_esquecido(self):
+        self.assertIsNone(esquecido("congelado", 400, None, False))
+
+    def test_aplicar_classes_congelado(self):
+        from pmo.regras import aplicar_classes
+        p = {"projetos": [{"id": "o/a", "estagio": None, "estagio_sugerido": "em andamento", "esquecido": "sem atividade há 200 dias"}],
+             "arquivados": [], "a_destinar": [], "contadores": {}}
+        aplicar_classes(p, {"o/a": {"estagio": "congelado"}})
+        self.assertEqual((p["projetos"][0]["estagio"], p["projetos"][0]["esquecido"]), ("congelado", None))
+        self.assertEqual(p["contadores"]["esquecidos"], 0)
+
+    def test_contar_congelados(self):
+        from pmo.regras import contar
+        r = contar([{"estagio": "congelado", "esquecido": None}, {"estagio": "em andamento", "esquecido": "x"}], 0)
+        self.assertEqual((r["congelados"], r["esquecidos"], r["projetos"], r["em_andamento"]), (1, 1, 2, 1))
+
+    def test_state_md_congelado_ignorado(self):
+        self.assertIsNone(ler_state("**Estágio:** congelado\n")["estagio"])
+
+
 class Tipos(unittest.TestCase):
     def test_state_aceita_tipos_novos(self):
         for t in ("site", "dados", "infra"):

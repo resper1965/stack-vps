@@ -28,33 +28,27 @@ Testes: `bash tests/run.sh` (precisa de `shellcheck`).
 
 | # | Script | O que faz |
 |---|---|---|
-| 22 | `22-openrig.sh` | [OpenRig](https://github.com/mvschwarz/openrig) e o comando `rig-dupla` (principal + revisor do `STATE.md`) — ver [`docs/openrig.md`](docs/openrig.md) |
-| 23 | `23-papeis.sh [--push]` | preenche principal/revisor nos `STATE.md` (Claude Code principal, Codex revisor); commita em `chore/…` |
 | 24 | `24-modelos.sh` | `codex -p openrouter [-m fornecedor/modelo]` pelo OpenRouter; `codex` sem `-p` segue no ChatGPT Pro |
 | 25 | `25-testes.sh` | valida o Postgres descartável (`/srv/dev/bin/postgres.yml`, em memória, só `127.0.0.1`) |
 | 26 | (aposentado) | atalhos `/srv/dev/verticais/<empresa>/<área>/<projeto>` agora saem da classificação feita no painel do PMO (executor → `pmo-pasta verticais`) |
 | 27 | `27-secrets.sh` | carrega `secrets/projetos.env` (um arquivo para todos os projetos) no shell do agente |
 | 28 | `28-contas-claude.sh` | duas contas Claude: bekaa (`~/.claude`, padrão) e ionic (`~/.claude-ionic`, vertical ionic); `claude-bekaa`/`claude-ionic` forçam |
 | 29 | `29-skills.sh` | skills de Cloudflare, Supabase, Vercel e GitHub nos três agentes; ponytail em `full` por padrão |
+| 36 | `36-opencode.sh` | unidade `opencode-web` (OpenCode só em `127.0.0.1:4096`); exige `~/.config/opencode/web.env` 0600 com `OPENCODE_SERVER_PASSWORD`, criado por você — não instala o OpenCode |
 
 Notas:
 
-- OpenRig: estado em `/srv/dev/state/openrig`, kernel desligado, hooks do Codex desligados; requer Node 22 ou 24
-  (por isso o `03` fixa `node@24`). Só conhece Claude Code e Codex: o `agy` fica fora do `rig-dupla`.
 - Featherless não entra no Codex: ele só fala a Responses API, que ela não tem.
 - A extensão do Claude no VS Code usa sempre a conta padrão (bekaa); para ionic, `claude` no terminal.
 - `agy`: login headless copiando `~/.gemini/antigravity-cli/antigravity-oauth-token` de uma máquina já logada.
 
-## Equipe: runners e PMO (como root, depois da base)
+## PMO (como root, depois da base)
 
 | # | Script | O que faz |
 |---|---|---|
-| 30 | `30-sysbox.sh` | runtime sysbox: Docker dentro do container sem modo privilegiado |
-| 31 | `31-rede-containers.sh --instalar` | containers sem acesso à tailnet e ao metadata; DNS público para os containers |
-| 33 | `33-runners.sh <org> …` | runners efêmeros do GitHub Actions por organização (`runs-on: [self-hosted, stack]`) |
-| 34 | `34-pmo.sh` | painel do PMO em `http://100.76.167.6:8080` (só VPN): coleta diária, alarme de esquecidos, descartar/restaurar |
+| 34 | `34-pmo.sh` | painel do PMO em `https://stack.<tailnet>.ts.net:8443` (só tailnet; precisa do 37; nos computadores com o cliente Tailscale (MagicDNS ligado por padrão) abre pelo nome, ver `docs/ssh-config.md`): coleta diária, alarme de esquecidos, descartar/restaurar |
+| 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36; exige "HTTPS Certificates" habilitado no admin da tailnet |
 
-- Runners: `RUNNER_TOKEN` (admin:org) no `admin.env`; só em organizações sem repositório público usando o rótulo.
 
 ## Outros
 

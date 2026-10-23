@@ -4,6 +4,9 @@ Dois caminhos para a mesma VPS: `stack` pela tailnet (principal) e `stack-cf` pe
 Tunnel (reserva). Se os dois caírem, o console do hPanel é a emergência. Nenhuma porta da VPS
 responde no IP público.
 
+Na tailnet, o OpenCode e o PMO abrem direto no navegador (`tailscale serve`, script 37):
+`https://stack.<tailnet>.ts.net` para o OpenCode e `https://stack.<tailnet>.ts.net:8443` para o PMO.
+
 O caminho principal é o **Windows**, não o WSL: em 05/10/2026 o WSL travou e deixou de responder,
 e o acesso não deve depender dele.
 
@@ -45,16 +48,30 @@ Host stack-cf
     IdentitiesOnly yes
     StrictHostKeyChecking accept-new
     ProxyCommand "C:\Program Files (x86)\cloudflared\cloudflared.exe" access ssh --hostname %h
+    LocalForward 4096 127.0.0.1:4096
+    LocalForward 8080 /run/pmo/pmo.sock
     ServerAliveInterval 30
     ServerAliveCountMax 3
 ```
 
-O `HostName` de `stack` é o IP da VPS na tailnet, não o nome: o Windows deste laptop não usa o DNS
-do Tailscale (MagicDNS), então `stack` não resolve. O IP é fixo no painel do Tailscale (Edit machine
-IPv4) e é reaplicado no nó novo quando a VPS é reinstalada.
+O `HostName` de `stack` é o IP da VPS na tailnet, não o nome: o nome curto `stack` não resolve no WSL
+(que não usa o DNS do Tailscale), e o IP funciona em qualquer lugar. O IP é fixo no painel do Tailscale
+(Edit machine IPv4) e é reaplicado no nó novo quando a VPS é reinstalada.
+
+**As URLs `https://stack.<tailnet>.ts.net` (OpenCode) e `:8443` (PMO)** resolvem por MagicDNS. No notebook
+Windows do dono isso já funciona (cliente Tailscale com `CorpDNS` ligado): não precisa de ação. Só onde o
+resolvedor do Tailscale não é visto (WSL2 em modo NAT, por exemplo) use uma linha de `hosts`:
+`100.76.167.6 stack.<tailnet>.ts.net` em `/etc/hosts` (no Windows, `C:\Windows\System32\drivers\etc\hosts`,
+como administrador). Pré-requisito do deploy, uma vez: habilitar
+**HTTPS Certificates** no admin da tailnet (aba DNS); sem isso o `37-tailscale-serve.sh` falha.
 
 No WSL, os mesmos blocos servem no `~/.ssh/config` dele, trocando o `ProxyCommand` por
 `cloudflared access ssh --hostname %h` (com o `cloudflared` instalado pelo apt).
+
+Sem a tailnet não há `tailscale serve`, então o `stack-cf` leva o OpenCode em `http://localhost:4096` e o PMO
+em `http://localhost:8080` por `LocalForward`. O PMO fica só leitura por aqui por desenho: o POST exige `X-Forwarded-For` e um login da tailnet que o caminho SSH
+não fornece (quem abre o socket, o dono ou o grupo `pmo`, tecnicamente poderia enviar qualquer cabeçalho). `LocalForward` para socket Unix exige OpenSSH 6.7 ou mais novo no cliente;
+no cliente OpenSSH do Windows, confirmar.
 
 ## Login do Access (só para `stack-cf`)
 

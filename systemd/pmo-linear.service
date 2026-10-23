@@ -1,0 +1,8 @@
+[Unit]
+Description=Espelho do estagio dos projetos no Linear
+[Service]
+Type=oneshot
+User=pmo
+TimeoutStartSec=10min
+Environment=PYTHONPATH=/opt
+ExecStart=/usr/bin/python3 -m pmo.linear

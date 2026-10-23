@@ -2,22 +2,31 @@
 
 Nao executa nada: so valida e grava arquivos de pedido. Quem executa e o pmo.executor.
 Classificar (empresa, area, cliente, tipo) grava na hora em classes.json, sem fila.
-Roda como pmo. Recusa acao pedida de dentro da propria VPS. Aceita so o Host da tailnet (contra DNS
-rebinding) e, no POST, exige JSON com o cabecalho X-PMO e Origin ausente ou propria (contra CSRF: forca preflight, que nao e respondido).
-Uso: python3 -m pmo.servidor [--host 100.76.167.6] [--porta 8080]
+Roda como pmo. Aceita so o Host da lista (contra DNS rebinding) e, no POST, exige JSON com o cabecalho X-PMO e
+Origin ausente ou propria (contra CSRF: forca preflight, que nao e respondido).
+Modo socket (producao): escuta em socket Unix e o tailscale serve faz proxy; o POST exige o cabecalho
+Tailscale-User-Login com login da lista. O socket NAO autentica: quem o abre forja o cabecalho, entao a
+fronteira e o diretorio/grupo pmo (o agente fica fora). O POST tambem exige X-Forwarded-For (anexado pelo
+serve) com origem que nao seja um IP do proprio no: o agente na VPS chama a URL da tailnet e o serve injeta o
+login do dono. Modo TCP (legado/testes): recusa pedido do IP local.
+Uso: python3 -m pmo.servidor --socket /run/pmo/pmo.sock --hosts h1,h2 --logins a@b.c --ips-proprios 100.x.y.z
+     python3 -m pmo.servidor [--host 100.76.167.6] [--porta 8080]
 """
 import argparse
 import hashlib
 import json
 import os
+import socketserver
+import stat
 import threading
 import time
+from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import unquote, urlsplit
 
-from pmo.executor import aplicar_ajustes
+from pmo.painel import ler_saude, montar
 from pmo.pasta import NOME
-from pmo.regras import EMPRESAS, ESTAGIOS, TIPOS, aplicar_classes
+from pmo.regras import EMPRESAS, ESTAGIOS, TIPOS
 
 ACOES = {"arquivar", "excluir", "restaurar", "trazer", "descartar", "clonar"}
 
@@ -42,14 +51,28 @@ def _classe_valida(c):
     return {k: (c.get(k) or "").strip() for k in campos}
 
 
-def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes="/var/lib/pmo/classes.json"):
+class _UnixHTTP(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+    daemon_threads = True
+
+
+def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes="/var/lib/pmo/classes.json",
+          *, socket=None, hosts=(), logins=(), ips_proprios=(), saude=None, atalhos=None, timeout=10):
+    if socket and not (hosts and logins and ips_proprios):
+        raise ValueError("modo socket exige hosts, logins e ips_proprios nao vazios (fail closed)")
     os.makedirs(fila, mode=0o700, exist_ok=True)
     trava = threading.Lock()
+    _timeout = timeout
 
     def ler_painel():
         with open(painel, encoding="utf-8") as f:
             d = json.load(f)
-        return aplicar_classes(aplicar_ajustes(d, _ler_json(ajustes, {})), _ler_json(classes, {}))
+        d = montar(d, _ler_json(ajustes, {}), _ler_json(classes, {}))
+        if saude:  # lido a cada GET: tempo real, sem esperar a coleta diaria
+            d["saude"] = ler_saude(saude, datetime.now(timezone.utc))
+        if atalhos is not None:
+            # vira href no front: so https
+            d["atalhos"] = {k: v if isinstance(v, str) and v.startswith("https://") else None for k, v in atalhos.items()}
+        return d
 
     def classificar(alvo, classe):
         with trava:
@@ -61,6 +84,9 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             os.replace(tmp, classes)
 
     class Handler(SimpleHTTPRequestHandler):
+        # leitura parada nao prende a thread: o corpo e lido antes da autenticacao
+        timeout = _timeout
+
         def __init__(self, *a, **k):
             super().__init__(*a, directory=web, **k)
 
@@ -74,11 +100,25 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             p = unquote(urlsplit(self.path).path)
             return ".." not in p.split("/")
 
-        def _proprio(self):
-            return "%s:%d" % self.server.server_address[:2]
+        def _host(self):
+            # Modo socket: o tailscale serve com alvo unix SEMPRE envia Host: localhost (host da URL do alvo) e
+            # sobrescreve X-Forwarded-Host com o Host original do cliente. Logo, pedido cujo Host nao seja exatamente
+            # "localhost" nao veio do proxy e seu X-Forwarded-Host e ignorado como confianca: vira None (403), sem cair
+            # no Host (um navegador sob DNS rebinding no fallback SSH pode enviar X-Forwarded-Host sem preflight).
+            # Sem X-Forwarded-Host, vale o Host (fallback SSH, so leitura: o POST ainda exige X-Forwarded-For e login
+            # Tailscale). Premissa residual: quem abre o socket (grupo pmo) forja qualquer cabecalho; a fronteira e o
+            # diretorio/grupo.
+            host = self.headers.get("Host")
+            if socket:
+                xfh = self.headers.get("X-Forwarded-Host")
+                if xfh:
+                    return xfh if host == "localhost" else None
+            return host
 
         def _host_ok(self):
-            return self.headers.get("Host") == self._proprio()
+            if hosts:
+                return self._host() in hosts
+            return self.headers.get("Host") == "%s:%d" % self.server.server_address[:2]
 
         def do_GET(self):
             if not self._host_ok():
@@ -98,20 +138,36 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             return super().do_GET()
 
         def do_POST(self):
+            try:  # le o corpo antes de qualquer resposta (recusar sem ler faz o cliente tomar RST); limitado e com timeout
+                n = max(0, min(int(self.headers.get("Content-Length") or 0), 4096))
+                bruto = self.rfile.read(n)
+            except ValueError:
+                bruto = b""
+            except OSError:  # timeout ou conexao quebrada: so fecha, sem traceback
+                self.close_connection = True
+                return
             origem = self.headers.get("Origin")
-            cliente = self.client_address[0]
-            if bloquear_local and (cliente == self.server.server_address[0] or cliente.startswith("127.")):
-                # pedido de dentro da VPS (agente, container) nunca vira acao; so o laptop pela tailnet
-                return self._resposta(403, "recusado: pedido de dentro da VPS")
+            if not socket and bloquear_local:
+                cliente = self.client_address[0]
+                if cliente == self.server.server_address[0] or cliente.startswith("127."):
+                    # pedido de dentro da VPS (agente, container) nunca vira acao; so o laptop pela tailnet
+                    return self._resposta(403, "recusado: pedido de dentro da VPS")
+            if socket:
+                # o tailscale serve anexa o IP de origem ao fim do X-Forwarded-For (os anteriores o cliente forja);
+                # origem = o proprio no (agente na VPS chamando a URL da tailnet) ou desconhecida nunca vira acao
+                xff = (self.headers.get("X-Forwarded-For") or "").split(",")[-1].strip().strip("[]")
+                if not xff or xff in ips_proprios:
+                    return self._resposta(403, "recusado: origem")
+            host = self._host()
             if (not self._host_ok() or self.headers.get("X-PMO") != "1"
                     or (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json"
-                    or origem not in (None, "http://" + self._proprio())):
+                    or origem not in (None, "http://" + host, "https://" + host)
+                    or (logins and self.headers.get("Tailscale-User-Login") not in logins)):
                 return self._resposta(403, "recusado")
             if urlsplit(self.path).path != "/acao":
                 return self.send_error(404)
             try:
-                tam = min(int(self.headers.get("Content-Length") or 0), 4096)
-                ped = json.loads(self.rfile.read(tam) or b"null")
+                ped = json.loads(bruto or b"null")
                 acao, alvo = ped["acao"], ped["alvo"]
                 conf = ped.get("confirmacao")
                 assert (acao in ACOES or acao == "classificar") and isinstance(alvo, str) and alvo.isprintable() and len(alvo) < 300
@@ -141,7 +197,15 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
             self.end_headers()
             self.wfile.write(texto.encode())
 
-    return ThreadingHTTPServer((host, porta), Handler)
+    if not socket:
+        return ThreadingHTTPServer((host, porta), Handler)
+    if os.path.lexists(socket):
+        if not stat.S_ISSOCK(os.lstat(socket).st_mode):
+            raise ValueError(f"{socket} existe e nao e um socket; nao vou apagar")
+        os.unlink(socket)
+    srv = _UnixHTTP(socket, Handler)
+    os.chmod(socket, 0o660)
+    return srv
 
 
 def main():
@@ -153,8 +217,23 @@ def main():
     a.add_argument("--fila", default="/var/lib/pmo/fila")
     a.add_argument("--ajustes", default="/var/lib/pmo/ajustes.json")
     a.add_argument("--classes", default="/var/lib/pmo/classes.json")
+    a.add_argument("--saude", default="/var/lib/stack-vps/health.txt")
+    a.add_argument("--socket")
+    a.add_argument("--hosts", default="")
+    a.add_argument("--logins", default="")
+    a.add_argument("--ips-proprios", default="")
     o = a.parse_args()
-    criar(o.host, o.porta, o.web, o.painel, o.fila, o.ajustes, classes=o.classes).serve_forever()
+    lista = lambda t: tuple(x.strip() for x in t.split(",") if x.strip())  # noqa: E731
+    hosts, logins, ips_proprios = lista(o.hosts), lista(o.logins), lista(o.ips_proprios)
+    if o.socket and not logins:
+        a.error("--socket exige --logins nao vazio (sem lista, nenhuma acao seria autenticada)")
+    if o.socket and not hosts:
+        a.error("--socket exige --hosts nao vazio (sem lista, todo pedido seria recusado)")
+    if o.socket and not ips_proprios:
+        a.error("--socket exige --ips-proprios nao vazio (sem os IPs do no, o agente agiria pela propria tailnet)")
+    criar(o.host, o.porta, o.web, o.painel, o.fila, o.ajustes, classes=o.classes,
+          socket=o.socket, hosts=hosts, logins=logins, ips_proprios=ips_proprios, saude=o.saude,
+          atalhos={"opencode": os.environ.get("PMO_ATALHO_OPENCODE")}).serve_forever()
 
 
 if __name__ == "__main__":

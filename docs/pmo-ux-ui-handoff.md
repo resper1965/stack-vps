@@ -1,5 +1,7 @@
 # Development Hub / PMO — UX/UI handoff (2026-10-16)
 
+> **Substituído** por docs/superpowers/specs/2026-10-18-lugar-de-trabalho-design.md (PMO em uma página; as 8 telas não serão implementadas). Mantido como registro.
+
 > Origem: decisões de interface aceitas em conversa com o usuário. **Especificação de produto e navegação, não implementação final ou imagens/mockups anexados.** Consulte também `docs/development-hub-continuity.md`. Não inventar telas já aprovadas nem substituir o PMO.
 
 ## Princípio
