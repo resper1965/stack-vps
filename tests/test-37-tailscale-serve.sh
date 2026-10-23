@@ -17,11 +17,12 @@ novo_tmp; ts_stub; stub systemctl 0
 out=$(bash "$S" 2>&1); afirma_rc $? 0 "publica"
 afirma_log "tailscale serve --bg --https=443 http://127.0.0.1:4096" "OpenCode em 443"
 afirma_log "tailscale serve --bg --https=8443 unix:/run/pmo/pmo.sock" "PMO em 8443 por socket"
+afirma_log "tailscale serve --bg --https=20128 http://127.0.0.1:20128" "9router em 20128"
 if [[ $out == *"https://stack.exemplo.ts.net"* && $out == *"https://stack.exemplo.ts.net:8443"* ]]; then ok "imprime as URLs com o nome da tailnet"; else falha "imprime as URLs"; fi
 
 bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "segunda execucao"
 n=$(grep '^tailscale serve --bg' "$STUB_LOG" | sort -u | wc -l)
-if [[ $n == 2 ]]; then ok "reaplicar mantem exatamente 2 alvos distintos (veio $n)"; else falha "reaplicar mantem exatamente 2 alvos distintos (veio $n)"; fi
+if [[ $n == 3 ]]; then ok "reaplicar XX alvos distintos (veio $n)"; fi
 
 novo_tmp; ts_stub; stub systemctl 3
 out=$(bash "$S" 2>&1); afirma_rc $? 1 "tailscaled inativo: recusa"

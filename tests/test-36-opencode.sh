@@ -48,4 +48,21 @@ chmod +x "$STUBS/systemctl"
 XDG_RUNTIME_DIR='' roda; afirma_rc $RC 0 "XDG_RUNTIME_DIR vazio: o script o preenche"
 uid=$(id -u); afirma_log "[XDG_RUNTIME_DIR=/run/user/$uid]" "systemctl --user recebeu /run/user/<uid>"
 roda_com() { XDG_RUNTIME_DIR=$1 roda; }; roda_com /outro; afirma_log "[XDG_RUNTIME_DIR=/outro]" "valor ja definido e respeitado"
+
+# provedor 9router no opencode.json: merge com jq, preserva as chaves do dono, nunca define model/small_model
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+CFG=$HOME/.config/opencode/opencode.json
+printf '{"theme":"dark","model":"x/y","provider":{"outro":{"npm":"z"},"9router":{"models":{"m1":{}}}}}
+' > "$CFG"
+roda; afirma_rc $RC 0 "merge em opencode.json existente"
+jq -e '.theme=="dark" and .model=="x/y" and .provider.outro.npm=="z"' "$CFG" >/dev/null; afirma $? "preserva as demais chaves do dono"
+jq -e '.provider["9router"].npm=="@ai-sdk/openai-compatible" and .provider["9router"].options.baseURL=="http://127.0.0.1:20128/v1" and .provider["9router"].options.apiKey=="{env:NINE_ROUTER_API_KEY}" and .provider["9router"].models.m1' "$CFG" >/dev/null; afirma $? "provedor 9router por referencia, modelos do dono mantidos"
+SUM=$(cat "$CFG"); roda; if [[ $SUM == "$(cat "$CFG")" ]]; then ok "merge idempotente"; else falha "merge idempotente"; fi
+rm "$CFG"; roda; afirma_rc $RC 0 "sem opencode.json: cria"
+jq -e 'has("model")==false and has("small_model")==false and (.provider|keys)==["9router"]' "$CFG" >/dev/null; afirma $? "criado sem model/small_model"
+echo '{quebrado' > "$CFG"; roda; afirma_rc $RC 1 "opencode.json invalido: recusa"
+if [[ $(cat "$CFG") == '{quebrado' ]]; then ok "opencode.json invalido intocado"; else falha "opencode.json invalido intocado"; fi
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+JQ_BIN=jq-que-nao-existe roda; afirma_rc $RC 1 "sem jq: falha"
+grep -q 'jq' "$T/saida"; afirma $? "sem jq: mensagem clara"; nada "sem jq"
 fim

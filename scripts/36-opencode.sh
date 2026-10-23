@@ -11,15 +11,25 @@ BIN=${OPENCODE_BIN:-$HOME/.opencode/bin/opencode}
 ENV_SENHA=$HOME/.config/opencode/web.env
 MSG_ENV='~'/.config/opencode/web.env  # so para mensagens
 UNIDADES=${OPENCODE_UNIT_DIR:-$HOME/.config/systemd/user}
+CONFIG=$HOME/.config/opencode/opencode.json
+JQ=jq
+[[ ${STACK_TESTE:-} == 1 ]] && JQ=${JQ_BIN:-jq}
 
 [[ -x $BIN ]] || { echo "OpenCode nao encontrado em $BIN (instale antes)"; exit 1; }
 [[ -f $ENV_SENHA ]] || { echo "crie $MSG_ENV"; exit 1; }
 [[ $(stat -c %a "$ENV_SENHA") == 600 ]] || { echo "$MSG_ENV deve ter modo 0600"; exit 1; }
 grep -Eq '^OPENCODE_SERVER_PASSWORD=.+' "$ENV_SENHA" || { echo "$MSG_ENV sem OPENCODE_SERVER_PASSWORD= preenchido"; exit 1; }
+command -v "$JQ" >/dev/null || { echo "jq nao encontrado (apt install jq)"; exit 1; }
+[[ -f $REPO/opencode/provider-9router.json ]] || { echo "falta $REPO/opencode/provider-9router.json"; exit 1; }
 
 install -d "$UNIDADES/opencode-web.service.d"
 install -m 644 "$REPO/opencode/opencode-web.service" "$UNIDADES/opencode-web.service"
 install -m 644 "$REPO/opencode/password.conf" "$UNIDADES/opencode-web.service.d/password.conf"
+# provedor 9router: o bloco do repo vence, o resto do opencode.json (e os modelos do dono) fica; model/small_model nunca
+[[ -f $CONFIG ]] || echo '{}' > "$CONFIG"
+novo=$(mktemp "$CONFIG.XXXXXX")
+"$JQ" --slurpfile p "$REPO/opencode/provider-9router.json"   '.provider["9router"] = ((.provider["9router"] // {}) * $p[0].provider["9router"])' "$CONFIG" > "$novo"   || { rm -f "$novo"; echo "opencode.json invalido, nada alterado"; exit 1; }
+chmod --reference="$CONFIG" "$novo"; mv "$novo" "$CONFIG"
 systemctl --user daemon-reload
 systemctl --user enable --now opencode-web.service
 systemctl --user try-restart opencode-web.service  # unidade ou senha trocadas valem ja, nao so no proximo boot

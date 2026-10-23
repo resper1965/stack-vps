@@ -5,7 +5,7 @@ H=$RAIZ_REPO/bin/health.sh
 echo "health (acesso: emergencia, opencode, pmo)"
 # Outras secoes dependem da maquina (disco, memoria, backup): assertamos nas linhas, nao no rc global.
 prepara() {
-  export STACK_CF_DIR=$T/cf HEALTH_PMO_ENV=$T/servidor.env HEALTH_OPENCODE_URL=http://127.0.0.1:4096/ HEALTH_PMO_SOCKET=$T/pmo.sock
+  export STACK_CF_DIR=$T/cf HEALTH_PMO_ENV=$T/servidor.env HEALTH_OPENCODE_URL=http://127.0.0.1:4096/ HEALTH_PMO_SOCKET=$T/pmo.sock HEALTH_9ROUTER_UNIT=$T/nao-existe.service HEALTH_9ROUTER_URL=http://127.0.0.1:20128/
   mkdir -p "$STACK_CF_DIR"; printf 'ingress:\n  - service: http_status:404\n' > "$STACK_CF_DIR/config.yml"
   printf 'PMO_HOSTS=pmo.esper.ws,outro.esper.ws\n' > "$HEALTH_PMO_ENV"
   systemctl_com 1; stub tailscale 0 100.1.2.3; stub ip; stub docker; stub df 0 "Use%"
@@ -55,6 +55,25 @@ curl_com 200 502; roda; tem "FALHA painel do PMO"; afirma "$?" "pmo 502: FALHA"
 novo_tmp; prepara; rm "$HEALTH_PMO_ENV"; curl_com 200 fail; roda
 tem "pend  painel do PMO sem /etc/pmo/servidor.env"; afirma "$?" "sem servidor.env: pend"
 ! tem "FALHA painel do PMO"; afirma "$?" "sem servidor.env: nao e falha"
+
+# 9router: sem unidade, sem secao; com unidade, ativa + HTTP ok = ok, senao FALHA
+novo_tmp; prepara; roda
+! tem "9router"; afirma "$?" "9router sem unidade: sem secao"
+touch "$T/9router.service"; export HEALTH_9ROUTER_UNIT=$T/9router.service
+roda; tem "ok    9router"; afirma "$?" "9router ativo e HTTP 200: ok"
+curl_com 401 200; roda; tem "ok    9router"; afirma "$?" "9router 401: ok"
+curl_com 500 200; roda; tem "FALHA 9router"; afirma "$?" "9router HTTP 500: FALHA"
+afirma_rc "$rc" 1 "9router HTTP 500: rc 1"
+curl_com fail 200; roda; tem "FALHA 9router"; afirma "$?" "9router curl falha: FALHA"
+curl_com 200 200
+printf '#!/usr/bin/env bash
+echo "systemctl $*" >> "$STUB_LOG"
+[[ $* == *9router* && $* == *is-active* ]] && exit 3
+[[ $1 == is-failed ]] && exit 1
+exit 0
+' > "$STUBS/systemctl"
+roda; tem "FALHA 9router"; afirma "$?" "9router unidade inativa: FALHA"
+afirma_rc "$rc" 1 "9router unidade inativa: rc 1"
 
 # espelho do Linear: is-failed rc 0 = unidade falhou; rc 1 (falhou nao, ou unidade inexistente) = silencio
 novo_tmp; prepara; systemctl_com 0; roda
