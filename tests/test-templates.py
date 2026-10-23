@@ -42,7 +42,7 @@ class TemplatesTests(unittest.TestCase):
         self.assertFalse([a for a in arqs if a.startswith(".github") or "_destinos" in a], arqs)
         for a in arqs:
             t = (out / a).read_text(encoding="utf-8")
-            self.assertNotIn("{{", t, a)
+            self.assertTrue("{{" not in t or a == "promptfoo/promptfooconfig.yaml", a)
             self.assertIsNone(SEGREDO.search(t), a)
         self.assertEqual(ler_state((out / "STATE.md").read_text(encoding="utf-8"))["tipo"], TIPO[natureza])
         if (out / "package.json").exists():
@@ -56,16 +56,74 @@ class TemplatesTests(unittest.TestCase):
                 self.assertEqual(arqs & TODOS, deploy)
                 self.assertTrue(any(a.startswith("src/") and a.endswith(".test.ts") for a in arqs))
 
+    def test_package_e_dockerfile(self):
+        out, _ = self.confere("sistema", "gcp")
+        pj = json.loads((out / "package.json").read_text())
+        self.assertEqual(pj["type"], "module")
+        self.assertIn("test", pj["scripts"])
+        self.assertLessEqual({"hono", "vitest", "@types/node"}, set(pj["dependencies"]) | set(pj["devDependencies"]))
+        df = (out / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("USER node", df)
+        self.assertNotIn("npm ci", df)
+
+    def test_multi_destino(self):
+        d = tempfile.TemporaryDirectory()
+        self.addCleanup(d.cleanup)
+        out = Path(d.name) / "multi"
+        cmd = [sys.executable, str(SCRIPT), str(out), "--natureza", "sistema", "--nome", "multi", "--apply",
+               "--destino", "gcp", "--destino", "fora-das-nuvens"]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue((out / "Dockerfile").exists() and (out / "config/deploy.yml").exists())
+
+    def _fake(self, divergir=False, link=False):
+        d = tempfile.TemporaryDirectory()
+        self.addCleanup(d.cleanup)
+        base = Path(d.name)
+        t = base / "tpl/sistema/_destinos"
+        for x, c in (("gcp", "a"), ("fora-das-nuvens", "b" if divergir else "a")):
+            (t / x).mkdir(parents=True)
+            (t / x / "Dockerfile").write_text(c)
+        if link:
+            os.rename(t / "gcp", base / "real")
+            os.symlink(base / "real", t / "gcp")
+        env = dict(os.environ, STACK_TESTE="1", TEMPLATES_DIR=str(base / "tpl"))
+        cmd = [sys.executable, str(SCRIPT), str(base / "o"), "--natureza", "sistema", "--nome", "x", "--apply",
+               "--destino", "gcp", "--destino", "fora-das-nuvens"]
+        r = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        return r, sorted(p.name for p in base.iterdir())
+
+    def test_conteudo_divergente_falha(self):
+        r, itens = self._fake(divergir=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("divergente", r.stderr)
+        self.assertEqual(itens, ["tpl"])
+
+    def test_destinos_symlink_recusado(self):
+        try:
+            r, itens = self._fake(link=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink indisponível")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("symlink", r.stderr)
+        self.assertNotIn("o", itens)
+
     def test_kamal(self):
         out, _ = self.confere("sistema", "fora-das-nuvens")
         y = (out / "config/deploy.yml").read_text(encoding="utf-8")
         self.assertRegex(y, r"(?m)^image:")
         self.assertRegex(y, r"(?m)^servers:")
+        self.assertIn("app_port: 8080", y)
+        self.assertIn("healthcheck:", y)
 
     def test_agente(self):
         out, arqs = self.confere("agente", "gcp")
         self.assertTrue(any(a.startswith("promptfoo/casos/") for a in arqs))
         src = (out / "src/index.ts").read_text(encoding="utf-8")
+        self.assertIn("eval", json.loads((out / "package.json").read_text())["scripts"])
+        cfg = (out / "promptfoo/promptfooconfig.yaml").read_text(encoding="utf-8")
+        prov = re.search(r"file://(\S+\.cjs)", cfg)
+        self.assertTrue(prov and (out / "promptfoo" / prov.group(1)).is_file())
         self.assertIn("NINE_ROUTER_API_KEY", src)
         self.assertIn("http://127.0.0.1:20128/v1", src)
 

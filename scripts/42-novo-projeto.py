@@ -27,10 +27,10 @@ def falha(msg):
     sys.exit(f"ERRO: {msg}")
 
 
-def copiar(origem, tmp, valores, sobrepor=False):
+def copiar(origem, tmp, valores, sobrepor=None):
     for dirpath, dirnames, filenames in os.walk(origem, followlinks=False):
         rel = Path(dirpath).relative_to(origem)
-        if not sobrepor and rel == Path("."):
+        if sobrepor is None and rel == Path("."):
             dirnames[:] = [d for d in dirnames if d != "_destinos"]  # só entra por destino, abaixo
         for nome in dirnames + filenames:
             if (Path(dirpath) / nome).is_symlink():
@@ -41,22 +41,28 @@ def copiar(origem, tmp, valores, sobrepor=False):
             if not (Path(dirpath) / f).is_file():
                 falha(f"template contém item que não é arquivo comum: {rel / f}")
             alvo = tmp / rel / (f[:-5] if f.endswith(".tmpl") else f)
-            if alvo.exists() and not sobrepor:
-                falha(f"arquivo duplicado no template: {rel / alvo.name}")
             dados = (Path(dirpath) / f).read_bytes()
             try:
                 texto = dados.decode("utf-8")
             except UnicodeDecodeError:
-                alvo.write_bytes(dados)
-                shutil.copymode(Path(dirpath) / f, alvo)
+                final = dados
+            else:
+                for k, v in valores.items():
+                    texto = texto.replace("{{" + k + "}}", v)
+                texto = texto.replace("{{abre}}", "@@ABRE@@")  # {{abre}} escreve um "{{" literal (ex.: variável do promptfoo)
+                sobra = MARCADOR.search(texto)
+                if sobra:
+                    falha(f"marcador indefinido {sobra.group(0)} em {rel / f}")
+                final = texto.replace("@@ABRE@@", "{{").encode("utf-8")
+            if alvo.exists():
+                # só um arquivo vindo de outro destino, com conteúdo idêntico, pode ser repetido
+                if sobrepor is None or sobrepor.get(alvo) != final:
+                    falha(f"arquivo duplicado ou divergente entre destinos: {rel / alvo.name}")
                 continue
-            for k, v in valores.items():
-                texto = texto.replace("{{" + k + "}}", v)
-            sobra = MARCADOR.search(texto)
-            if sobra:
-                falha(f"marcador indefinido {sobra.group(0)} em {rel / f}")
-            alvo.write_text(texto, encoding="utf-8", newline="\n")
+            alvo.write_bytes(final)
             shutil.copymode(Path(dirpath) / f, alvo)  # preserva o bit de execução
+            if sobrepor is not None:
+                sobrepor[alvo] = final
 
 
 def main():
@@ -76,6 +82,9 @@ def main():
     origem = templates_dir() / a.natureza
     if not origem.is_dir() or origem.is_symlink():
         falha(f"template ausente: {origem}")
+    dest = origem / "_destinos"
+    if dest.is_symlink() or any((dest / d).is_symlink() for d in a.destino):
+        falha("_destinos do template não pode ser symlink")
     if a.pasta.expanduser().is_symlink():
         falha("a pasta de destino não pode ser um symlink")
     p = a.pasta.expanduser().resolve()
@@ -100,10 +109,11 @@ def main():
         if r.returncode:
             falha(f"35-projeto-standards falhou: {r.stderr.strip()}")
         copiar(origem, tmp, valores)
-        # _destinos/<perfil>/ entra por cima da raiz; destinos que repetem um arquivo (ex.: Dockerfile) o sobrescrevem
+        # _destinos/<perfil>/ entra por cima da raiz; destinos só podem repetir um arquivo (ex.: Dockerfile) se o conteúdo for idêntico
+        escritos = {}
         for d in dict.fromkeys(a.destino):
             if (origem / "_destinos" / d).is_dir():
-                copiar(origem / "_destinos" / d, tmp, valores, sobrepor=True)
+                copiar(origem / "_destinos" / d, tmp, valores, sobrepor=escritos)
         (tmp / "STATE.md").write_text(
             f"# {a.nome}\n\n**Tipo:** {TIPO[a.natureza]}\n**Estágio:** ideia\n"
             "**Próximo passo:** definir o escopo e abrir a primeira tarefa\n",

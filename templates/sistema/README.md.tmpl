@@ -12,3 +12,10 @@ Os arquivos de deploy do destino escolhido já estão na raiz. Eles não criam
 pipeline nem segredo: o deploy é feito pela VPS, e as credenciais ficam fora
 do repositório. Se houver interface, use o design system em `skills/ness-design`
 (tokens e componentes) em vez de inventar estilo.
+
+`npm install` gera o `package-lock.json`; commite-o. Depois disso `npm ci` é
+preferível ao `npm install`.
+
+Deploy com Kamal (fora-das-nuvens): os segredos vão em `.kamal/secrets`, que é
+lido na máquina de deploy e já está no `.gitignore`.
+O arquivo lista `NOME=valor` por linha; o `config/deploy.yml` só cita os nomes.

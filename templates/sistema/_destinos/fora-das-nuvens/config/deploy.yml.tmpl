@@ -7,7 +7,13 @@ servers:
 proxy:
   ssl: true
   host: {{nome}}.example.com   # trocar pelo domínio real
+  app_port: 8080
+  healthcheck:
+    path: /health
 registry:
   username: ness
   password:
     - KAMAL_REGISTRY_PASSWORD   # lido do ambiente de quem faz o deploy; nunca no repositório
+env:
+  secret:
+    - EXEMPLO_API_KEY   # nome de exemplo; o valor vem de .kamal/secrets
