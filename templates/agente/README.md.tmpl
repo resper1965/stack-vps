@@ -1,0 +1,12 @@
+# {{nome}}
+
+Agente em TypeScript. Destino(s): {{destino}}.
+
+Fala com o 9router (OpenAI-compatível) em `http://127.0.0.1:20128/v1`. A chave
+vem de `NINE_ROUTER_API_KEY` no ambiente; não a coloque em arquivo versionado.
+
+```
+npm install
+NINE_ROUTER_API_KEY=... npm start -- "pergunta"
+npm run eval      # promptfoo com provedor estático, sem rede
+```

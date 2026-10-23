@@ -1,0 +1,13 @@
+# Executado pela imagem oficial do Kamal na máquina de deploy; sem Ruby na stack.
+service: {{nome}}
+image: ness/{{nome}}
+servers:
+  web:
+    - 0.0.0.0   # trocar pelo IP do servidor antes do primeiro deploy
+proxy:
+  ssl: true
+  host: {{nome}}.example.com   # trocar pelo domínio real
+registry:
+  username: ness
+  password:
+    - KAMAL_REGISTRY_PASSWORD   # lido do ambiente de quem faz o deploy; nunca no repositório

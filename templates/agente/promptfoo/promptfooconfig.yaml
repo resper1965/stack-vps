@@ -1,0 +1,6 @@
+# Provedor estático: a avaliação roda sem rede nem chave. Troque pelo modelo real
+# (openai:chat com apiBaseUrl http://127.0.0.1:20128/v1) quando houver casos de verdade.
+description: casos do agente
+providers:
+  - id: file://provedor-estatico.js
+tests: file://casos/*.yaml

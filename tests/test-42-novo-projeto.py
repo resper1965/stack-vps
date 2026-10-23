@@ -42,6 +42,19 @@ class GeradorTests(unittest.TestCase):
         self.assertIn("PREVIEW", r.stdout)
         self.assertEqual(self.sobras(), [])
 
+    def test_destinos_por_cima_da_raiz(self):
+        (self.tpl / "sistema/_destinos/gcp").mkdir(parents=True)
+        (self.tpl / "sistema/_destinos/vercel").mkdir()
+        (self.tpl / "sistema/_destinos/gcp/g.txt.tmpl").write_text("{{nome}}
+")
+        (self.tpl / "sistema/_destinos/vercel/v.txt").write_text("v
+")
+        self.assertEqual(self.run42(destino=("gcp",)).returncode, 0)
+        self.assertEqual((self.out / "g.txt").read_text(), "meu-app
+")
+        self.assertFalse((self.out / "v.txt").exists())
+        self.assertFalse((self.out / "_destinos").exists())
+
     def test_apply(self):
         r = self.run42(destino=("gcp", "cloudflare"))
         self.assertEqual(r.returncode, 0, r.stderr)

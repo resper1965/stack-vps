@@ -27,9 +27,11 @@ def falha(msg):
     sys.exit(f"ERRO: {msg}")
 
 
-def copiar(origem, tmp, valores):
+def copiar(origem, tmp, valores, sobrepor=False):
     for dirpath, dirnames, filenames in os.walk(origem, followlinks=False):
         rel = Path(dirpath).relative_to(origem)
+        if not sobrepor and rel == Path("."):
+            dirnames[:] = [d for d in dirnames if d != "_destinos"]  # só entra por destino, abaixo
         for nome in dirnames + filenames:
             if (Path(dirpath) / nome).is_symlink():
                 falha(f"template contém symlink: {rel / nome}")
@@ -39,7 +41,7 @@ def copiar(origem, tmp, valores):
             if not (Path(dirpath) / f).is_file():
                 falha(f"template contém item que não é arquivo comum: {rel / f}")
             alvo = tmp / rel / (f[:-5] if f.endswith(".tmpl") else f)
-            if alvo.exists():
+            if alvo.exists() and not sobrepor:
                 falha(f"arquivo duplicado no template: {rel / alvo.name}")
             dados = (Path(dirpath) / f).read_bytes()
             try:
@@ -98,6 +100,10 @@ def main():
         if r.returncode:
             falha(f"35-projeto-standards falhou: {r.stderr.strip()}")
         copiar(origem, tmp, valores)
+        # _destinos/<perfil>/ entra por cima da raiz; destinos que repetem um arquivo (ex.: Dockerfile) o sobrescrevem
+        for d in dict.fromkeys(a.destino):
+            if (origem / "_destinos" / d).is_dir():
+                copiar(origem / "_destinos" / d, tmp, valores, sobrepor=True)
         (tmp / "STATE.md").write_text(
             f"# {a.nome}\n\n**Tipo:** {TIPO[a.natureza]}\n**Estágio:** ideia\n"
             "**Próximo passo:** definir o escopo e abrir a primeira tarefa\n",
