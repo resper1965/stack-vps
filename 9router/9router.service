@@ -7,6 +7,7 @@ Type=simple
 Environment=HOSTNAME=127.0.0.1 PORT=20128 DATA_DIR=%h/.9router
 EnvironmentFile=%h/.config/9router/9router.env
 ExecStart=%h/.local/bin/9router
+UMask=0077
 Restart=on-failure
 RestartSec=5
 

@@ -21,12 +21,19 @@ MSG_ENV='~'/.config/9router/9router.env  # so para mensagens
 
 valor() { grep -E "^$1=" "$AMBIENTE" | tail -n1 | cut -d= -f2-; }
 
-[[ -f $AMBIENTE ]] || { echo "crie $MSG_ENV"; exit 1; }
+[[ -f $AMBIENTE && ! -L $AMBIENTE ]] || { echo "crie $MSG_ENV (arquivo comum, nao link)"; exit 1; }
+[[ $(stat -c %U "$AMBIENTE") == "$(id -un)" ]] || { echo "$MSG_ENV deve pertencer ao usuario atual"; exit 1; }
 [[ $(stat -c %a "$AMBIENTE") == 600 ]] || { echo "$MSG_ENV deve ter modo 0600"; exit 1; }
+# o systemd interpreta aspas e o grep nao: recusar o que os dois leriam diferente
+if grep -q $'\r' "$AMBIENTE"; then echo "$MSG_ENV tem CR (fim de linha do Windows)"; exit 1; fi
 senha=$(valor INITIAL_PASSWORD || true)
-if [[ ${#senha} -lt 16 || $senha == 123456 ]]; then echo "$MSG_ENV: INITIAL_PASSWORD ausente, curta (< 16) ou padrao"; exit 1; fi
-[[ -n $(valor JWT_SECRET || true) ]] || { echo "$MSG_ENV sem JWT_SECRET= preenchido"; exit 1; }
+jwt=$(valor JWT_SECRET || true)
+# o minimo de 16 e o unico criterio de senha fraca (123456 cai nele)
+[[ ${#senha} -ge 16 ]] || { echo "$MSG_ENV: INITIAL_PASSWORD ausente ou curta (< 16)"; exit 1; }
+[[ -n $jwt ]] || { echo "$MSG_ENV sem JWT_SECRET= preenchido"; exit 1; }
+[[ $senha != [\'\"]* && $jwt != [\'\"]* ]] || { echo "$MSG_ENV: INITIAL_PASSWORD/JWT_SECRET nao podem comecar com aspas"; exit 1; }
 [[ $(valor REQUIRE_API_KEY || true) == true ]] || { echo "$MSG_ENV deve ter REQUIRE_API_KEY=true"; exit 1; }
+[[ -f $REPO/9router/9router.service ]] || { echo "falta $REPO/9router/9router.service"; exit 1; }
 
 instalada=$(grep -m1 '"version"' "$PREFIXO/lib/node_modules/9router/package.json" 2>/dev/null | cut -d'"' -f4 || true)
 if [[ $instalada != "$VERSAO" ]]; then
