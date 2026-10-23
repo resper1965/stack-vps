@@ -185,14 +185,13 @@ bash "$S" >/dev/null 2>&1; touch "$T/sem-ci"
 out=$(bash "$S" --status 2>&1); rc=$?
 igual "$out" inativa "status sem a conta: inativa"; afirma_rc $rc 1 "status sem a conta: rc 1"
 
-# instalar: aplica e depois instala; habilita sem --now
+# instalar: aplica, instala e habilita com --now (o 40 --habilitar exige a unidade ativa)
 mundo
 bash "$S" --instalar >/dev/null 2>&1; afirma_rc $? 0 "--instalar"
 afirma_log "install -m 755 $S $CI_REDE_LIB/39-ci-rede.sh" "copia o script (0755)"
 afirma_log "install -m 644 $RAIZ_REPO/systemd/stack-ci-rede.service $CI_REDE_UNIT/" "copia a unidade (0644)"
-afirma_log "systemctl daemon-reload" "daemon-reload"; afirma_log "systemctl enable stack-ci-rede.service" "enable"
+afirma_log "systemctl daemon-reload" "daemon-reload"; afirma_log "systemctl enable --now stack-ci-rede.service" "enable --now"
 com_w "instalar"
-nega_log "--now" "sem --now (as regras acabaram de ser aplicadas)"; nega_log "systemctl start" "sem start"
 if (( $(grep -n 'iptables -I OUTPUT' "$STUB_LOG" | head -1 | cut -d: -f1) < $(grep -n '^install ' "$STUB_LOG" | head -1 | cut -d: -f1) )); then ok "aplica antes de instalar"; else falha "ordem aplica/instala"; fi
 mundo; touch "$T/sem-ci"
 bash "$S" --instalar >/dev/null 2>&1; afirma_rc $? 1 "--instalar sem a conta: recusa"; nega_log "install" "sem conta: nada instalado"

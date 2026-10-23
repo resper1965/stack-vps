@@ -133,6 +133,6 @@ if [[ $modo == --instalar ]]; then
   install -d -m 755 "$CI_REDE_LIB"
   install -m 755 "$0" "$CI_REDE_LIB/39-ci-rede.sh"
   install -m 644 "$REPO/systemd/stack-ci-rede.service" "$CI_REDE_UNIT/"
-  systemctl daemon-reload; systemctl enable stack-ci-rede.service >/dev/null
+  systemctl daemon-reload; systemctl enable --now stack-ci-rede.service >/dev/null  # --now: o 40 --habilitar exige a unidade ativa; reexecutar as regras e idempotente
 fi
 echo "ci-rede: ativa para o uid $uid"
