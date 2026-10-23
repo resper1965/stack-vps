@@ -20,11 +20,20 @@ JQ=jq
 [[ $(stat -c %a "$ENV_SENHA") == 600 ]] || { echo "$MSG_ENV deve ter modo 0600"; exit 1; }
 grep -Eq '^OPENCODE_SERVER_PASSWORD=.+' "$ENV_SENHA" || { echo "$MSG_ENV sem OPENCODE_SERVER_PASSWORD= preenchido"; exit 1; }
 command -v "$JQ" >/dev/null || { echo "jq nao encontrado (apt install jq)"; exit 1; }
+[[ -f $REPO/opencode/command/novo-projeto.md ]] || { echo "falta $REPO/opencode/command/novo-projeto.md"; exit 1; }
 [[ -f $REPO/opencode/provider-9router.json ]] || { echo "falta $REPO/opencode/provider-9router.json"; exit 1; }
 
 install -d "$UNIDADES/opencode-web.service.d"
 install -m 644 "$REPO/opencode/opencode-web.service" "$UNIDADES/opencode-web.service"
 install -m 644 "$REPO/opencode/password.conf" "$UNIDADES/opencode-web.service.d/password.conf"
+# comando /novo-projeto: o marcador identifica a copia do repo; arquivo do dono sem ele nunca e sobrescrito
+CMD=$HOME/.config/opencode/command/novo-projeto.md
+if [[ -e $CMD ]] && ! head -n 6 "$CMD" | grep -qF '<!-- stack-vps -->'; then
+  echo "AVISO: $CMD e do dono (sem o marcador <!-- stack-vps -->); comando /novo-projeto nao instalado"
+else
+  install -d "$(dirname "$CMD")"
+  install -m 644 "$REPO/opencode/command/novo-projeto.md" "$CMD"
+fi
 # provedor 9router: o bloco do repo vence, o resto do opencode.json (e os modelos do dono) fica; model/small_model nunca
 CONFIG=$(readlink -f "$CONFIG")  # link do dono: escreve no alvo, nunca troca o link
 [[ -f $CONFIG ]] || (umask 077; echo '{}' > "$CONFIG")

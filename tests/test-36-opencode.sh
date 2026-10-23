@@ -76,4 +76,21 @@ if [[ -L $CFG ]] && jq -e '.provider["9router"]' "$T/alvo.json" >/dev/null; then
 prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
 JQ_BIN=jq-que-nao-existe roda; afirma_rc $RC 1 "sem jq: falha"
 grep -q 'jq' "$T/saida"; afirma $? "sem jq: mensagem clara"; nada "sem jq"
+# comando /novo-projeto: copia idempotente; arquivo do dono sem marcador e preservado
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+CMD=$HOME/.config/opencode/command/novo-projeto.md
+roda; afirma_rc $RC 0 "instala o comando"
+cmp -s "$CMD" "$RAIZ_REPO/opencode/command/novo-projeto.md"; afirma $? "comando igual ao do repo"
+SUM=$(cat "$CMD"); roda; if [[ $SUM == "$(cat "$CMD")" ]]; then ok "comando idempotente"; else falha "comando idempotente"; fi
+echo '<!-- stack-vps -->
+antigo' > "$CMD"; roda; cmp -s "$CMD" "$RAIZ_REPO/opencode/command/novo-projeto.md"; afirma $? "com marcador: atualiza"
+echo 'meu comando' > "$CMD"; roda; afirma_rc $RC 0 "comando do dono: segue"
+if [[ $(cat "$CMD") == 'meu comando' ]]; then ok "comando do dono preservado"; else falha "comando do dono preservado"; fi
+grep -qF 'AVISO' "$T/saida"; afirma $? "comando do dono: avisa"
+# toda flag citada no comando existe no --help do gerador
+AJUDA=$(python3 "$RAIZ_REPO/scripts/42-novo-projeto.py" --help)
+for f in $(grep -o -- '--[a-z]\+' "$RAIZ_REPO/opencode/command/novo-projeto.md" | sort -u); do
+  case $f in --private) continue;; esac  # flag do gh, nao do gerador
+  grep -qF -- "$f" <<<"$AJUDA"; afirma $? "flag $f existe no gerador"
+done
 fim
