@@ -29,6 +29,7 @@ U=$OPENCODE_UNIT_DIR/opencode-web.service; D=$OPENCODE_UNIT_DIR/opencode-web.ser
 grep -q '127.0.0.1' "$U" && grep -q '4096' "$U"; afirma $? "unidade escuta 127.0.0.1:4096"
 ! grep -q '0.0.0.0' "$U"; afirma $? "unidade sem 0.0.0.0"
 grep -q 'EnvironmentFile=%h/.config/opencode/web.env' "$D"; afirma $? "drop-in aponta o web.env"
+grep -qx 'EnvironmentFile=-%h/.config/9router/client.env' "$D"; afirma $? "drop-in aponta o client.env do 9router (opcional)"
 afirma_log "--user daemon-reload" "daemon-reload"
 afirma_log "--user enable --now opencode-web.service" "enable --now"
 ! grep -qF "$SENHA" "$T/saida" "$STUB_LOG"; afirma $? "senha fora da saida e do log"
@@ -36,6 +37,24 @@ if [[ $(stat -c %a "$ENV") == 600 && $(cat "$ENV") == "OPENCODE_SERVER_PASSWORD=
 SUM=$(cat "$U" "$D"); roda; afirma_rc $RC 0 "segunda execucao"
 if [[ $SUM == "$(cat "$U" "$D")" ]]; then ok "idempotente"; else falha "idempotente"; fi
 afirma_log "--user try-restart opencode-web.service" "try-restart para pegar unidade ou senha novas"
+
+# client.env do 9router: opcional; se existir, 0600 e do usuario, e o conteudo nunca aparece
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+CL=$HOME/.config/9router/client.env; mkdir -p "${CL%/*}"; CHAVE=chave-do-9router-xyz
+echo "NINE_ROUTER_API_KEY=$CHAVE" > "$CL"; chmod 644 "$CL"; roda; afirma_rc $RC 1 "client.env 0644"; nada "client.env 0644"
+grep -qF '/.config/9router/client.env deve ter modo 0600' "$T/saida"; afirma $? "client.env 0644: mensagem"
+! grep -qF "$CHAVE" "$T/saida"; afirma $? "client.env 0644: chave fora da saida"
+chmod 600 "$CL"; REAL_STAT=$(command -v stat)
+printf '#!/usr/bin/env bash
+[[ "$*" == *client.env* && "$*" == *%%U* ]] && { echo root; exit 0; }
+exec %s "$@"
+' "$REAL_STAT" > "$STUBS/stat"; chmod +x "$STUBS/stat"; roda; afirma_rc $RC 1 "client.env de outro dono"; nada "client.env de outro dono"
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+CL=$HOME/.config/9router/client.env; mkdir -p "${CL%/*}"; echo "NINE_ROUTER_API_KEY=$CHAVE" > "$T/real"; chmod 600 "$T/real"; ln -s "$T/real" "$CL"
+roda; afirma_rc $RC 1 "client.env symlink"; nada "client.env symlink"
+rm "$CL"; echo "NINE_ROUTER_API_KEY=$CHAVE" > "$CL"; chmod 600 "$CL"; roda; afirma_rc $RC 0 "client.env 0600: segue"
+! grep -qF "$CHAVE" "$T/saida" "$STUB_LOG"; afirma $? "client.env 0600: chave fora da saida e do log"
+if [[ $(cat "$CL") == "NINE_ROUTER_API_KEY=$CHAVE" ]]; then ok "client.env intocado"; else falha "client.env intocado"; fi
 
 # sob sudo -u agente -H bash -c o XDG_RUNTIME_DIR vem vazio: o systemctl --user precisa recebe-lo preenchido
 prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
@@ -61,6 +80,14 @@ SUM=$(cat "$CFG"); roda; if [[ $SUM == "$(cat "$CFG")" ]]; then ok "merge idempo
 rm "$CFG"; roda; afirma_rc $RC 0 "sem opencode.json: cria"
 jq -e 'has("model")==false and has("small_model")==false and (.provider|keys)==["9router"]' "$CFG" >/dev/null; afirma $? "criado sem model/small_model"
 echo '{quebrado' > "$CFG"; roda; afirma_rc $RC 1 "opencode.json invalido: recusa"
+grep -qF 'nao e JSON puro' "$T/saida" && grep -qF 'nada foi alterado' "$T/saida"; afirma $? "opencode.json invalido: mensagem cita JSONC e que nada mudou"
+printf '{
+  // comentario
+  "theme": "dark"
+}
+' > "$CFG"; roda; afirma_rc $RC 1 "opencode.json com comentario (JSONC): recusa"
+grep -qF 'JSONC' "$T/saida"; afirma $? "JSONC: mensagem explicita"
+echo '{quebrado' > "$CFG"
 if [[ $(cat "$CFG") == '{quebrado' ]]; then ok "opencode.json invalido intocado"; else falha "opencode.json invalido intocado"; fi
 if ls "$CFG".* >/dev/null 2>&1; then falha "sem temporario sobrando apos falha"; else ok "sem temporario sobrando apos falha"; fi
 # arquivo de 0 bytes: tratado como {} (nada a perder)
@@ -118,6 +145,10 @@ FLAGS_AJUDA=$(grep -o -- '--[a-z]\+' <<<"$AJUDA" | sort -u)
 FLAGS_MD=$(grep -o -- '--[a-z]\+' "$CMDREPO" | grep -vx -- '--private' | sort -u)  # --private e do gh
 if [[ -n $FLAGS_MD && -z $(comm -23 <(echo "$FLAGS_MD") <(echo "$FLAGS_AJUDA")) ]]; then ok "flags do comando contidas nas do gerador"; else falha "flags do comando contidas nas do gerador"; fi
 for f in --apply --destino --natureza --nome; do grep -qx -- "$f" <<<"$FLAGS_MD"; afirma $? "comando cita $f"; done
+# parecer: pasta fora de projetos/ e nunca gh repo create (conteudo fora do Git)
+grep -qF '/srv/dev/pareceres/<nome>' "$CMDREPO"; afirma $? "comando: parecer usa /srv/dev/pareceres/<nome>"
+grep -qF '/srv/dev/projetos/<nome>' "$CMDREPO"; afirma $? "comando: demais naturezas usam /srv/dev/projetos/<nome>"
+grep -qE 'parecer.*nunca.*gh repo create|nunca.*gh repo create.*parecer' "$CMDREPO"; afirma $? "comando: proibe gh repo create para parecer"
 grep -qF '/opt/stack-vps/scripts/42-novo-projeto.py' "$CMDREPO" && [[ -f $GER ]]; afirma $? "caminho do gerador citado existe no repo"
 ESC=$(grep -o '{[a-z,]*}' <<<"$AJUDA" | head -1 | tr -d '{}' | tr ',' '\n' | sort)
 CIT=$(grep -o '`[a-z]*`' "$CMDREPO" | tr -d '`' | grep -Fxf <(echo "$ESC") | sort -u)

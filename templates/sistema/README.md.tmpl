@@ -19,3 +19,7 @@ preferível ao `npm install`.
 Deploy com Kamal (fora-das-nuvens): os segredos vão em `.kamal/secrets`, que é
 lido na máquina de deploy e já está no `.gitignore`.
 O arquivo lista `NOME=valor` por linha; o `config/deploy.yml` só cita os nomes.
+
+No `config/deploy.yml` (destino fora-das-nuvens), `registry.username` e `image`
+são placeholders: troque pelos valores reais do registry antes do primeiro deploy.
+O `.dockerignore` mantém `node_modules`, `.env*`, `.kamal/secrets` e `.git` fora da imagem.

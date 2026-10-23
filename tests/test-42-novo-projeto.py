@@ -40,6 +40,11 @@ class GeradorTests(unittest.TestCase):
         r = self.run42(apply=False)
         self.assertEqual(r.returncode, 0)
         self.assertIn("PREVIEW", r.stdout)
+        self.assertIn("  README.md\n", r.stdout)
+        self.assertIn("  src/a.txt\n", r.stdout)
+        self.assertIn("  STATE.md\n", r.stdout)
+        self.assertIn("  .standards.json\n", r.stdout)
+        self.assertNotIn("README.md.tmpl", r.stdout)
         self.assertEqual(self.sobras(), [])
 
     def test_destinos_por_cima_da_raiz(self):

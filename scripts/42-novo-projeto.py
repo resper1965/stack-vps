@@ -65,6 +65,26 @@ def copiar(origem, tmp, valores, sobrepor=None):
                 sobrepor[alvo] = final
 
 
+def montar(tmp, a, origem, valores):
+    # o 35 grava o .standards.json em pasta vazia; os templates entram depois
+    cmd = [sys.executable, str(ROOT / "scripts/35-projeto-standards.py"), str(tmp), "--apply"]
+    for d in a.destino:
+        cmd += ["--provider", d]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode:
+        falha(f"35-projeto-standards falhou: {r.stderr.strip()}")
+    copiar(origem, tmp, valores)
+    # _destinos/<perfil>/ entra por cima da raiz; destinos só podem repetir um arquivo (ex.: Dockerfile) se o conteúdo for idêntico
+    escritos = {}
+    for d in dict.fromkeys(a.destino):
+        if (origem / "_destinos" / d).is_dir():
+            copiar(origem / "_destinos" / d, tmp, valores, sobrepor=escritos)
+    (tmp / "STATE.md").write_text(
+        f"# {a.nome}\n\n**Tipo:** {TIPO[a.natureza]}\n**Estágio:** ideia\n"
+        "**Próximo passo:** definir o escopo e abrir a primeira tarefa\n",
+        encoding="utf-8", newline="\n")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Cria um projeto novo a partir de templates")
     ap.add_argument("pasta", type=Path)
@@ -92,32 +112,20 @@ def main():
         falha("a pasta já existe e não está vazia")
     if not p.parent.is_dir():
         falha(f"pasta-mãe inexistente: {p.parent}")
+    valores = {"nome": a.nome, "destino": ", ".join(dict.fromkeys(a.destino))}
     if not a.apply:
         print(f"PREVIEW {p} natureza={a.natureza} tipo={TIPO[a.natureza]} nome={a.nome} destino={','.join(a.destino)}")
+        with tempfile.TemporaryDirectory() as t:  # monta de verdade e descarta: a lista é a que o --apply criaria
+            montar(Path(t), a, origem, valores)
+            for f in sorted(x.relative_to(t).as_posix() for x in Path(t).rglob("*") if x.is_file()):
+                print(f"  {f}")
         return
-    valores = {"nome": a.nome, "destino": ", ".join(dict.fromkeys(a.destino))}
     tmp = Path(tempfile.mkdtemp(prefix=f".{a.nome}.", dir=p.parent))
     umask = os.umask(0)
     os.umask(umask)
     tmp.chmod(0o777 & ~umask)  # mkdtemp cria 0700; a pasta final segue o umask
     try:
-        # o 35 grava o .standards.json em pasta vazia; os templates entram depois
-        cmd = [sys.executable, str(ROOT / "scripts/35-projeto-standards.py"), str(tmp), "--apply"]
-        for d in a.destino:
-            cmd += ["--provider", d]
-        r = subprocess.run(cmd, capture_output=True, text=True)
-        if r.returncode:
-            falha(f"35-projeto-standards falhou: {r.stderr.strip()}")
-        copiar(origem, tmp, valores)
-        # _destinos/<perfil>/ entra por cima da raiz; destinos só podem repetir um arquivo (ex.: Dockerfile) se o conteúdo for idêntico
-        escritos = {}
-        for d in dict.fromkeys(a.destino):
-            if (origem / "_destinos" / d).is_dir():
-                copiar(origem / "_destinos" / d, tmp, valores, sobrepor=escritos)
-        (tmp / "STATE.md").write_text(
-            f"# {a.nome}\n\n**Tipo:** {TIPO[a.natureza]}\n**Estágio:** ideia\n"
-            "**Próximo passo:** definir o escopo e abrir a primeira tarefa\n",
-            encoding="utf-8", newline="\n")
+        montar(tmp, a, origem, valores)
         tmp.rename(p)  # em POSIX substitui uma pasta vazia já existente
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)

@@ -11,6 +11,8 @@ BIN=${OPENCODE_BIN:-$HOME/.opencode/bin/opencode}
 ENV_SENHA=$HOME/.config/opencode/web.env
 MSG_ENV='~'/.config/opencode/web.env  # so para mensagens
 UNIDADES=${OPENCODE_UNIT_DIR:-$HOME/.config/systemd/user}
+CLIENTE_9R=$HOME/.config/9router/client.env
+MSG_CLIENTE_9R='~'/.config/9router/client.env  # so para mensagens
 CONFIG=$HOME/.config/opencode/opencode.json
 JQ=jq
 [[ ${STACK_TESTE:-} == 1 ]] && JQ=${JQ_BIN:-jq}
@@ -19,6 +21,12 @@ JQ=jq
 [[ -f $ENV_SENHA ]] || { echo "crie $MSG_ENV"; exit 1; }
 [[ $(stat -c %a "$ENV_SENHA") == 600 ]] || { echo "$MSG_ENV deve ter modo 0600"; exit 1; }
 grep -Eq '^OPENCODE_SERVER_PASSWORD=.+' "$ENV_SENHA" || { echo "$MSG_ENV sem OPENCODE_SERVER_PASSWORD= preenchido"; exit 1; }
+# chave do 9router para o OpenCode: opcional, mas se existir nao pode estar aberta; o conteudo nunca e lido nem impresso
+if [[ -e $CLIENTE_9R || -L $CLIENTE_9R ]]; then
+  [[ -f $CLIENTE_9R && ! -L $CLIENTE_9R ]] || { echo "$MSG_CLIENTE_9R deve ser arquivo comum, nao link"; exit 1; }
+  [[ $(stat -c %U "$CLIENTE_9R") == "$(id -un)" ]] || { echo "$MSG_CLIENTE_9R deve pertencer ao usuario atual"; exit 1; }
+  [[ $(stat -c %a "$CLIENTE_9R") == 600 ]] || { echo "$MSG_CLIENTE_9R deve ter modo 0600"; exit 1; }
+fi
 command -v "$JQ" >/dev/null || { echo "jq nao encontrado (apt install jq)"; exit 1; }
 [[ -f $REPO/opencode/command/novo-projeto.md ]] || { echo "falta $REPO/opencode/command/novo-projeto.md"; exit 1; }
 [[ -f $REPO/opencode/provider-9router.json ]] || { echo "falta $REPO/opencode/provider-9router.json"; exit 1; }
@@ -44,7 +52,7 @@ CONFIG=$(readlink -f "$CONFIG")  # link do dono: escreve no alvo, nunca troca o 
 [[ -f $CONFIG ]] || (umask 077; echo '{}' > "$CONFIG")
 [[ -s $CONFIG ]] || echo '{}' > "$CONFIG"  # arquivo vazio nao tem o que perder
 novo=$(mktemp "$CONFIG.XXXXXX")
-"$JQ" --slurpfile p "$REPO/opencode/provider-9router.json"   '.provider["9router"] = ((.provider["9router"] // {}) * $p[0].provider["9router"])' "$CONFIG" > "$novo"   && [[ -s $novo ]] || { echo "opencode.json invalido, nada alterado"; exit 1; }
+"$JQ" --slurpfile p "$REPO/opencode/provider-9router.json"   '.provider["9router"] = ((.provider["9router"] // {}) * $p[0].provider["9router"])' "$CONFIG" > "$novo"   && [[ -s $novo ]] || { echo "opencode.json nao e JSON puro (comentarios/JSONC ou sintaxe invalida); nada foi alterado, ajuste o arquivo a mao"; exit 1; }
 chmod --reference="$CONFIG" "$novo"; mv "$novo" "$CONFIG"
 systemctl --user daemon-reload
 systemctl --user enable --now opencode-web.service

@@ -5,3 +5,7 @@ Parecer. Destino(s): {{destino}}.
 O conteúdo do parecer vai em `/srv/dev/pareceres/{{nome}}`, fora do repositório
 de código. Aqui ficam o roteiro, a lista de fontes e o gerador de PDF.
 `make pdf` exige o Typst instalado.
+
+O `.gitignore` já ignora `parecer.md`, `fontes.md`, `*.docx` e `*.pdf`, por segurança:
+o conteúdo do parecer não vai ao Git. Se um dia esta pasta virar repositório,
+só o roteiro, o `Makefile` e o gerador de PDF entram nele.

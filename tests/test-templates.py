@@ -125,7 +125,25 @@ class TemplatesTests(unittest.TestCase):
         prov = re.search(r"file://(\S+\.cjs)", cfg)
         self.assertTrue(prov and (out / "promptfoo" / prov.group(1)).is_file())
         self.assertIn("NINE_ROUTER_API_KEY", src)
+        self.assertIn("process.env.MODELO", src)
+        self.assertNotIn('"default"', src)
+        self.assertRegex(src, r"if \(!modelo\) throw")
+        self.assertIn("MODELO", (out / "README.md").read_text(encoding="utf-8"))
         self.assertIn("http://127.0.0.1:20128/v1", src)
+
+    def test_sistema_dockerignore_e_placeholders(self):
+        out, _ = self.confere("sistema", "fora-das-nuvens")
+        di = (out / ".dockerignore").read_text(encoding="utf-8").split()
+        for item in ("node_modules", ".env", ".env.*", ".kamal/secrets", ".git"):
+            self.assertIn(item, di)
+        self.assertIn("placeholders", (out / "README.md").read_text(encoding="utf-8"))
+
+    def test_parecer_gitignore(self):
+        out, _ = self.confere("parecer", "gcp")
+        gi = (out / ".gitignore").read_text(encoding="utf-8").split()
+        for item in ("*.pdf", "*.docx", "parecer.md", "fontes.md"):
+            self.assertIn(item, gi)
+        self.assertIn("não vai ao Git", (out / "README.md").read_text(encoding="utf-8").replace("\n", " "))
 
     def test_parecer(self):
         out, _ = self.confere("parecer", "gcp")

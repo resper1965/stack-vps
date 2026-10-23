@@ -32,7 +32,6 @@ jwt=$(valor JWT_SECRET || true)
 [[ ${#senha} -ge 16 ]] || { echo "$MSG_ENV: INITIAL_PASSWORD ausente ou curta (< 16)"; exit 1; }
 [[ -n $jwt ]] || { echo "$MSG_ENV sem JWT_SECRET= preenchido"; exit 1; }
 [[ $senha != [\'\"]* && $jwt != [\'\"]* ]] || { echo "$MSG_ENV: INITIAL_PASSWORD/JWT_SECRET nao podem comecar com aspas"; exit 1; }
-[[ $(valor REQUIRE_API_KEY || true) == true ]] || { echo "$MSG_ENV deve ter REQUIRE_API_KEY=true"; exit 1; }
 [[ -f $REPO/9router/9router.service ]] || { echo "falta $REPO/9router/9router.service"; exit 1; }
 
 instalada=$(grep -m1 '"version"' "$PREFIXO/lib/node_modules/9router/package.json" 2>/dev/null | cut -d'"' -f4 || true)
