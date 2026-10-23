@@ -101,7 +101,7 @@ descobertos sozinhos todo dia às 06:00 (Brasília), mais as pastas sem git de `
 
 `stack-health.timer` roda o `health.sh` de hora em hora e, so quando o estado muda, avisa por
 ntfy (`NTFY_TOPIC`), e-mail (`RESEND_API_KEY`) e Telegram (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`),
-configurados no `admin.env`. Canal sem valor e pulado. Teste manual:
+configurados no `admin.env`. Canal sem valor e pulado. O `health.sh` tem uma seção do 9router, que só aparece se a unidade existir. Teste manual:
 `sudo /usr/local/lib/stack-vps/alertar.sh "teste" "mensagem"`.
 
 ## Antes de cada deploy de etapa

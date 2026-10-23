@@ -1,6 +1,6 @@
 ---
 name: project-bootstrap
-description: Configurar o início de projetos novos no stack-vps escolhendo GCP, Azure, Vercel, Cloudflare ou VPS, autenticacao, design system e skills. Usar somente na criação de projetos novos; projetos existentes preservam sua stack e podem utilizar skills especializadas sem bootstrap.
+description: Configurar o início de projetos novos no stack-vps escolhendo GCP, Vercel, Cloudflare ou fora das nuvens, autenticacao, design system e skills. Usar somente na criação de projetos novos; projetos existentes preservam sua stack e podem utilizar skills especializadas sem bootstrap.
 ---
 
 # Project bootstrap
@@ -12,4 +12,5 @@ description: Configurar o início de projetos novos no stack-vps escolhendo GCP,
 5. Selecionar receita de autenticação, autorização e referências de design conforme o novo projeto. Reutilizar `skills/ness-design`.
 6. Não criar serviços, assinaturas, GitHub Actions, chaves ou deploy automaticamente.
 7. Para projetos **existentes**, encerrar o bootstrap; respeitar a arquitetura atual e oferecer somente skills pontuais quando solicitadas.
-8. Responder de forma breve: provider(s), padrões selecionados e próximo passo.
+8. O caminho normal para criar o projeto é `/novo-projeto`, que chama este bootstrap; usar o script direto só quando o comando não estiver disponível.
+9. Responder de forma breve: provider(s), padrões selecionados e próximo passo.

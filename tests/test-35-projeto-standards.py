@@ -26,9 +26,18 @@ class BootstrapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             project = Path(d)
             (project / "README.md").write_text("existing")
-            r = subprocess.run([sys.executable, str(SCRIPT), d, "--provider", "azure", "--apply"], capture_output=True)
+            r = subprocess.run([sys.executable, str(SCRIPT), d, "--provider", "gcp", "--apply"], capture_output=True)
             self.assertNotEqual(r.returncode, 0)
             self.assertFalse((project / ".standards.json").exists())
+
+    def test_profiles(self):
+        with tempfile.TemporaryDirectory() as d:
+            project = Path(d) / "novo"
+            ok = subprocess.run([sys.executable, str(SCRIPT), str(project), "--provider", "fora-das-nuvens"], capture_output=True)
+            self.assertEqual(ok.returncode, 0)
+            for old in ("azure", "local"):
+                r = subprocess.run([sys.executable, str(SCRIPT), str(project), "--provider", old], capture_output=True)
+                self.assertNotEqual(r.returncode, 0, old)
 
 if __name__ == "__main__":
     unittest.main()

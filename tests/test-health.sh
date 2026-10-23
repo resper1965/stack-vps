@@ -5,7 +5,7 @@ H=$RAIZ_REPO/bin/health.sh
 echo "health (acesso: emergencia, opencode, pmo)"
 # Outras secoes dependem da maquina (disco, memoria, backup): assertamos nas linhas, nao no rc global.
 prepara() {
-  export STACK_CF_DIR=$T/cf HEALTH_PMO_ENV=$T/servidor.env HEALTH_OPENCODE_URL=http://127.0.0.1:4096/ HEALTH_PMO_SOCKET=$T/pmo.sock
+  export STACK_CF_DIR=$T/cf HEALTH_PMO_ENV=$T/servidor.env HEALTH_OPENCODE_URL=http://127.0.0.1:4096/ HEALTH_PMO_SOCKET=$T/pmo.sock HEALTH_9ROUTER_UNIT=$T/nao-existe.service HEALTH_9ROUTER_URL=http://127.0.0.1:20128/api/health
   mkdir -p "$STACK_CF_DIR"; printf 'ingress:\n  - service: http_status:404\n' > "$STACK_CF_DIR/config.yml"
   printf 'PMO_HOSTS=pmo.esper.ws,outro.esper.ws\n' > "$HEALTH_PMO_ENV"
   systemctl_com 1; stub tailscale 0 100.1.2.3; stub ip; stub docker; stub df 0 "Use%"
@@ -19,12 +19,13 @@ echo "systemctl $*" >> "$STUB_LOG"
 exit 0
 ' "$1" > "$STUBS/systemctl"
   chmod +x "$STUBS/systemctl"; }
-# curl_com <codigo-opencode> <codigo-pmo>: o stub distingue pelo --unix-socket
+# curl_com <codigo-opencode/9router> <codigo-pmo> [codigo-/v1/models, padrao 401]: o stub distingue pelo --unix-socket e pela URL
 curl_com() {
   cat > "$STUBS/curl" <<STUB
 #!/usr/bin/env bash
 echo "curl \$*" >> "\$STUB_LOG"
 [[ "$2" == fail && "\$*" == *--unix-socket* ]] && exit 7
+[[ "\$*" == */v1/models* ]] && { printf '%s' "${3:-401}"; exit 0; }
 [[ "$1" == fail && "\$*" != *--unix-socket* ]] && exit 7
 [[ "\$*" == *--unix-socket* ]] && printf '%s' "$2" || printf '%s' "$1"
 STUB
@@ -55,6 +56,24 @@ curl_com 200 502; roda; tem "FALHA painel do PMO"; afirma "$?" "pmo 502: FALHA"
 novo_tmp; prepara; rm "$HEALTH_PMO_ENV"; curl_com 200 fail; roda
 tem "pend  painel do PMO sem /etc/pmo/servidor.env"; afirma "$?" "sem servidor.env: pend"
 ! tem "FALHA painel do PMO"; afirma "$?" "sem servidor.env: nao e falha"
+
+# 9router: sem unidade, sem secao; com unidade, /api/health 200 + /v1/models sem chave 401 = ok, senao FALHA
+novo_tmp; prepara; roda
+! tem "9router"; afirma "$?" "9router sem unidade: sem secao"
+touch "$T/9router.service"; export HEALTH_9ROUTER_UNIT=$T/9router.service
+roda; tem "ok    9router"; afirma "$?" "9router HTTP 200: ok"
+tem "ok    9router exige chave de API"; afirma "$?" "9router /v1/models 401 sem chave: ok"
+afirma_log "http://127.0.0.1:20128/api/health" "9router: checa /api/health"
+curl_com 200 200 200; roda; tem "FALHA 9router sem exigir chave de API"; afirma "$?" "9router /v1/models 200 sem chave: FALHA"
+afirma_rc "$rc" 1 "9router sem exigir chave: rc 1"
+curl_com 200 200 500; roda; tem "FALHA 9router: /v1/models respondeu 500"; afirma "$?" "9router /v1/models 500: FALHA"
+curl_com 401 200; roda; tem "FALHA 9router"; afirma "$?" "9router /api/health 401: FALHA"
+curl_com 500 200; roda; tem "FALHA 9router"; afirma "$?" "9router HTTP 500: FALHA"
+afirma_rc "$rc" 1 "9router HTTP 500: rc 1"
+curl_com fail 200; roda; tem "FALHA 9router"; afirma "$?" "9router curl falha: FALHA"
+curl_com 307 200; roda; tem "FALHA 9router"; afirma "$?" "9router 307: FALHA"
+curl_com 000 200; roda; tem "FALHA 9router"; afirma "$?" "9router parado (HTTP 000): FALHA"
+afirma_rc "$rc" 1 "9router parado: rc 1"
 
 # espelho do Linear: is-failed rc 0 = unidade falhou; rc 1 (falhou nao, ou unidade inexistente) = silencio
 novo_tmp; prepara; systemctl_com 0; roda

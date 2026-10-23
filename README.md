@@ -34,7 +34,9 @@ Testes: `bash tests/run.sh` (precisa de `shellcheck`).
 | 27 | `27-secrets.sh` | carrega `secrets/projetos.env` (um arquivo para todos os projetos) no shell do agente |
 | 28 | `28-contas-claude.sh` | duas contas Claude: bekaa (`~/.claude`, padrão) e ionic (`~/.claude-ionic`, vertical ionic); `claude-bekaa`/`claude-ionic` forçam |
 | 29 | `29-skills.sh` | skills de Cloudflare, Supabase, Vercel e GitHub nos três agentes; ponytail em `full` por padrão |
-| 36 | `36-opencode.sh` | unidade `opencode-web` (OpenCode só em `127.0.0.1:4096`); exige `~/.config/opencode/web.env` 0600 com `OPENCODE_SERVER_PASSWORD`, criado por você — não instala o OpenCode |
+| 36 | `36-opencode.sh` | unidade `opencode-web` (OpenCode só em `127.0.0.1:4096`); exige `~/.config/opencode/web.env` 0600 com `OPENCODE_SERVER_PASSWORD`, criado por você — não instala o OpenCode; se existir `~/.config/9router/client.env` (0600, `NINE_ROUTER_API_KEY=`) o OpenCode o recebe, e o script recusa o arquivo aberto; o provedor 9router entra com `models: {}`, então o seletor fica vazio até você acrescentar os modelos do 9router |
+| 41 | `41-9router.sh` | 9router (faixa 1: só chaves de API, versão fixa) em `127.0.0.1:20128`; recusa senha fraca; o `ExecStart` fixa `--host 127.0.0.1 --skip-update` (o binário é um lançador interativo) e, a cada start, o lançador dá `kill -9` em processos do `agente` com `next-server` (um `next dev` morre quando o 9router reinicia); a chave de API é criada no painel e guardada em `client.env` (OpenCode) e em `/srv/dev/secrets/agente.env` (`bin/modelo`); `requireApiKey` é do painel, o `health.sh` acusa se faltar; **ainda não instalado na VPS** |
+| 42 | `42-novo-projeto.py` | gerador usado pelo comando `/novo-projeto` do OpenCode (templates `sistema`, `agente` e `parecer` em `templates/`); o comando `opencode/command/novo-projeto.md` é instalado pelo `36-opencode.sh`; antes do primeiro uso o dono cria `/srv/dev/pareceres` e `/srv/dev/projetos` (se faltarem) com escrita para o `agente`; **ainda não instalado na VPS** |
 
 Notas:
 
@@ -47,7 +49,7 @@ Notas:
 | # | Script | O que faz |
 |---|---|---|
 | 34 | `34-pmo.sh` | painel do PMO em `https://stack.<tailnet>.ts.net:8443` (só tailnet; precisa do 37; nos computadores com o cliente Tailscale (MagicDNS ligado por padrão) abre pelo nome, ver `docs/ssh-config.md`): coleta diária, alarme de esquecidos, descartar/restaurar |
-| 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36; exige "HTTPS Certificates" habilitado no admin da tailnet |
+| 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36; exige "HTTPS Certificates" habilitado no admin da tailnet; o 9router (20128) também sai na tailnet por ele, quando existir |
 
 
 ## Outros
@@ -56,6 +58,7 @@ Notas:
 |---|---|
 | `14-backup.sh` / `15-restore.sh` | backup restic no R2 (desligado até a decisão pós-migração) |
 | `20-laptop-github.sh` | envia o trabalho do laptop ao GitHub, com bloqueio de segredo e documento de cliente (roda no WSL) |
+| `health.sh` | tem seção do 9router, que só aparece se a unidade existir |
 | `alertar.sh`, `vigia-health.sh` | alertas por ntfy, e-mail e Telegram na mudança de estado do `health.sh` |
 
 ## Convenção
