@@ -22,7 +22,7 @@ Resolver a dor de **um desenvolvedor** que trabalha no escritório e continua em
 
 - **Prioridade:** continuidade remota, sessões persistentes, integração com PMO, depois Project Factory e skills.
 - PMO é **o único painel**. Reaproveitar serviços e padrão existente; não criar novo produto/painel.
-- Projetos podem ser software, análise, GRC, forense, docs ou arquitetura. Bootstrap, perfis GCP/Vercel/Cloudflare/Azure/local e escolha de stack são **somente para novos projetos**. Existentes permanecem intactos.
+- Projetos podem ser software, análise, GRC, forense, docs ou arquitetura. Bootstrap, perfis GCP/Vercel/Cloudflare/fora-das-nuvens e escolha de stack são **somente para novos projetos**. Existentes permanecem intactos.
 - Skills são reutilizáveis; Ponytail prioritariamente para código, Superpowers para planejamento/testes; práticas SSDLC proporcionais ao risco.
 - Respeitar freeze de projetos: suspende análises/alertas periódicos, não backups nem segurança (requisito planejado, não afirmar implementado).
 - Privacidade e mínimos privilégios: nada de segredos em Git, coleta de prompts/transcrições para PMO, exposição pública do OpenCode ou automação destrutiva.

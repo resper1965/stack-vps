@@ -2,7 +2,7 @@
 
 **Projetos existentes permanecem em suas stacks atuais.** Não há migração, adoção retroativa nem exigência de cadastrar seus provedores neste catálogo.
 
-Ao **criar um projeto novo**, escolher um ou mais destinos: `gcp`, `vercel`, `cloudflare`, `azure`, `local`. Essa seleção orienta os agentes e futuros templates, mas não implanta infraestrutura automaticamente.
+Ao **criar um projeto novo**, escolher um ou mais destinos: `gcp`, `vercel`, `cloudflare`, `fora-das-nuvens`. Essa seleção orienta os agentes e futuros templates, mas não implanta infraestrutura automaticamente.
 
 ```bash
 python3 scripts/35-projeto-standards.py /srv/dev/projetos/novo-projeto --provider gcp

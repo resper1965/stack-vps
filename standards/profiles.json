@@ -20,13 +20,9 @@
       "label": "Cloudflare",
       "guidance": "Use scoped API tokens, Workers secrets/bindings, Wrangler and environment-specific config. Do not expose admin DNS tokens to apps."
     },
-    "azure": {
-      "label": "Microsoft Azure",
-      "guidance": "Use Entra ID, managed identities, Key Vault, Azure Monitor, RBAC least privilege; do not assume Azure AD B2C migration is complete."
-    },
-    "local": {
-      "label": "VPS / self-hosted",
-      "guidance": "Use Docker rootless, localhost-only ports or Tailnet, project-scoped secrets and systemd jobs."
+    "fora-das-nuvens": {
+      "label": "Fora das nuvens",
+      "guidance": "Qualquer máquina com SSH e Docker; deploy e rollback pelo Kamal; segredos por projeto; sem porta pública sem proxy TLS."
     }
   }
 }
