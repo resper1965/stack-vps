@@ -31,7 +31,7 @@ sistema intactos. Nenhum segredo foi impresso.
 2. **Docker em job é opt-in.** Por padrão o container do runner **não** recebe o socket. Só depois de apertar as permissões de
    `/srv/dev/projetos`, `/srv/dev/state` e `/srv/dev` (hoje 755; sugestão 750 para o dono e o grupo certos, decisão do Ricardo porque afeta
    `dev`, `pmo` e os agentes) é que um repositório pode pedir o socket.
-3. **`38-ci-conta.sh` cria um usuário comum** com `useradd -m -U -s /bin/bash -d /srv/ci ci` (grupo primário próprio, sem o grupo `users` que o
+3. **`38-ci-conta.sh` cria um usuário comum** com `useradd -m -U -s /usr/sbin/nologin -d /srv/ci ci` (grupo primário próprio, sem o grupo `users` que o
    `adduser` acrescentou). Não usar `--system`: o spike só testou usuário comum (UID ≥ 1000); linger e Docker rootless com UID de sistema não foram verificados.
 4. **Imagem**: `ghcr.io/actions/actions-runner` (oficial), `./run.sh` com `ACTIONS_RUNNER_INPUT_JITCONFIG` em `--env-file` 0600 ou `docker run -e VAR`
    sem valor no argv; limites `--cpus 2 --memory 4g --pids-limit 512`.

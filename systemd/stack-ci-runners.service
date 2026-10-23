@@ -1,0 +1,30 @@
+[Unit]
+Description=Runners efêmeros do GitHub Actions (conta ci)
+# o marcador de UID abaixo e trocado pelo UID numerico da conta ci na instalacao (40-ci-runners.sh):
+# o especificador de UID do systemd, em unidade de sistema, vale o do gerenciador (0), nao o de User=
+After=network-online.target stack-ci-rede.service user@@CI_UID@.service
+# falha fechado: sem o isolamento de rede aplicado nao ha runner
+Requires=stack-ci-rede.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ci
+Group=ci
+# / e nao /srv/ci: o python poe o cwd no sys.path e /srv/ci e gravavel pela conta ci (json.py ali sombrearia o codigo do root)
+WorkingDirectory=/
+Environment=PYTHONPATH=/opt
+Environment=XDG_RUNTIME_DIR=/run/user/@CI_UID@
+Environment=DOCKER_HOST=unix:///run/user/@CI_UID@/docker.sock
+ExecStart=/usr/bin/python3 -P -m ci.runners --config /etc/stack-ci/config.json --token-file /etc/stack-ci/token --status /srv/ci/status.json
+Restart=on-failure
+RestartSec=30
+NoNewPrivileges=yes
+# o resto do sistema fica somente leitura (inclusive /etc/stack-ci: config e token); o supervisor so escreve o status.json em /srv/ci
+ProtectSystem=strict
+ReadWritePaths=/srv/ci
+PrivateTmp=yes
+# sem ProtectHome: yes/tmpfs esconderiam /run/user, onde fica o socket do Docker rootless (o CLI nao funcionaria)
+
+[Install]
+WantedBy=multi-user.target

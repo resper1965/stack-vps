@@ -119,7 +119,7 @@ Mesmo modelo do `16-agente.sh` (leia-o primeiro): root, idempotente, `STACK_TEST
 
 - [ ] **Step 1 — testes (stubs de `useradd`, `usermod`, `loginctl`, `id`, `getent`, `systemctl`, `install`):**
   - `test_recusa_quando_nao_e_root` (rc 1, nenhuma escrita);
-  - `test_cria_usuario_sem_grupos_privilegiados` — o script chama `useradd -m -U -s /bin/bash -d /srv/ci ci` (usuário comum, UID ≥ 1000, grupo primário próprio; **não** `--system` nem `adduser`: o spike só testou usuário comum, e o systemd user manager/linger e o Docker rootless não foram verificados com UID de sistema), sem `-G` (Docker rootless
+  - `test_cria_usuario_sem_grupos_privilegiados` — o script chama `useradd -m -U -s /usr/sbin/nologin -d /srv/ci ci` (usuário comum, UID ≥ 1000, grupo primário próprio; **não** `--system` nem `adduser`: o spike só testou usuário comum, e o systemd user manager/linger e o Docker rootless não foram verificados com UID de sistema), sem `-G` (Docker rootless
     precisa de sessão), e **nunca** com `-G sudo,docker,agente,pmo`;
   - `test_falha_se_ci_estiver_em_grupo_privilegiado` — `id -nG ci` stubado contendo `sudo` → rc 1 com mensagem (Review Focus 3);
   - `test_subuid_nao_colide_com_o_agente` — faixa escolhida não intersecta a do `agente` (`/etc/subuid` de fixture);
@@ -167,7 +167,7 @@ Mesmo modelo do `16-agente.sh` (leia-o primeiro): root, idempotente, `STACK_TEST
 - `def ciclo(cfg: dict, gh: Github, dk: Docker, estado_path: str, agora: float) -> dict` — um passe: valida o grupo e a organização (recusa se
   `allows_public_repositories` **ou** `run_workflows_from_fork_pull_requests`; a visibilidade `all` do grupo `Default` é aceita), calcula `planejar`, inicia no máximo `LIMITE_POR_CICLO = 4` runners, grava o estado
   (`/srv/ci/status.json`, atômico) e devolve o resumo.
-- `def main(argv=None) -> int` — lê `/srv/ci/config.json` (`{"imagem", "cpus", "memoria", "orgs": {…}}`) e o token de `/srv/ci/token`;
+- `def main(argv=None) -> int` — lê `/etc/stack-ci/config.json` (`{"imagem", "cpus", "memoria", "orgs": {…}}`) e o token de `/etc/stack-ci/token`;
   laço com `sleep(INTERVALO = 30)`; backoff exponencial até 10 min em erro; `--uma-vez` roda um ciclo (usado por teste e pelo health).
 
 - [ ] **Step 1 — testes (`ci/tests/test_runners.py`, API e Docker falsos):**
@@ -193,7 +193,7 @@ Mesmo modelo do `16-agente.sh` (leia-o primeiro): root, idempotente, `STACK_TEST
 
 **Interfaces:**
 - Consumes: Tasks 2–4; `RUNNER_TOKEN` e a lista de organizações do `admin.env` (`CI_ORGS=bekaa-trusted-advisors:Default:3,forense-io:Default:3`; `nessenergy` não entra no nível de organização).
-- Produces: `/srv/ci/token` (0400, `ci:ci`, copiado do `admin.env` por subshell/umask, nunca por argv), `/srv/ci/config.json` (0640),
+- Produces: `/etc/stack-ci/token` (0400, `ci:ci`, copiado do `admin.env` por subshell/umask, nunca por argv), `/etc/stack-ci/config.json` (0640),
   a unidade `stack-ci-runners.service` (`User=ci`, `ExecStart=/usr/bin/python3 -m ci.runners`, `Restart=on-failure`, `PYTHONPATH=/opt`),
   instalada e **só habilitada com `--habilitar`**.
 
@@ -236,7 +236,7 @@ Não é código: é o roteiro executado com o Ricardo, passo a passo.
 - [ ] **Antes de qualquer repositório pedir Docker no job** (`docker_socket: true`): decisão do Ricardo sobre apertar `/srv/dev`, `/srv/dev/projetos` e
   `/srv/dev/state` para 750 (dono e grupo corretos; afeta `dev`, `pmo` e os agentes) e sobre o `.env` legível; teste: a conta `ci` não lista nem lê.
 - [ ] Só depois: `docs/AGENTS.md` descreve o CI da stack como disponível (Task 7, Step 1) e abrimos os outros repositórios, **um PR por vez**.
-- **Rollback:** `sudo systemctl disable --now stack-ci-runners.service`; remover runners órfãos na organização; a conta e a regra de rede podem ficar.
+- **Rollback:** use sempre `sudo ./40-ci-runners.sh --parar` (nunca só `systemctl stop`: os containers dos runners sobrevivem à unidade); remover runners órfãos na organização; a conta e a regra de rede podem ficar. Para remover o isolamento, `--parar` antes de `39-ci-rede.sh --remover` (o 39 recusa se ainda houver runners).
 
 ---
 
