@@ -89,8 +89,8 @@ if [[ $(cat "$CMD") == 'meu comando' ]]; then ok "comando do dono preservado"; e
 grep -qF 'AVISO' "$T/saida"; afirma $? "comando do dono: avisa"
 # toda flag citada no comando existe no --help do gerador
 AJUDA=$(python3 "$RAIZ_REPO/scripts/42-novo-projeto.py" --help)
-for f in $(grep -o -- '--[a-z]\+' "$RAIZ_REPO/opencode/command/novo-projeto.md" | sort -u); do
+while read -r f; do
   case $f in --private) continue;; esac  # flag do gh, nao do gerador
   grep -qF -- "$f" <<<"$AJUDA"; afirma $? "flag $f existe no gerador"
-done
+done < <(grep -o -- '--[a-z]\+' "$RAIZ_REPO/opencode/command/novo-projeto.md" | sort -u)
 fim
