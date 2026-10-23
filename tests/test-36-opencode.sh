@@ -62,6 +62,17 @@ rm "$CFG"; roda; afirma_rc $RC 0 "sem opencode.json: cria"
 jq -e 'has("model")==false and has("small_model")==false and (.provider|keys)==["9router"]' "$CFG" >/dev/null; afirma $? "criado sem model/small_model"
 echo '{quebrado' > "$CFG"; roda; afirma_rc $RC 1 "opencode.json invalido: recusa"
 if [[ $(cat "$CFG") == '{quebrado' ]]; then ok "opencode.json invalido intocado"; else falha "opencode.json invalido intocado"; fi
+if ls "$CFG".* >/dev/null 2>&1; then falha "sem temporario sobrando apos falha"; else ok "sem temporario sobrando apos falha"; fi
+# arquivo de 0 bytes: tratado como {} (nada a perder)
+: > "$CFG"; roda; afirma_rc $RC 0 "opencode.json de 0 bytes: tratado como {}"
+jq -e '.provider["9router"]' "$CFG" >/dev/null; afirma $? "0 bytes: provedor escrito"
+# modo preservado
+chmod 644 "$CFG"; roda; if [[ $(stat -c %a "$CFG") == 644 ]]; then ok "modo 0644 preservado"; else falha "modo 0644 preservado"; fi
+chmod 600 "$CFG"; roda; if [[ $(stat -c %a "$CFG") == 600 ]]; then ok "modo 0600 preservado"; else falha "modo 0600 preservado"; fi
+rm "$CFG"; roda; if [[ $(stat -c %a "$CFG") == 600 ]]; then ok "criado do zero com 0600"; else falha "criado do zero com 0600"; fi
+# symlink: escreve no alvo e mantem o link
+mv "$CFG" "$T/alvo.json"; ln -s "$T/alvo.json" "$CFG"; roda; afirma_rc $RC 0 "opencode.json symlink"
+if [[ -L $CFG ]] && jq -e '.provider["9router"]' "$T/alvo.json" >/dev/null; then ok "symlink mantido, alvo atualizado"; else falha "symlink mantido, alvo atualizado"; fi
 prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
 JQ_BIN=jq-que-nao-existe roda; afirma_rc $RC 1 "sem jq: falha"
 grep -q 'jq' "$T/saida"; afirma $? "sem jq: mensagem clara"; nada "sem jq"

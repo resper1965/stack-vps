@@ -15,12 +15,11 @@ if grep -q 'hostname: emergencia\.' "${STACK_CF_DIR:-/etc/cloudflared}/config.ym
 else ok "web de emergência desligada"; fi
 oc=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${HEALTH_OPENCODE_URL:-http://127.0.0.1:4096/}" 2>/dev/null)
 case $oc in 200|302|401) ok "opencode web" ;; *) bad "opencode web" ;; esac
-# 9router e unidade de usuario do agente: so conta se estiver instalada
+# 9router: so conta se a unidade do agente estiver instalada (como o opencode, vale a resposta HTTP)
 nr_unit=${HEALTH_9ROUTER_UNIT:-/home/agente/.config/systemd/user/9router.service}
 if [[ -f $nr_unit ]]; then
   nr=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${HEALTH_9ROUTER_URL:-http://127.0.0.1:20128/}" 2>/dev/null)
-  if systemctl --user --machine=agente@ is-active --quiet 9router.service && [[ $nr =~ ^(200|302|307|401)$ ]]; then ok "9router"
-  else bad "9router"; fi
+  case $nr in 200|302|401) ok "9router" ;; *) bad "9router" ;; esac
 fi
 pmo_env=${HEALTH_PMO_ENV:-/etc/pmo/servidor.env}
 if [[ ! -f $pmo_env ]]; then printf '  pend  %s\n' "painel do PMO sem /etc/pmo/servidor.env (34-pmo.sh ainda não rodou)"

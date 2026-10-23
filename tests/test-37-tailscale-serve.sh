@@ -22,7 +22,7 @@ if [[ $out == *"https://stack.exemplo.ts.net"* && $out == *"https://stack.exempl
 
 bash "$S" >/dev/null 2>&1; afirma_rc $? 0 "segunda execucao"
 n=$(grep '^tailscale serve --bg' "$STUB_LOG" | sort -u | wc -l)
-if [[ $n == 3 ]]; then ok "reaplicar XX alvos distintos (veio $n)"; fi
+if [[ $n == 3 ]]; then ok "reaplicar mantem exatamente 3 alvos distintos (veio $n)"; else falha "reaplicar mantem exatamente 3 alvos distintos (veio $n)"; fi
 
 novo_tmp; ts_stub; stub systemctl 3
 out=$(bash "$S" 2>&1); afirma_rc $? 1 "tailscaled inativo: recusa"

@@ -60,20 +60,14 @@ tem "pend  painel do PMO sem /etc/pmo/servidor.env"; afirma "$?" "sem servidor.e
 novo_tmp; prepara; roda
 ! tem "9router"; afirma "$?" "9router sem unidade: sem secao"
 touch "$T/9router.service"; export HEALTH_9ROUTER_UNIT=$T/9router.service
-roda; tem "ok    9router"; afirma "$?" "9router ativo e HTTP 200: ok"
+roda; tem "ok    9router"; afirma "$?" "9router HTTP 200: ok"
 curl_com 401 200; roda; tem "ok    9router"; afirma "$?" "9router 401: ok"
 curl_com 500 200; roda; tem "FALHA 9router"; afirma "$?" "9router HTTP 500: FALHA"
 afirma_rc "$rc" 1 "9router HTTP 500: rc 1"
 curl_com fail 200; roda; tem "FALHA 9router"; afirma "$?" "9router curl falha: FALHA"
-curl_com 200 200
-printf '#!/usr/bin/env bash
-echo "systemctl $*" >> "$STUB_LOG"
-[[ $* == *9router* && $* == *is-active* ]] && exit 3
-[[ $1 == is-failed ]] && exit 1
-exit 0
-' > "$STUBS/systemctl"
-roda; tem "FALHA 9router"; afirma "$?" "9router unidade inativa: FALHA"
-afirma_rc "$rc" 1 "9router unidade inativa: rc 1"
+curl_com 307 200; roda; tem "FALHA 9router"; afirma "$?" "9router 307: FALHA"
+curl_com 000 200; roda; tem "FALHA 9router"; afirma "$?" "9router parado (HTTP 000): FALHA"
+afirma_rc "$rc" 1 "9router parado: rc 1"
 
 # espelho do Linear: is-failed rc 0 = unidade falhou; rc 1 (falhou nao, ou unidade inexistente) = silencio
 novo_tmp; prepara; systemctl_com 0; roda
