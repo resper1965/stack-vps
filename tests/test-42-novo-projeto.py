@@ -65,8 +65,12 @@ class GeradorTests(unittest.TestCase):
     def test_pasta_existente(self):
         self.out.mkdir()
         (self.out / "x").write_text("meu")
-        self.assertNotEqual(self.run42().returncode, 0)
+        r = self.run42()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("não está vazia", r.stderr)
         self.assertEqual(os.listdir(self.out), ["x"])
+        self.assertEqual((self.out / "x").read_text(), "meu")
+        self.assertEqual(self.sobras(), ["meu-app"])
 
     def test_pasta_vazia_ok(self):
         self.out.mkdir()
@@ -74,8 +78,10 @@ class GeradorTests(unittest.TestCase):
         self.assertTrue((self.out / "STATE.md").exists())
 
     def test_nome_invalido(self):
-        for nome in ("a/b", "..", "a b", "Abc", "1abc", "", "-x"):
-            self.assertNotEqual(self.run42(nome=nome).returncode, 0, nome)
+        for nome in ("a/b", "..", "a b", "Abc", "1abc", "", "-x", "abc\n"):
+            r = self.run42(nome=nome)
+            self.assertNotEqual(r.returncode, 0, nome)
+            self.assertIn("--nome", r.stderr)
         self.assertEqual(self.sobras(), [])
 
     def test_desconhecidos(self):
@@ -105,6 +111,45 @@ class GeradorTests(unittest.TestCase):
                "--destino", "gcp", "--apply"]
         r = subprocess.run(cmd, capture_output=True, text=True, env=env)
         self.assertFalse((self.out / "src").exists())  # templates do teste não foram usados
+        if r.returncode == 0:
+            self.assertFalse((self.out / "README.md").exists() and "Destino:" in (self.out / "README.md").read_text(encoding="utf-8"))
+        else:
+            self.assertIn("template ausente", r.stderr)
+
+    def test_modo_dos_arquivos(self):
+        sh = self.tpl / "sistema/run.sh"
+        sh.write_text("#!/bin/sh\n")
+        sh.chmod(0o755)
+        (self.tpl / "sistema/bin.dat").write_bytes(b"\xff\xfe")
+        (self.tpl / "sistema/bin.dat").chmod(0o755)
+        self.assertEqual(self.run42().returncode, 0)
+        self.assertTrue(os.access(self.out / "run.sh", os.X_OK))
+        self.assertTrue(os.access(self.out / "bin.dat", os.X_OK))
+        self.assertFalse(os.access(self.out / "src/a.txt", os.X_OK))
+        umask = os.umask(0)
+        os.umask(umask)
+        self.assertEqual(self.out.stat().st_mode & 0o777, 0o777 & ~umask)
+
+    def test_destino_symlink(self):
+        alvo = self.d / "real"
+        alvo.mkdir()
+        try:
+            os.symlink(alvo, self.out)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink indisponível")
+        r = self.run42()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("symlink", r.stderr)
+        self.assertEqual(os.listdir(alvo), [])
+
+    def test_fifo_no_template(self):
+        if not hasattr(os, "mkfifo"):
+            self.skipTest("mkfifo indisponível")
+        os.mkfifo(self.tpl / "sistema/pipe")
+        r = self.run42()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("arquivo comum", r.stderr)
+        self.assertEqual(self.sobras(), [])
 
 
 if __name__ == "__main__":

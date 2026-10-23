@@ -36,6 +36,8 @@ def copiar(origem, tmp, valores):
         for d in dirnames:
             (tmp / rel / d).mkdir(parents=True, exist_ok=True)
         for f in filenames:
+            if not (Path(dirpath) / f).is_file():
+                falha(f"template contém item que não é arquivo comum: {rel / f}")
             alvo = tmp / rel / (f[:-5] if f.endswith(".tmpl") else f)
             if alvo.exists():
                 falha(f"arquivo duplicado no template: {rel / alvo.name}")
@@ -44,6 +46,7 @@ def copiar(origem, tmp, valores):
                 texto = dados.decode("utf-8")
             except UnicodeDecodeError:
                 alvo.write_bytes(dados)
+                shutil.copymode(Path(dirpath) / f, alvo)
                 continue
             for k, v in valores.items():
                 texto = texto.replace("{{" + k + "}}", v)
@@ -51,6 +54,7 @@ def copiar(origem, tmp, valores):
             if sobra:
                 falha(f"marcador indefinido {sobra.group(0)} em {rel / f}")
             alvo.write_text(texto, encoding="utf-8", newline="\n")
+            shutil.copymode(Path(dirpath) / f, alvo)  # preserva o bit de execução
 
 
 def main():
@@ -58,10 +62,11 @@ def main():
     ap.add_argument("pasta", type=Path)
     ap.add_argument("--natureza", required=True, choices=sorted(TIPO))
     ap.add_argument("--nome", required=True)
-    ap.add_argument("--destino", action="append", required=True)
+    ap.add_argument("--destino", action="append", required=True,
+                    help="obrigatório, pelo menos um perfil de standards/profiles.json (repetível)")
     ap.add_argument("--apply", action="store_true", help="grava; sem isso só mostra a prévia")
     a = ap.parse_args()
-    if not NOME_OK.match(a.nome):
+    if not NOME_OK.fullmatch(a.nome):
         falha("--nome deve ser [a-z0-9-], começar com letra e ter até 50 caracteres")
     perfis = json.loads((ROOT / "standards/profiles.json").read_text(encoding="utf-8"))["profiles"]
     if not set(a.destino) <= set(perfis):
@@ -69,6 +74,8 @@ def main():
     origem = templates_dir() / a.natureza
     if not origem.is_dir() or origem.is_symlink():
         falha(f"template ausente: {origem}")
+    if a.pasta.expanduser().is_symlink():
+        falha("a pasta de destino não pode ser um symlink")
     p = a.pasta.expanduser().resolve()
     if p.exists() and (not p.is_dir() or any(p.iterdir())):
         falha("a pasta já existe e não está vazia")
@@ -79,6 +86,9 @@ def main():
         return
     valores = {"nome": a.nome, "destino": ", ".join(dict.fromkeys(a.destino))}
     tmp = Path(tempfile.mkdtemp(prefix=f".{a.nome}.", dir=p.parent))
+    umask = os.umask(0)
+    os.umask(umask)
+    tmp.chmod(0o777 & ~umask)  # mkdtemp cria 0700; a pasta final segue o umask
     try:
         # o 35 grava o .standards.json em pasta vazia; os templates entram depois
         cmd = [sys.executable, str(ROOT / "scripts/35-projeto-standards.py"), str(tmp), "--apply"]
@@ -92,9 +102,7 @@ def main():
             f"# {a.nome}\n\n**Tipo:** {TIPO[a.natureza]}\n**Estágio:** ideia\n"
             "**Próximo passo:** definir o escopo e abrir a primeira tarefa\n",
             encoding="utf-8", newline="\n")
-        if p.exists():
-            p.rmdir()
-        tmp.rename(p)
+        tmp.rename(p)  # em POSIX substitui uma pasta vazia já existente
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)
         raise

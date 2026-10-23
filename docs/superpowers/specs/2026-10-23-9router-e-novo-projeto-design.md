@@ -40,7 +40,7 @@
 
 - **Comando do OpenCode** `opencode/command/novo-projeto.md`, provisionado em `~/.config/opencode/command/` pelo
   `36-opencode.sh`. Conduz a skill `project-bootstrap` (natureza → poucas perguntas → prévia → confirmação).
-- **Gerador:** `scripts/42-novo-projeto.py <pasta> --natureza sistema|agente|parecer --nome <slug> [--destino ...] [--apply]`.
+- **Gerador:** `scripts/42-novo-projeto.py <pasta> --natureza sistema|agente|parecer --nome <slug> --destino <perfil> [--destino ...] [--apply]` (`--destino` obrigatório, pelo menos um).
   Sem `--apply` só mostra a prévia (como o `35-projeto-standards.py`). Recusa pasta que exista e não esteja vazia. Copia
   `templates/<natureza>/` (não gera por IA), troca os marcadores `{{nome}}`/`{{destino}}`, escreve `STATE.md` válido
   (`tipo`, `estágio: ideia`, `próximo passo`) e chama o `35-projeto-standards.py` para o `.standards.json`.
