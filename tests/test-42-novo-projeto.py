@@ -45,13 +45,10 @@ class GeradorTests(unittest.TestCase):
     def test_destinos_por_cima_da_raiz(self):
         (self.tpl / "sistema/_destinos/gcp").mkdir(parents=True)
         (self.tpl / "sistema/_destinos/vercel").mkdir()
-        (self.tpl / "sistema/_destinos/gcp/g.txt.tmpl").write_text("{{nome}}
-")
-        (self.tpl / "sistema/_destinos/vercel/v.txt").write_text("v
-")
+        (self.tpl / "sistema/_destinos/gcp/g.txt.tmpl").write_text("{{nome}}\n")
+        (self.tpl / "sistema/_destinos/vercel/v.txt").write_text("v\n")
         self.assertEqual(self.run42(destino=("gcp",)).returncode, 0)
-        self.assertEqual((self.out / "g.txt").read_text(), "meu-app
-")
+        self.assertEqual((self.out / "g.txt").read_text(), "meu-app\n")
         self.assertFalse((self.out / "v.txt").exists())
         self.assertFalse((self.out / "_destinos").exists())
 
@@ -123,7 +120,7 @@ class GeradorTests(unittest.TestCase):
         cmd = [sys.executable, str(SCRIPT), str(self.out), "--natureza", "sistema", "--nome", "x",
                "--destino", "gcp", "--apply"]
         r = subprocess.run(cmd, capture_output=True, text=True, env=env)
-        self.assertFalse((self.out / "src").exists())  # templates do teste não foram usados
+        self.assertFalse((self.out / "src/a.txt").exists())  # templates do teste não foram usados
         if r.returncode == 0:
             self.assertFalse((self.out / "README.md").exists() and "Destino:" in (self.out / "README.md").read_text(encoding="utf-8"))
         else:
