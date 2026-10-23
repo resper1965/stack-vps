@@ -87,10 +87,39 @@ antigo' > "$CMD"; roda; cmp -s "$CMD" "$RAIZ_REPO/opencode/command/novo-projeto.
 echo 'meu comando' > "$CMD"; roda; afirma_rc $RC 0 "comando do dono: segue"
 if [[ $(cat "$CMD") == 'meu comando' ]]; then ok "comando do dono preservado"; else falha "comando do dono preservado"; fi
 grep -qF 'AVISO' "$T/saida"; afirma $? "comando do dono: avisa"
-# toda flag citada no comando existe no --help do gerador
-AJUDA=$(python3 "$RAIZ_REPO/scripts/42-novo-projeto.py" --help)
-while read -r f; do
-  case $f in --private) continue;; esac  # flag do gh, nao do gerador
-  grep -qF -- "$f" <<<"$AJUDA"; afirma $? "flag $f existe no gerador"
-done < <(grep -o -- '--[a-z]\+' "$RAIZ_REPO/opencode/command/novo-projeto.md" | sort -u)
+# marcador no repo, convergencia e limite das 6 linhas
+CMDREPO=$RAIZ_REPO/opencode/command/novo-projeto.md
+head -n 6 "$CMDREPO" | grep -qF '<!-- stack-vps -->'; afirma $? "repo: marcador nas 6 primeiras linhas"
+cp "$CMDREPO" "$CMD"; printf '\nextra\n' >> "$CMD"; roda; cmp -s "$CMD" "$CMDREPO"; afirma $? "copia com marcador alterada converge"
+printf 'a\nb\nc\nd\ne\nf\n<!-- stack-vps -->\n' > "$CMD"; roda
+if [[ $(head -n1 "$CMD") == a ]]; then ok "marcador na linha 7: arquivo do dono"; else falha "marcador na linha 7: arquivo do dono"; fi
+# repo mudou depois da 1a instalacao: reexecucao converge (repo falso em arvore temporaria)
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+FAKE=$T/repo; mkdir -p "$FAKE/scripts" "$FAKE/opencode/command"
+cp "$S" "$FAKE/scripts/"; cp "$RAIZ_REPO"/opencode/*.* "$FAKE/opencode/"; cp "$CMDREPO" "$FAKE/opencode/command/"
+bash "$FAKE/scripts/36-opencode.sh" >/dev/null 2>&1; printf 'novidade\n' >> "$FAKE/opencode/command/novo-projeto.md"
+bash "$FAKE/scripts/36-opencode.sh" >/dev/null 2>&1; cmp -s "$HOME/.config/opencode/command/novo-projeto.md" "$FAKE/opencode/command/novo-projeto.md"; afirma $? "repo alterado: reexecucao converge"
+# repo sem o comando: exit 1
+rm "$FAKE/opencode/command/novo-projeto.md"; bash "$FAKE/scripts/36-opencode.sh" >"$T/saida" 2>&1; afirma_rc $? 1 "sem comando no repo"
+grep -q 'novo-projeto.md' "$T/saida"; afirma $? "sem comando no repo: mensagem"
+# symlink do dono
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+CMD=$HOME/.config/opencode/command/novo-projeto.md; mkdir -p "${CMD%/*}"
+printf '<!-- stack-vps -->\nvelho\n' > "$T/alvo.md"; ln -s "$T/alvo.md" "$CMD"; roda
+if [[ -L $CMD ]] && cmp -s "$T/alvo.md" "$CMDREPO"; then ok "symlink com marcador: alvo atualizado, link mantido"; else falha "symlink com marcador: alvo atualizado, link mantido"; fi
+echo 'do dono' > "$T/alvo.md"; roda
+if [[ -L $CMD && $(cat "$T/alvo.md") == 'do dono' ]]; then ok "symlink sem marcador: intocado"; else falha "symlink sem marcador: intocado"; fi
+if ls "$T"/alvo.md.* >/dev/null 2>&1; then falha "sem temporario do comando sobrando"; else ok "sem temporario do comando sobrando"; fi
+
+# flags, caminho e valores citados no comando vs. gerador: conjuntos exatos
+GER=$RAIZ_REPO/scripts/42-novo-projeto.py
+AJUDA=$(python3 "$GER" --help)
+FLAGS_AJUDA=$(grep -o -- '--[a-z]\+' <<<"$AJUDA" | sort -u)
+FLAGS_MD=$(grep -o -- '--[a-z]\+' "$CMDREPO" | grep -vx -- '--private' | sort -u)  # --private e do gh
+if [[ -n $FLAGS_MD && -z $(comm -23 <(echo "$FLAGS_MD") <(echo "$FLAGS_AJUDA")) ]]; then ok "flags do comando contidas nas do gerador"; else falha "flags do comando contidas nas do gerador"; fi
+for f in --apply --destino --natureza --nome; do grep -qx -- "$f" <<<"$FLAGS_MD"; afirma $? "comando cita $f"; done
+grep -qF '/opt/stack-vps/scripts/42-novo-projeto.py' "$CMDREPO" && [[ -f $GER ]]; afirma $? "caminho do gerador citado existe no repo"
+ESC=$(grep -o '{[a-z,]*}' <<<"$AJUDA" | head -1 | tr -d '{}' | tr ',' '\n' | sort)
+CIT=$(grep -o '`[a-z]*`' "$CMDREPO" | tr -d '`' | grep -Fxf <(echo "$ESC") | sort -u)
+if [[ $CIT == "$ESC" ]]; then ok "valores de --natureza citados = choices do gerador"; else falha "valores de --natureza citados = choices do gerador"; fi
 fim

@@ -27,19 +27,22 @@ install -d "$UNIDADES/opencode-web.service.d"
 install -m 644 "$REPO/opencode/opencode-web.service" "$UNIDADES/opencode-web.service"
 install -m 644 "$REPO/opencode/password.conf" "$UNIDADES/opencode-web.service.d/password.conf"
 # comando /novo-projeto: o marcador identifica a copia do repo; arquivo do dono sem ele nunca e sobrescrito
-CMD=$HOME/.config/opencode/command/novo-projeto.md
+install -d "$HOME/.config/opencode/command"  # readlink -f exige o diretorio
+CMD=$(readlink -f "$HOME/.config/opencode/command/novo-projeto.md")  # link do dono: decide e escreve no alvo
+novo=""; cmd_novo=""
+trap 'rm -f "$novo" "$cmd_novo"' EXIT
 if [[ -e $CMD ]] && ! head -n 6 "$CMD" | grep -qF '<!-- stack-vps -->'; then
   echo "AVISO: $CMD e do dono (sem o marcador <!-- stack-vps -->); comando /novo-projeto nao instalado"
 else
   install -d "$(dirname "$CMD")"
-  install -m 644 "$REPO/opencode/command/novo-projeto.md" "$CMD"
+  cmd_novo=$(mktemp "$CMD.XXXXXX")
+  install -m 644 "$REPO/opencode/command/novo-projeto.md" "$cmd_novo"
+  mv "$cmd_novo" "$CMD"
 fi
 # provedor 9router: o bloco do repo vence, o resto do opencode.json (e os modelos do dono) fica; model/small_model nunca
 CONFIG=$(readlink -f "$CONFIG")  # link do dono: escreve no alvo, nunca troca o link
 [[ -f $CONFIG ]] || (umask 077; echo '{}' > "$CONFIG")
 [[ -s $CONFIG ]] || echo '{}' > "$CONFIG"  # arquivo vazio nao tem o que perder
-novo=
-trap 'rm -f "$novo"' EXIT
 novo=$(mktemp "$CONFIG.XXXXXX")
 "$JQ" --slurpfile p "$REPO/opencode/provider-9router.json"   '.provider["9router"] = ((.provider["9router"] // {}) * $p[0].provider["9router"])' "$CONFIG" > "$novo"   && [[ -s $novo ]] || { echo "opencode.json invalido, nada alterado"; exit 1; }
 chmod --reference="$CONFIG" "$novo"; mv "$novo" "$CONFIG"
