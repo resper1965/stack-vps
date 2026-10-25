@@ -19,7 +19,8 @@ def texto(painel, url=None):
 
 
 def main():
-    r = texto(json.load(open(PAINEL, encoding="utf-8")), os.environ.get("PMO_URL"))
+    with open(PAINEL, encoding="utf-8") as f:
+        r = texto(json.load(f), os.environ.get("PMO_URL"))
     if r:
         subprocess.run(["/usr/local/lib/stack-vps/alertar.sh", r[0], r[1]], check=False)
 

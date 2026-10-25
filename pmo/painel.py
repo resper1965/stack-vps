@@ -177,9 +177,11 @@ def main():
     from pmo.coleta import coletar, mapear_locais
     from pmo.github import GitHub
     token = os.environ.get("GITHUB_TOKEN") or sys.exit("falta GITHUB_TOKEN")
-    donos = open(os.path.join(os.path.dirname(__file__), "donos.txt"), encoding="utf-8").read().split()
+    with open(os.path.join(os.path.dirname(__file__), "donos.txt"), encoding="utf-8") as f:
+        donos = f.read().split()
     try:
-        anterior = json.load(open(SAIDA, encoding="utf-8"))
+        with open(SAIDA, encoding="utf-8") as f:
+            anterior = json.load(f)
     except (OSError, ValueError):
         anterior = None
     agora = datetime.now(timezone.utc)
