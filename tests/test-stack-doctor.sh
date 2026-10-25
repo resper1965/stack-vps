@@ -186,6 +186,18 @@ falta_com "chat sem chave 000" "POST /v1/chat/completions sem chave: resposta in
 falta_com "chat sem chave 500" "POST /v1/chat/completions sem chave: resposta inesperada" 'export STUB_MODELS_CODE=500'
 falta_com "ss sem listener em 20128" "nada escutando em :20128" 'export STUB_SS="LISTEN 0 511 127.0.0.1:4096 0.0.0.0:*"'
 falta_com "listener *:20128" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 *:20128 *:*"'
+falta_com "203.0.113.5:20128" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 203.0.113.5:20128 0.0.0.0:*"'
+falta_com "10.0.0.5:20128" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 10.0.0.5:20128 0.0.0.0:*"'
+falta_com "tailnet mais 0.0.0.0" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 100.76.167.6%tailscale0:20128 0.0.0.0:*
+LISTEN 0 511 0.0.0.0:20128 0.0.0.0:*"'
+novo_tmp; prepara; export STUB_SS="LISTEN 0 511 127.0.0.1:20128 0.0.0.0:*
+LISTEN 0 511 100.76.167.6%tailscale0:20128 0.0.0.0:*
+LISTEN 0 511 [fd7a:115c:a1e0::613b:9026]%tailscale0:20128 [::]:*"; roda
+tem "ok    20128 só em loopback"; afirma "$?" "tailnet (%tailscale0) aceita"
+novo_tmp; prepara; export STUB_SS="LISTEN 0 511 127.0.0.1:20128 0.0.0.0:*
+LISTEN 0 511 100.76.167.6:20128 0.0.0.0:*
+LISTEN 0 511 [fd7a:115c:a1e0::613b:9026]:20128 [::]:*"; roda
+tem "ok    20128 só em loopback"; afirma "$?" "tailnet sem sufixo aceita"
 falta_com "listener 100.x" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 100.1.2.3:20128 0.0.0.0:*"'
 falta_com "loopback mais 0.0.0.0" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 127.0.0.1:20128 0.0.0.0:*
 LISTEN 0 511 0.0.0.0:20128 0.0.0.0:*"'

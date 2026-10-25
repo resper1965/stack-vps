@@ -112,7 +112,8 @@ elif ! ls_out=$("$SS" -Hltn 2>/dev/null); then pend "porta 20128: ss falhou"
 else
   esc=$(awk '$4 ~ /:20128$/ {print $4}' <<<"$ls_out")
   if [[ -z $esc ]]; then falta "nada escutando em :20128 (9router fora do ar)"
-  elif grep -Evxq '127\.0\.0\.1:20128|\[::1\]:20128' <<<"$esc"; then falta "9router escutando fora do loopback ($(tr '\n' ' ' <<<"$esc"))"
+  # loopback e endereços da tailnet (tailscale serve --https=20128) são legítimos: %tailscale0, 100.64.0.0/10, fd7a:115c:a1e0::/48
+  elif grep -Evxq '127\.0\.0\.1:20128|\[::1\]:20128|[^ ]+%tailscale0:20128|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]+\.[0-9]+:20128|\[fd7a:115c:a1e0:[0-9a-f:]*\]:20128' <<<"$esc"; then falta "9router escutando fora do loopback ($(tr '\n' ' ' <<<"$esc"))"
   else ok "20128 só em loopback"; fi
 fi
 
