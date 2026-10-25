@@ -124,3 +124,16 @@ concessão de acesso (grupo/ACL): esses passos ficam com o dono.
 7. Depois: timers dos jobs agendados parados (backup do `n.360-alternative` primeiro), `@ness/auth` (opcional), espelho no Linear (chaves).
 
 **Go-live:** o roteiro por fases (portões, quem faz, rollback) está em `docs/runbooks/2026-10-go-live.md`; o critério de pronto é o `bin/stack-doctor` sem `FALTA`. Nada dele foi executado na VPS.
+
+## Atualização 2026-10-25 (noite) — execução na VPS
+
+- **Feito com aprovação do dono:** `usermod -aG agente pmo`; `/srv/dev` 751, `projetos` e `state` 750, `/srv/dev/pareceres` criado (agente, 750);
+  Coder apagado por completo sem backup (container de teste, 2 volumes, `/srv/coder`, rede e imagens `coder`/`postgres:17`); restos dos runners
+  (redes, imagem, `/srv/runners`); Continue, OpenRig (pacote, estado, linhas do `.bashrc` com backup), sysbox (pacote; Docker reiniciado sem
+  containers) e a regra 8080 do UFW.
+- **Não feito:** `stack-rede-containers` (barrado pelo classificador como enfraquecimento de segurança; precisa de autorização explícita do dono;
+  hoje sem efeito, não há containers de terceiros no Docker do sistema) e a imagem `stack/web` (5,28 GB; decisão do dono).
+- **`stack-doctor` na VPS (leitura):** 29 ok, 1 pend, 16 FALTA. O CI (conta `ci`, regra de rede, `stack-ci-runners`, `status.json`) já aparece
+  instalado e fresco: foi feito fora desta sessão. Faltam o 9router (aguarda merge do #20 e as chaves pelo `43-segredos-guiado.sh`), o clone de
+  `/opt/stack-vps` fora do `main` e o login do `agy`.
+- **PRs:** #19 mergeado; #20 e #21 abertos (#21 empilhado sobre #20); #16 e #17 abertos.
