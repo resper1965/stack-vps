@@ -13,7 +13,7 @@ if [[ ${STACK_TESTE:-} == 1 ]]; then   # overrides só nos testes
   SRV=${DOCTOR_SRV:-$SRV}; SEGREDOS=${DOCTOR_SEGREDOS:-$SEGREDOS}; BASE=${DOCTOR_CURL_BASE:-$BASE}
   CI_DIR=${DOCTOR_CI_DIR:-$CI_DIR}; UNITDIR=${DOCTOR_UNIT_DIR:-$UNITDIR}; CODER=${DOCTOR_CODER:-$CODER}; RUNNERS=${DOCTOR_RUNNERS:-$RUNNERS}
 fi
-VERSAO_9R=0.5.104
+VERSAO_9R=0.5.109
 n_ok=0; n_pend=0; n_falta=0
 ok(){ n_ok=$((n_ok+1)); printf '  ok    %s\n' "$*"; }
 pend(){ n_pend=$((n_pend+1)); printf '  pend  %s\n' "$*"; }

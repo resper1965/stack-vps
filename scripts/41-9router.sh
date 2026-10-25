@@ -8,7 +8,7 @@ set -euo pipefail
 # sob "sudo -u agente -H bash -c" a variavel vem vazia e o systemctl --user nao acha o bus
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-VERSAO=0.5.104
+VERSAO=0.5.109
 PREFIXO=$HOME/.local
 AMBIENTE=$HOME/.config/9router/9router.env
 UNIDADES=$HOME/.config/systemd/user
