@@ -153,3 +153,8 @@ concessão de acesso (grupo/ACL): esses passos ficam com o dono.
 - **Falta (dono):** cadastrar no painel os provedores (OpenRouter, DeepSeek, Featherless; nenhuma conexão cadastrada ainda), acrescentar os
   modelos ao `opencode.json`, logins de `claude`, `codex` e `agy`, escolher o modelo padrão, merge do #20 e #21, autorizar a remoção do
   `stack-rede-containers`.
+- **Featherless conectado ao 9router** pela API do painel (`POST /api/providers`, provedor `featherless`, chave lida do `agente.env`, nunca
+  impressa; validação `valid: true`). Prova de ponta a ponta: `POST /v1/chat/completions` com a chave `stack-vps` e o modelo
+  `fl/deepseek-ai/DeepSeek-V4-Pro` respondeu 200 ("ok"). Modelos `fl/…` (DeepSeek V4 Pro/Flash, GLM 5.2/5.1, Kimi K2.7 Code/K2.6/K2.5)
+  acrescentados ao provedor `9router` do `opencode.json` (sem `model` padrão). OpenRouter e DeepSeek direto seguem sem cadastro: as chaves
+  não estão nos arquivos de segredo da VPS.
