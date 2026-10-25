@@ -20,7 +20,7 @@ prepara() {
   chmod 600 "$A/.config/9router/9router.env" "$A/.config/9router/client.env"
   printf '{"provider":{"9router":{"options":{"baseURL":"http://127.0.0.1:20128/v1"}}}}\n' > "$A/.config/opencode/opencode.json"
   printf -- '---\n---\n<!-- stack-vps -->\n' > "$A/.config/opencode/command/novo-projeto.md"
-  printf '{\n  "version": "0.5.104"\n}\n' > "$A/.local/lib/node_modules/9router/package.json"
+  printf '{\n  "version": "0.5.109"\n}\n' > "$A/.local/lib/node_modules/9router/package.json"
   for c in claude codex agy; do printf '#!/bin/sh\n' > "$A/.local/bin/$c"; chmod +x "$A/.local/bin/$c"; done
   printf 'OUTRA=1\nNINE_ROUTER_API_KEY=%s\n' "$SENT" > "$T/agente.env"
   stubs
@@ -149,7 +149,7 @@ falta_com "opencode sem resposta" "opencode não responde" 'export STUB_OC=500'
 falta_com "sem jq" "jq não instalado" 'export DOCTOR_JQ=jq-que-nao-existe'
 falta_com "opencode.json sem 9router" "opencode.json sem o provedor 9router" 'echo "{}" > "$T/ah/.config/opencode/opencode.json"'
 falta_com "novo-projeto sem marcador" "comando /novo-projeto ausente" 'echo x > "$T/ah/.config/opencode/command/novo-projeto.md"'
-falta_com "pacote 9router velho" "pacote 9router 0.5.1 " 'sed -i s/0.5.104/0.5.1/ "$T/ah/.local/lib/node_modules/9router/package.json"'
+falta_com "pacote 9router velho" "pacote 9router 0.5.1 " 'sed -i s/0.5.109/0.5.1/ "$T/ah/.local/lib/node_modules/9router/package.json"'
 falta_com "unidade 9router inativa" "unidade 9router inativa" 'export STUB_INATIVAS=9router.service'
 falta_com "9router.env 0644" "9router.env: esperado 600" 'chmod 644 "$T/ah/.config/9router/9router.env"'
 falta_com "client.env ausente" "client.env:" 'rm "$T/ah/.config/9router/client.env"'

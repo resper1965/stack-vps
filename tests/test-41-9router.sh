@@ -47,7 +47,7 @@ prepara; env_com "" "$JWT"; roda; afirma_rc $RC 1 "sem INITIAL_PASSWORD"; nada "
 prepara; env_com "$SENHA" ""; roda; afirma_rc $RC 1 "sem JWT_SECRET"; nada "sem JWT"
 
 prepara; env_com "$SENHA" "$JWT"; roda; afirma_rc $RC 0 "caso valido"
-afirma_log "9router@0.5.104" "npm instala a versao fixa"
+afirma_log "9router@0.5.109" "npm instala a versao fixa"
 afirma_log "--prefix $NR_PREFIX" "npm com --prefix"
 U=$NR_UNIT_DIR/9router.service
 if [[ -f $U ]]; then ok "unidade instalada"; else falha "unidade instalada"; fi
@@ -74,13 +74,13 @@ cat > "$STUBS/npm" <<'EOS'
 #!/usr/bin/env bash
 echo "npm $*" >> "$STUB_LOG"
 mkdir -p "$NR_PREFIX/lib/node_modules/9router"
-printf '{\n  "name": "9router",\n  "version": "0.5.104"\n}\n' > "$NR_PREFIX/lib/node_modules/9router/package.json"
+printf '{\n  "name": "9router",\n  "version": "0.5.109"\n}\n' > "$NR_PREFIX/lib/node_modules/9router/package.json"
 EOS
 chmod +x "$STUBS/npm"
 roda; afirma_rc $RC 0 "primeira execucao instala"; afirma_log "npm install" "npm chamado na primeira vez"
 : > "$STUB_LOG"; roda; afirma_rc $RC 0 "versao ja instalada"; nega_log "npm" "versao ja instalada: npm nao chamado"
 printf '{"version": "0.5.1"}\n' > "$NR_PREFIX/lib/node_modules/9router/package.json"
-roda; afirma_log "9router@0.5.104" "versao diferente: npm reinstala"
+roda; afirma_log "9router@0.5.109" "versao diferente: npm reinstala"
 
 # DATA_DIR pre-existente e aberto vira 0700
 prepara; env_com "$SENHA" "$JWT"; mkdir -p "$HOME/.9router"; chmod 755 "$HOME/.9router"
