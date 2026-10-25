@@ -61,9 +61,9 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 ## Ambiente (VPS `stack`)
 
 - Você roda como `agente`: sem sudo, Docker rootless. Faltou ferramenta ou permissão: peça, não contorne.
-- CI: antes de commit e de PR, rode o comando de CI local do projeto. Onde houver runner da `stack`, o workflow
-  usa `runs-on: [self-hosted, stack]`; nunca `ubuntu-latest` em repositório privado (sem minutos pagos). Os runners
-  estão sendo reinstalados (planejado): não suponha que existam hoje.
+- CI: antes de commit e de PR, rode o comando de CI local do projeto (o comando único dele). O padrão é
+  `ci: local-vps`. `runs-on: [self-hosted, stack]` só em repositório privado de organização com runner instalado
+  (hoje nenhum; há um piloto previsto). Nunca `ubuntu-latest` em repositório privado.
 - Projetos em `/srv/dev/projetos`; material do laptop em `/srv/dev/laptop` até o Ricardo destinar.
   `/srv/dev/data` e `/srv/forense` estão fora do seu alcance.
 - Segredo vem do ambiente (`agente.env`, `projetos.env`, `.envrc` via direnv). Use a variável; nunca

@@ -11,6 +11,10 @@ if [[ -d pmo/tests ]]; then
   echo "pmo (python)"
   if python3 -m unittest discover -s pmo/tests -t . -q 2>"$HOME/.pmo-testes.log"; then echo "  ok"; else cat "$HOME/.pmo-testes.log"; rc=1; fi
 fi
+if [[ -d ci/tests ]]; then
+  echo "ci (python)"
+  if python3 -m unittest discover -s ci/tests -t . -q 2>"$HOME/.ci-testes.log"; then echo "  ok"; else cat "$HOME/.ci-testes.log"; rc=1; fi
+fi
 if command -v node >/dev/null; then
   echo "plugin do opencode (node)"
   if node --test opencode/plugin/*.test.mjs >"$HOME/.plugin-testes.log" 2>&1; then echo "  ok"; else cat "$HOME/.plugin-testes.log"; rc=1; fi

@@ -36,7 +36,7 @@ DNS do `dns-repair` e as varreduras de segurança (CodeQL, Security, DefectDojo,
 
 | Tema | Decisão |
 |---|---|
-| Runners | **Containers efêmeros na `stack`, isolados**, sob uma conta de sistema `ci`; só repositórios **privados** de organizações; as 3 organizações são plano Free, então o runner de organização atende **todos** os privados dela (ver spike) |
+| Runners | **Containers efêmeros na `stack`, isolados**, sob uma conta `ci` (usuário comum, UID >= 1000, sem shell de login); só repositórios **privados** de organizações; as 3 organizações são plano Free, então o runner de organização atende **todos** os privados dela (ver spike) |
 | Conta pessoal `resper1965` | **Sem runner por enquanto.** CI local (abaixo). Repositórios que importarem podem ser movidos a uma organização depois, a pedido |
 | CI local | Todo projeto tem um comando único de CI; o agente o roda antes de commit e de PR; padrão dos projetos novos |
 | Jobs agendados parados | Viram **timers systemd** na VPS, com alerta de falha e presença no bloco Saúde |
@@ -44,7 +44,7 @@ DNS do `dns-repair` e as varreduras de segurança (CodeQL, Security, DefectDojo,
 
 ## 1. Runners isolados
 
-- **Conta `ci`:** usuário de sistema, sem sudo, **sem leitura de `/srv/dev/secrets`**, com Docker rootless próprio (separado do
+- **Conta `ci`:** usuário comum (UID >= 1000, shell `nologin`), sem sudo, **sem leitura de `/srv/dev/secrets`**, com Docker rootless próprio (separado do
   Docker do `agente` e do Docker do sistema).
 - **Rede:** regra de firewall por UID da conta `ci` negando destino `100.64.0.0/10` (tailnet) e `169.254.169.254` (metadata), e
   nada publicado. Substitui o `31-rede-containers` (que protegia só o Docker do sistema, via `DOCKER-USER`). *Confirmado no spike (`docs/spikes/2026-10-19-ci-runners.md`): o tráfego de um
@@ -59,9 +59,11 @@ DNS do `dns-repair` e as varreduras de segurança (CodeQL, Security, DefectDojo,
   num arquivo `0400` e, para cada runner, chama a API `generate-jitconfig` da organização (configuração de uso único, já com o rótulo e o
   grupo) e passa **só essa configuração** ao container. O container nunca vê o token; a configuração JIT serve para um único runner
   efêmero. Nunca em argumento de linha de comando, log ou Git (mesmo padrão do `alertar.sh`).
-- **Script e compose:** `scripts/33-runners.sh` e `compose/runners.yml` voltam **adaptados** à conta `ci` e ao Docker rootless
-  (a versão antiga rodava no Docker do sistema com sysbox, e está no histórico do `main`).
-- **Saúde:** `health.sh` confere que os runners da conta `ci` estão de pé e que o Docker rootless dela responde; falha vira alerta.
+- **Scripts e supervisor:** `scripts/38-ci-conta.sh`, `39-ci-rede.sh` e `40-ci-runners.sh` mais o supervisor `ci/runners.py` (unidade
+  `stack-ci-runners.service`) substituem o `33-runners.sh` e o `compose/runners.yml` antigos (que rodavam no Docker do sistema com sysbox e
+  estão no histórico do `main`). Token e config ficam em `/etc/stack-ci` (root:ci 0750; config `root:ci 0640` (a conta só lê); token `ci:ci 0400` (a conta é dona do arquivo, mas nem o root o lê depois)); só o `status.json` fica em `/srv/ci`.
+- **Saúde:** `health.sh` confere o isolamento de rede, a unidade e o `status.json` dos runners da conta `ci`; falha vira alerta. Ele **não** consulta o
+  Docker rootless diretamente: um Docker parado só aparece pelo campo `erro` do `status.json` (ou por `status.json` velho).
 - **Segurança de uso:** só repositórios privados (runner self-hosted em repositório público é risco de execução de código de
   terceiros); PR vindo de fork nunca roda em runner (configuração do grupo).
 
@@ -96,7 +98,7 @@ DNS do `dns-repair` e as varreduras de segurança (CodeQL, Security, DefectDojo,
 
 1. Correções de documentos (item 4) — sem efeito em produção.
 2. Spike: Docker rootless da conta `ci` + regra de firewall por UID (resposta, não código).
-3. Conta `ci`, regra de rede, `33-runners.sh`/`compose/runners.yml` adaptados, saúde — com snapshot antes e aprovação em cada passo.
+3. Conta `ci`, regra de rede, supervisor (`38`/`39`/`40` + `ci/runners.py`), saúde — com snapshot antes e aprovação em cada passo.
 4. Primeiro repositório piloto de uma organização (não-cliente): um PR trocando `runs-on` e uma execução de ponta a ponta.
 5. Um job agendado por vez migrado para timer (backup primeiro), cada um com o seu plano.
 
@@ -111,3 +113,8 @@ consertar o pagamento do GitHub (solução mais barata para a conta pessoal, e �
   só privados; **se o isolamento do spike não se confirmar, parar e propor a segunda VPS de CI**.
 - Jobs de cliente (`nessenergy/Alupdatalake`, `nessenergy/sitealupar`) hoje rodam com minutos da organização; migrar só com
   aprovação explícita e nunca como efeito colateral de um PR em massa.
+- **`docker_socket` é opt-in:** com o socket do Docker rootless, um job pode montar caminhos do host (visíveis à conta `ci`) e ler os JIT dos
+  runners vizinhos; o supervisor só aceita com `docker_socket_ciente_do_risco: true` e vale apenas para repositórios totalmente confiáveis.
+- **`RUNNER_TOKEN` é um PAT clássico com `admin:org` das 3 organizações e passa a ficar legível pela conta `ci`** (`/etc/stack-ci/token`, 0400).
+  Um escape do container ou do Docker rootless até a conta `ci` dá `admin:org`, **inclusive em `nessenergy`**. Mitigação futura, a verificar:
+  PAT fine-grained por organização (um por organização, só o escopo de runners). **Decisão do Ricardo (2026-10-23): manter o PAT atual e aceitar este risco** (opção mais simples; segundo ele, as organizações são todas ligadas a ele, sem cliente a proteger aqui). `nessenergy` continua fora da configuração dos runners; revisar se isso mudar.
