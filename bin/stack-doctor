@@ -45,7 +45,9 @@ if [[ -d $REPO ]]; then
   g=(git -c "safe.directory=$REPO" -C "$REPO")
   br=$("${g[@]}" rev-parse --abbrev-ref HEAD 2>/dev/null)
   if [[ $br == main ]]; then ok "$REPO na main"; else falta "$REPO na branch '${br:-?}' (volte para main)"; fi
-  if [[ -z $("${g[@]}" status --porcelain 2>/dev/null) ]]; then ok "$REPO sem alteração local"; else falta "$REPO com alteração local"; fi
+  st=$("${g[@]}" status --porcelain 2>/dev/null); src=$?
+  if (( src != 0 )); then falta "git status falhou em $REPO"
+  elif [[ -z $st ]]; then ok "$REPO sem alteração local"; else falta "$REPO com alteração local"; fi
   for f in scripts/41-9router.sh scripts/42-novo-projeto.py opencode/command/novo-projeto.md; do
     check "$f presente" "$f ausente em $REPO (branch antiga?)" test -f "$REPO/$f"; done
 else falta "$REPO ausente"; fi
@@ -53,6 +55,7 @@ else falta "$REPO ausente"; fi
 echo "acesso"
 if sv=$(tailscale serve status 2>/dev/null) || { [[ $ROOT_OK ]] && sv=$(root tailscale serve status 2>/dev/null); }; then
   grep -Eq '^https://[^: ]+([[:space:]]|$)' <<<"$sv" && ok "serve 443 (OpenCode)" || falta "tailscale serve sem 443"
+  grep -qi 'funnel on' <<<"$sv" && falta "tailscale serve com Funnel ligado (exposto na internet)"
   for p in 8443 20128; do grep -Eq "^https://[^ ]+:$p([[:space:]]|\$)" <<<"$sv" && ok "serve $p" || falta "tailscale serve sem $p"; done
 else pend "tailscale serve status: $SEMROOT"; fi
 nome=$(tailscale status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null) || nome=
@@ -60,7 +63,9 @@ if [[ -n $nome ]] && getent hosts "$nome" >/dev/null 2>&1; then ok "MagicDNS res
 
 echo "permissões"
 [[ $(modo "$SRV") == 751 ]] && ok "$SRV 751" || falta "$SRV deve ser 751 (veio '$(modo "$SRV")')"
-for d in projetos state; do [[ $(modo "$SRV/$d") == 750 ]] && ok "$SRV/$d 750" || falta "$SRV/$d deve ser 750 (veio '$(modo "$SRV/$d")')"; done
+for d in projetos state; do
+  if [[ $(modo "$SRV/$d") == 750 && $(stat -c %U "$SRV/$d" 2>/dev/null) == "$AGENTE" ]]; then ok "$SRV/$d 750 do $AGENTE"
+  else falta "$SRV/$d deve ser 750 do $AGENTE (veio '$(modo "$SRV/$d")')"; fi; done
 if [[ $(modo "$SRV/pareceres") == 750 && $(stat -c %U "$SRV/pareceres" 2>/dev/null) == "$AGENTE" ]]; then ok "$SRV/pareceres 750 do $AGENTE"
 else falta "$SRV/pareceres deve ser 750 do $AGENTE"; fi
 if id -nG pmo 2>/dev/null | tr ' ' '\n' | grep -qx "$AGENTE"; then ok "pmo no grupo $AGENTE"; else falta "pmo fora do grupo $AGENTE"; fi
@@ -100,20 +105,36 @@ case $(http "$BASE:20128/v1/models") in
   200) falta "/v1/models responde sem chave (requireApiKey desligado no painel)" ;;
   *) falta "/v1/models sem chave: resposta inesperada" ;;
 esac
-if ss -Hltn 2>/dev/null | awk '{print $4}' | grep -Eq '^(0\.0\.0\.0|\*|\[::\]):20128$'; then falta "9router escutando fora do loopback (0.0.0.0:20128)"
-else ok "nada escutando em 0.0.0.0:20128"; fi
+SS=ss; [[ ${STACK_TESTE:-} == 1 ]] && SS=${DOCTOR_SS:-ss}
+if ! command -v "$SS" >/dev/null 2>&1; then pend "porta 20128: ss indisponível"
+elif ! ls_out=$("$SS" -Hltn 2>/dev/null); then pend "porta 20128: ss falhou"
+else
+  esc=$(awk '$4 ~ /:20128$/ {print $4}' <<<"$ls_out")
+  if [[ -z $esc ]]; then falta "nada escutando em :20128 (9router fora do ar)"
+  elif grep -Evxq '127\.0\.0\.1:20128|\[::1\]:20128' <<<"$esc"; then falta "9router escutando fora do loopback ($(tr '\n' ' ' <<<"$esc"))"
+  else ok "20128 só em loopback"; fi
+fi
 
 echo "modelos"
 # a chave é lida do arquivo (sem source) e entregue ao curl por stdin (-K -): nunca em argv nem na saída
-chave=$(grep -E '^NINE_ROUTER_API_KEY=' "$SEGREDOS" 2>/dev/null | tail -n1 | cut -d= -f2-)
-if [[ -z $chave ]]; then falta "NINE_ROUTER_API_KEY ausente em $SEGREDOS"
-elif [[ $chave == *[\"\\]* || $chave == *$'\r'* ]]; then falta "NINE_ROUTER_API_KEY com caracteres inválidos em $SEGREDOS"
+if [[ ! -e $SEGREDOS ]]; then falta "$SEGREDOS ausente"
+elif [[ ! -r $SEGREDOS ]]; then falta "$SEGREDOS ilegível para $(id -un)"
 else
-  ok "NINE_ROUTER_API_KEY presente"
-  corpo=$(printf 'header = "Authorization: Bearer %s"\n' "$chave" | curl -s --max-time 5 -K - "$BASE:20128/v1/models" 2>/dev/null)
-  if grep -q '"id"' <<<"$corpo"; then ok "/v1/models com a chave lista modelos"; else falta "/v1/models com a chave não lista modelos (cadastre provedores no painel)"; fi
+  chave=$(grep -E '^(export[[:space:]]+)?NINE_ROUTER_API_KEY=' "$SEGREDOS" 2>/dev/null | tail -n1 | sed -E 's/^(export[[:space:]]+)?NINE_ROUTER_API_KEY=//')
+  if [[ -z $chave ]]; then falta "NINE_ROUTER_API_KEY ausente em $SEGREDOS"
+  elif [[ $chave == *[\"\\]* || $chave == *$'\r'* ]]; then falta "NINE_ROUTER_API_KEY com caracteres inválidos em $SEGREDOS"
+  elif ! command -v "$JQ" >/dev/null 2>&1; then ok "NINE_ROUTER_API_KEY presente"; pend "/v1/models com a chave não conferido sem jq"
+  else
+    ok "NINE_ROUTER_API_KEY presente"
+    corpo=$(mktemp) || corpo=/dev/null
+    cod=$(printf 'header = "Authorization: Bearer %s"\n' "$chave" | curl -s -o "$corpo" -w '%{http_code}' --max-time 5 -K - "$BASE:20128/v1/models" 2>/dev/null)
+    if [[ $cod != 200 ]]; then falta "/v1/models com a chave respondeu HTTP ${cod:-000}"
+    elif "$JQ" -e '.data | length > 0' "$corpo" >/dev/null 2>&1; then ok "/v1/models com a chave lista modelos"
+    else falta "/v1/models com a chave não lista modelos (cadastre provedores no painel)"; fi
+    [[ $corpo == /dev/null ]] || rm -f "$corpo"
+  fi
 fi
-chave=; corpo=
+chave=
 
 echo "clis"
 if [[ $AG_OK ]]; then
@@ -131,7 +152,9 @@ if ! id ci >/dev/null 2>&1; then pend "CI ainda não instalado (38, 39, 40)"
 else
   ok "conta ci"
   if [[ $ROOT_OK ]]; then
-    root iptables -S OUTPUT 2>/dev/null | grep -q STACK-CI && ok "rede por UID (STACK-CI)" || falta "rede por UID ausente (39-ci-rede.sh)"
+    if ipt=$(root iptables -S OUTPUT 2>/dev/null); then
+      grep -q STACK-CI <<<"$ipt" && ok "rede por UID (STACK-CI)" || falta "rede por UID ausente (39-ci-rede.sh)"
+    else pend "rede por UID: iptables sem permissão ou indisponível"; fi
   else pend "rede por UID: $SEMROOT"; fi
   if [[ ! -f $UNITDIR/stack-ci-runners.service ]]; then pend "stack-ci-runners não instalado (40)"
   else
@@ -151,9 +174,12 @@ for h in "$AH" "$DEVH"; do
     ag test -e "$h/.continue" && falta "$h/.continue existe" || ok "$h/.continue ausente"
   else [[ -e $h/.continue ]] && falta "$h/.continue existe" || ok "$h/.continue ausente"; fi
 done
-if [[ -e $SRV/state/openrig || -e $AH/.local/bin/rig-dupla ]]; then falta "OpenRig ainda presente"; else ok "OpenRig ausente"; fi
+if [[ ! $AG_OK ]]; then pend "OpenRig: $SEMAG"
+elif ag test -e "$SRV/state/openrig" || ag test -e "$AH/.local/bin/rig-dupla"; then falta "OpenRig ainda presente"; else ok "OpenRig ausente"; fi
 if [[ $ROOT_OK ]]; then
-  root ufw status 2>/dev/null | grep -Eq '(^|[[:space:]])8080(/tcp)?([[:space:]]|$)' && falta "regra 8080 no UFW" || ok "UFW sem regra 8080"
+  if ufo=$(root ufw status 2>/dev/null) && grep -q '^Status: active' <<<"$ufo"; then
+    grep -Eq '(^|[[:space:]])8080(/tcp)?([[:space:]]|$)' <<<"$ufo" && falta "regra 8080 no UFW" || ok "UFW sem regra 8080"
+  else pend "UFW 8080: ufw inativo, sem permissão ou indisponível"; fi
 else pend "UFW 8080: $SEMROOT"; fi
 if im=$(docker images --format '{{.Repository}}' 2>/dev/null); then
   grep -Exq 'stack/web|myoung34/github-runner' <<<"$im" && falta "imagem de runner/stack-web ainda no Docker" || ok "sem imagem de runner"

@@ -11,7 +11,7 @@ prepara() {
   export DOCTOR_REPO=$T/repo DOCTOR_AGENTE DOCTOR_AGENTE_HOME=$T/ah DOCTOR_DEV_HOME=$T/dev DOCTOR_SRV=$T/srv
   export DOCTOR_SEGREDOS=$T/agente.env DOCTOR_CURL_BASE=http://127.0.0.1 DOCTOR_CI_DIR=$T/ci DOCTOR_UNIT_DIR=$T/units
   export DOCTOR_CODER=$T/coder DOCTOR_RUNNERS=$T/runners DOCTOR_JQ=jq
-  unset STUB_BRANCH STUB_DIRTY STUB_SERVE STUB_INATIVAS STUB_SUDO_AG STUB_SUDO_ROOT STUB_PMO_GROUPS STUB_CI STUB_SYSBOX STUB_UFW STUB_SS STUB_MODELS_CODE STUB_BODY STUB_NODNS STUB_IMAGENS STUB_IPT STUB_OC
+  unset STUB_BRANCH STUB_DIRTY STUB_SERVE STUB_INATIVAS STUB_SUDO_AG STUB_SUDO_ROOT STUB_PMO_GROUPS STUB_CI STUB_SYSBOX STUB_UFW STUB_SS STUB_MODELS_CODE STUB_BODY STUB_NODNS STUB_IMAGENS STUB_IPT STUB_OC STUB_GIT_FAIL STUB_UFW_RC STUB_IPT_RC STUB_KCODE DOCTOR_SS
   mkdir -p "$T/repo/scripts" "$T/repo/opencode/command" "$T/units" "$T/dev" "$T/ci"
   touch "$T/repo/scripts/41-9router.sh" "$T/repo/scripts/42-novo-projeto.py" "$T/repo/opencode/command/novo-projeto.md"
   mkdir -p "$T/srv/projetos" "$T/srv/state" "$T/srv/pareceres"; chmod 751 "$T/srv"; chmod 750 "$T/srv/projetos" "$T/srv/state" "$T/srv/pareceres"
@@ -37,6 +37,7 @@ S
   cat > "$STUBS/systemctl" <<'S'
 #!/usr/bin/env bash
 echo "systemctl $*" >> "$STUB_LOG"
+case " $* " in *" is-active "*) ;; *) exit 4 ;; esac   # so is-active e usado; outros subcomandos falham
 for u in ${STUB_INATIVAS:-}; do [[ "${*: -1}" == "$u" ]] && exit 3; done
 exit 0
 S
@@ -44,10 +45,12 @@ S
 #!/usr/bin/env bash
 echo "curl $*" >> "$STUB_LOG"
 if [[ "$*" == *"-K -"* ]]; then   # configuracao por stdin: a chave nunca esta em argv
-  cfg=$(cat)
+  cfg=$(cat); out=
+  while (( $# )); do [[ $1 == -o ]] && out=$2; shift; done
   if [[ $cfg == *"Bearer "* ]]; then
-    if [[ -n ${STUB_BODY+x} ]]; then printf '%s' "$STUB_BODY"; else printf '%s' '{"data":[{"id":"m1"}]}'; fi
-  fi
+    if [[ -n ${STUB_BODY+x} ]]; then printf '%s' "$STUB_BODY" > "$out"; else printf '%s' '{"data":[{"id":"m1"}]}' > "$out"; fi
+    printf '%s' "${STUB_KCODE:-200}"
+  else printf '%s' 401; fi
   exit 0
 fi
 case "$*" in
@@ -85,7 +88,7 @@ S
 #!/usr/bin/env bash
 case "$*" in
   *rev-parse*) echo "${STUB_BRANCH:-main}" ;;
-  *status*) printf '%s' "${STUB_DIRTY:-}" ;;
+  *status*) [[ -n ${STUB_GIT_FAIL:-} ]] && exit 128; printf '%s' "${STUB_DIRTY:-}" ;;
 esac
 S
   cat > "$STUBS/dpkg" <<'S'
@@ -94,7 +97,9 @@ exit "${STUB_SYSBOX:-1}"
 S
   cat > "$STUBS/ufw" <<'S'
 #!/usr/bin/env bash
-printf '%s\n' "${STUB_UFW:-22/tcp ALLOW Anywhere}"
+[[ -n ${STUB_UFW_RC:-} ]] && exit "$STUB_UFW_RC"
+printf '%s\n' "${STUB_UFW:-Status: active
+22/tcp ALLOW Anywhere}"
 S
   cat > "$STUBS/docker" <<'S'
 #!/usr/bin/env bash
@@ -102,6 +107,7 @@ printf '%s' "${STUB_IMAGENS:-}"
 S
   cat > "$STUBS/iptables" <<'S'
 #!/usr/bin/env bash
+[[ -n ${STUB_IPT_RC:-} ]] && exit "$STUB_IPT_RC"
 printf '%s\n' "${STUB_IPT:--A OUTPUT -j STACK-CI}"
 S
   cat > "$STUBS/ss" <<'S'
@@ -155,10 +161,62 @@ falta_com "CLI ausente" "codex fora do PATH" 'rm "$T/ah/.local/bin/codex"'
 falta_com "sysbox" "sysbox-ce ainda instalado" 'export STUB_SYSBOX=0'
 falta_com ".continue" "@T/ah/.continue existe" 'mkdir "$T/ah/.continue"'
 falta_com "OpenRig" "OpenRig ainda presente" 'touch "$T/ah/.local/bin/rig-dupla"'
-falta_com "UFW 8080" "regra 8080 no UFW" 'export STUB_UFW="8080/tcp ALLOW Anywhere"'
+falta_com "UFW 8080" "regra 8080 no UFW" 'export STUB_UFW="Status: active
+8080/tcp ALLOW Anywhere"'
 falta_com "imagem de runner" "imagem de runner" 'export STUB_IMAGENS="stack/web"'
 falta_com "/srv/coder" "@T/coder existe" 'mkdir "$T/coder"'
 falta_com "/srv/runners" "@T/runners existe" 'mkdir "$T/runners"'
+
+falta_com "git status falha" "git status falhou" 'export STUB_GIT_FAIL=1'
+falta_com "Funnel ligado" "tailscale serve com Funnel" 'export STUB_SERVE="https://vps.tail1.ts.net (Funnel on)
+https://vps.tail1.ts.net:8443 (tailnet only)
+https://vps.tail1.ts.net:20128 (tailnet only)"'
+falta_com "serve sem 443" "tailscale serve sem 443" 'export STUB_SERVE="https://vps.tail1.ts.net:8443 (tailnet only)
+https://vps.tail1.ts.net:20128 (tailnet only)"'
+falta_com "serve sem 8443" "tailscale serve sem 8443" 'export STUB_SERVE="https://vps.tail1.ts.net (tailnet only)
+https://vps.tail1.ts.net:20128 (tailnet only)"'
+falta_com "pmo no grupo agente2" "pmo fora do grupo" 'export STUB_PMO_GROUPS="pmo ${DOCTOR_AGENTE}2"'
+falta_com "pareceres de outro dono" "@T/srv/pareceres deve ser 750 do root" 'export DOCTOR_AGENTE=root'
+falta_com "projetos de outro dono" "@T/srv/projetos deve ser 750 do root" 'export DOCTOR_AGENTE=root'
+falta_com "state de outro dono" "@T/srv/state deve ser 750 do root" 'export DOCTOR_AGENTE=root'
+falta_com "9router.env de outro dono" "9router.env: esperado 600 de root" 'export DOCTOR_AGENTE=root'
+falta_com "9router.env e link" "9router.env: esperado" 'mv "$T/ah/.config/9router/9router.env" "$T/real.env"; ln -s "$T/real.env" "$T/ah/.config/9router/9router.env"'
+falta_com "/v1/models sem chave 000" "/v1/models sem chave: resposta inesperada" 'export STUB_MODELS_CODE=000'
+falta_com "/v1/models sem chave 500" "/v1/models sem chave: resposta inesperada" 'export STUB_MODELS_CODE=500'
+falta_com "ss sem listener em 20128" "nada escutando em :20128" 'export STUB_SS="LISTEN 0 511 127.0.0.1:4096 0.0.0.0:*"'
+falta_com "listener *:20128" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 *:20128 *:*"'
+falta_com "listener 100.x" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 100.1.2.3:20128 0.0.0.0:*"'
+falta_com "loopback mais 0.0.0.0" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 127.0.0.1:20128 0.0.0.0:*
+LISTEN 0 511 0.0.0.0:20128 0.0.0.0:*"'
+falta_com "chave: 401 com a chave" "/v1/models com a chave respondeu HTTP 401" 'export STUB_KCODE=401'
+falta_com "chave: 500 com a chave" "/v1/models com a chave respondeu HTTP 500" 'export STUB_KCODE=500'
+falta_com "chave: 000 com a chave" "/v1/models com a chave respondeu HTTP 000" 'export STUB_KCODE=000'
+falta_com "chave com export sem valor" "NINE_ROUTER_API_KEY ausente" 'echo "export NINE_ROUTER_API_KEY=" > "$T/agente.env"'
+falta_com "agente.env ilegivel" "@T/agente.env ilegível" 'chmod 000 "$T/agente.env"'
+# nao FALTA: ss so em [::1], export no agente.env
+novo_tmp; prepara; export STUB_SS="LISTEN 0 511 [::1]:20128 [::]:*"; printf 'export NINE_ROUTER_API_KEY=%s\n' "$SENT" > "$T/agente.env"; roda
+! tem "  FALTA "; afirma "$?" "so [::1] e export na chave: zero FALTA"
+tem "ok    /v1/models com a chave lista modelos"; afirma "$?" "export NINE_ROUTER_API_KEY= reconhecido"
+novo_tmp; prepara; export DOCTOR_SS=ss-que-nao-existe; roda
+tem "pend  porta 20128: ss indisponível"; afirma "$?" "sem ss: pend"
+! tem "  FALTA "; afirma "$?" "sem ss: sem FALTA"
+novo_tmp; prepara; export STUB_UFW_RC=1; roda
+tem "pend  UFW 8080"; afirma "$?" "ufw rc!=0: pend"
+! tem "  FALTA "; afirma "$?" "ufw rc!=0: sem FALTA"
+novo_tmp; prepara; export STUB_UFW="Status: inactive"; roda
+tem "pend  UFW 8080"; afirma "$?" "ufw inativo: pend"
+novo_tmp; prepara; export STUB_CI=0 STUB_IPT_RC=1; touch "$T/units/stack-ci-runners.service" "$T/ci/status.json"; roda
+tem "pend  rede por UID: iptables"; afirma "$?" "iptables rc!=0: pend"
+! tem "  FALTA "; afirma "$?" "iptables rc!=0: sem FALTA"
+novo_tmp; prepara; export STUB_CI=0 STUB_IPT="-P OUTPUT ACCEPT"; touch "$T/units/stack-ci-runners.service" "$T/ci/status.json"; roda
+tem "FALTA rede por UID ausente"; afirma "$?" "iptables sem STACK-CI: FALTA"
+# OpenRig/rig-dupla: dev sem acesso (sem sudo) vira pend, nao ok
+novo_tmp; prepara; export STUB_SUDO_AG=1; roda
+tem "pend  OpenRig: rode com sudo"; afirma "$?" "OpenRig sem sudo: pend"
+! tem "ok    OpenRig"; afirma "$?" "OpenRig sem sudo: nao e ok"
+# segredo nunca no corpo/erro: 500 com a chave nao imprime o corpo
+novo_tmp; prepara; export STUB_KCODE=500 STUB_BODY="corpo-secreto-$SENT"; roda
+! tem "corpo-secreto"; afirma "$?" "HTTP 500: corpo fora da saida"
 
 # CI: sem conta e pend; com conta, unidade inativa e FALTA, status velho e FALTA
 novo_tmp; prepara; roda
