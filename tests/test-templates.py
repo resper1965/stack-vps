@@ -56,6 +56,18 @@ class TemplatesTests(unittest.TestCase):
                 self.assertEqual(arqs & TODOS, deploy)
                 self.assertTrue(any(a.startswith("src/") and a.endswith(".test.ts") for a in arqs))
 
+    def test_sistema_docs_auth_opcional(self):
+        for destino in DEPLOY:
+            with self.subTest(destino=destino):
+                out, _ = self.confere("sistema", destino, {"docs/AUTH.md"})
+                texto = (out / "docs/AUTH.md").read_text(encoding="utf-8")
+                self.assertIn("@ness/auth", texto)
+                self.assertIn(destino, texto)
+                self.assertIsNone(SEGREDO.search(texto))
+                # o template só documenta: não adiciona a dependência
+                pj = json.loads((out / "package.json").read_text())
+                self.assertNotIn("@ness/auth", {**pj["dependencies"], **pj["devDependencies"]})
+
     def test_package_e_dockerfile(self):
         out, _ = self.confere("sistema", "gcp")
         pj = json.loads((out / "package.json").read_text())

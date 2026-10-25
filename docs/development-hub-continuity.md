@@ -158,3 +158,7 @@ concessão de acesso (grupo/ACL): esses passos ficam com o dono.
   `fl/deepseek-ai/DeepSeek-V4-Pro` respondeu 200 ("ok"). Modelos `fl/…` (DeepSeek V4 Pro/Flash, GLM 5.2/5.1, Kimi K2.7 Code/K2.6/K2.5)
   acrescentados ao provedor `9router` do `opencode.json` (sem `model` padrão). OpenRouter e DeepSeek direto seguem sem cadastro: as chaves
   não estão nos arquivos de segredo da VPS.
+
+## Atualização 2026-10-25 (@ness/auth)
+
+- **`@ness/auth` v0.1.0** pronto em repositório próprio (`ness-auth`, tag local, sem push): login, sessão, RBAC, chave de API, SSO por tenant, emergência, stores D1 e Postgres, README de uso e dois exemplos testados. O template `sistema` ganhou `docs/AUTH.md` (opcional) explicando como ligá-lo por destino (D1 no Cloudflare, Postgres nos demais, `ipDe` por destino); o `package.json` do template não ganhou a dependência. Estado, riscos aceitos e comparação com o niso: seção "Estado da implementação" em `docs/superpowers/specs/2026-10-25-ness-auth-design.md`. Falta (dono): criar o repositório privado no GitHub, fazer o push e a tag, e escolher o primeiro sistema consumidor.

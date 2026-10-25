@@ -36,3 +36,13 @@ Contrato do `AuthStore` rodado contra memória, D1 (via shim compatível ou Mini
 
 ## Entrega
 Repositório `ness-auth` (privado), pacote **não publicado** nesta etapa (consumo por caminho git ou `file:`); publicar no GitHub Packages é decisão posterior. README com o passo a passo de uso em um sistema novo.
+
+## Estado da implementação (2026-10-25)
+
+**Entrou (repositório `ness-auth`, tag local `v0.1.0`, ainda sem push):** `criarAuth` com login, logout, `me`, troca e redefinição de senha (token longo de uso único), usuários e chaves de API (`nak_...`, validade padrão de 365 dias, revogação em cascata); sessões com expiração absoluta e por inatividade; RBAC que nega por padrão e `exigir(recurso:acao)`; adaptadores memória, D1 (KV opcional, não atômico) e Postgres sobre um contrato único; migrações 0001 a 0003; SSO OIDC por tenant (segredo cifrado com AAD do tenant, vínculo por `(iss, sub)`, SSRF com DoH e `criarFetchSeguro` no Node); login de emergência com limite por IP e global e sessão restrita; `semearAdmin`; CSRF por `Origin` e limite de corpo; `ipDe` obrigatório em produção. Cerca de 410 testes (2 pulados de propósito, KV), mais um exemplo testado para Workers+D1 e outro para Node+Postgres. O template `sistema` ganhou `docs/AUTH.md` (opcional, sem dependência no `package.json`).
+
+**Ficou fora:** MFA (só o gancho `exigeMfa`), SCIM, política por tenant, lista de IPs, prova de posse de domínio do SSO (DNS TXT), rota para trocar o IdP de um tenant (exige SQL), pacote compilado, publicação no GitHub Packages, e a migração do niso para consumir o pacote.
+
+**Riscos aceitos (detalhe no README, "Limitações conhecidas"):** administrador de tenant pode reivindicar domínio livre; `#sso_token=` no fragmento até o app trocá-lo; `/sso/:tenant/iniciar` é anônimo; trilha inundável por quem tem muitos IPs (retenção e alerta ficam com o consumidor); atraso progressivo não limita paralelismo; checar-e-criar do `semearAdmin` não é atômico (script de operador). O código é entregue em TypeScript, então o consumidor precisa transpilar `node_modules/@ness/auth`.
+
+**Contra o niso:** o pacote não replica as falhas do levantamento (token na query string, PBKDF2 a 100k sem versão, reset com código de 6 dígitos, decrypt aceitando texto claro, derivação sem KDF, enumeração por tempo, comparação sem tempo constante). Acrescenta o que o niso não tem: IP confiável por injeção, CSRF por `Origin`, vínculo SSO por `(iss, sub)`, domínio exclusivo por tenant, chave que não emite chave, emergência restrita e checklist de produção. O niso segue com o código dele; migrá-lo é trabalho separado.
