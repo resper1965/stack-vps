@@ -100,10 +100,11 @@ else pend "pacote e unidade do 9router: $SEMAG"; fi
 arq_priv "9router.env" "$AH/.config/9router/9router.env" 600
 arq_priv "client.env" "$AH/.config/9router/client.env" 600
 [[ $(http "$BASE:20128/api/health") == 200 ]] && ok "/api/health 200" || falta "9router não responde em 127.0.0.1:20128"
-case $(http "$BASE:20128/v1/models") in
-  401) ok "/v1/models sem chave dá 401" ;;
-  200) falta "/v1/models responde sem chave (requireApiKey desligado no painel)" ;;
-  *) falta "/v1/models sem chave: resposta inesperada" ;;
+# GET /v1/models é público (catálogo embutido); a exigência de chave vale para o POST de chat
+case $(http -X POST -H 'Content-Type: application/json' -d '{"model":"x","messages":[{"role":"user","content":"oi"}]}' "$BASE:20128/v1/chat/completions") in
+  401) ok "POST /v1/chat/completions sem chave dá 401" ;;
+  2??) falta "POST /v1/chat/completions responde sem chave (requireApiKey desligado no painel)" ;;
+  *) falta "POST /v1/chat/completions sem chave: resposta inesperada" ;;
 esac
 SS=ss; [[ ${STACK_TESTE:-} == 1 ]] && SS=${DOCTOR_SS:-ss}
 if ! command -v "$SS" >/dev/null 2>&1; then pend "porta 20128: ss indisponível"
@@ -129,8 +130,8 @@ else
     corpo=$(mktemp) || corpo=/dev/null
     cod=$(printf 'header = "Authorization: Bearer %s"\n' "$chave" | curl -s -o "$corpo" -w '%{http_code}' --max-time 5 -K - "$BASE:20128/v1/models" 2>/dev/null)
     if [[ $cod != 200 ]]; then falta "/v1/models com a chave respondeu HTTP ${cod:-000}"
-    elif "$JQ" -e '.data | length > 0' "$corpo" >/dev/null 2>&1; then ok "/v1/models com a chave lista modelos"
-    else falta "/v1/models com a chave não lista modelos (cadastre provedores no painel)"; fi
+    elif "$JQ" -e '.data | length > 0' "$corpo" >/dev/null 2>&1; then ok "/v1/models com a chave lista modelos (catálogo embutido, lista mesmo sem provedor conectado)"
+    else falta "/v1/models com a chave não lista modelos (o catálogo embutido deveria listar mesmo sem provedor conectado)"; fi
     [[ $corpo == /dev/null ]] || rm -f "$corpo"
   fi
 fi

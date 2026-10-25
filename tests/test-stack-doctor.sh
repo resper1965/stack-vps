@@ -54,7 +54,8 @@ if [[ "$*" == *"-K -"* ]]; then   # configuracao por stdin: a chave nunca esta e
   exit 0
 fi
 case "$*" in
-  */v1/models*) printf '%s' "${STUB_MODELS_CODE:-401}" ;;
+  *POST*/v1/chat/completions*) printf '%s' "${STUB_MODELS_CODE:-401}" ;;
+  */v1/models*) printf '%s' 200 ;;  # GET publico
   */api/health*) printf '%s' "${STUB_HEALTH:-200}" ;;
   *4096*) printf '%s' "${STUB_OC:-200}" ;;
 esac
@@ -152,7 +153,7 @@ falta_com "pacote 9router velho" "pacote 9router 0.5.1 " 'sed -i s/0.5.104/0.5.1
 falta_com "unidade 9router inativa" "unidade 9router inativa" 'export STUB_INATIVAS=9router.service'
 falta_com "9router.env 0644" "9router.env: esperado 600" 'chmod 644 "$T/ah/.config/9router/9router.env"'
 falta_com "client.env ausente" "client.env:" 'rm "$T/ah/.config/9router/client.env"'
-falta_com "/v1/models sem chave 200" "/v1/models responde sem chave" 'export STUB_MODELS_CODE=200'
+falta_com "chat sem chave 200" "POST /v1/chat/completions responde sem chave" 'export STUB_MODELS_CODE=200'
 falta_com "0.0.0.0:20128" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 0.0.0.0:20128 0.0.0.0:*"'
 falta_com "[::]:20128" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 [::]:20128 [::]:*"'
 falta_com "chave ausente" "NINE_ROUTER_API_KEY ausente" 'echo OUTRA=1 > "$T/agente.env"'
@@ -181,8 +182,8 @@ falta_com "projetos de outro dono" "@T/srv/projetos deve ser 750 do root" 'expor
 falta_com "state de outro dono" "@T/srv/state deve ser 750 do root" 'export DOCTOR_AGENTE=root'
 falta_com "9router.env de outro dono" "9router.env: esperado 600 de root" 'export DOCTOR_AGENTE=root'
 falta_com "9router.env e link" "9router.env: esperado" 'mv "$T/ah/.config/9router/9router.env" "$T/real.env"; ln -s "$T/real.env" "$T/ah/.config/9router/9router.env"'
-falta_com "/v1/models sem chave 000" "/v1/models sem chave: resposta inesperada" 'export STUB_MODELS_CODE=000'
-falta_com "/v1/models sem chave 500" "/v1/models sem chave: resposta inesperada" 'export STUB_MODELS_CODE=500'
+falta_com "chat sem chave 000" "POST /v1/chat/completions sem chave: resposta inesperada" 'export STUB_MODELS_CODE=000'
+falta_com "chat sem chave 500" "POST /v1/chat/completions sem chave: resposta inesperada" 'export STUB_MODELS_CODE=500'
 falta_com "ss sem listener em 20128" "nada escutando em :20128" 'export STUB_SS="LISTEN 0 511 127.0.0.1:4096 0.0.0.0:*"'
 falta_com "listener *:20128" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 *:20128 *:*"'
 falta_com "listener 100.x" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 100.1.2.3:20128 0.0.0.0:*"'

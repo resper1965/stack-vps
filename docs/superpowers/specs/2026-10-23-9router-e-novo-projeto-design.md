@@ -40,7 +40,7 @@
 - **Faixa 2 (fora do 9router):** `claude`, `codex` e `agy` com login próprio no `agente`; as duas assinaturas Claude em
   pastas de configuração separadas (`CLAUDE_CONFIG_DIR`). Nada disso passa pelo 9router.
 - **Saúde:** `bin/health.sh` ganha a seção `9router` (unidade instalada → só HTTP, decidido: `GET /api/health` em
-  `127.0.0.1:20128` deve dar 200, pois `GET /` responde 307 para `/dashboard`; e `GET /v1/models` **sem chave** deve dar 401,
+  `127.0.0.1:20128` deve dar 200, pois `GET /` responde 307 para `/dashboard`; e `POST /v1/chat/completions` **sem chave** deve dar 401 (`GET /v1/models` é público),
   senão `FALHA 9router sem exigir chave de API`; sem unidade, nada é impresso).
 - **Falha:** 9router fora do ar não impede o trabalho: o OpenCode ainda usa os provedores diretos que já tem.
 - **Risco aceito:** 8 CVEs em 2026; mitigação é versão fixa, só `127.0.0.1`/tailnet, chave de API exigida (checada pelo health),

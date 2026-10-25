@@ -21,9 +21,9 @@ nr_unit=${HEALTH_9ROUTER_UNIT:-/home/agente/.config/systemd/user/9router.service
 if [[ -f $nr_unit ]]; then
   nr=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${HEALTH_9ROUTER_URL:-http://127.0.0.1:20128/api/health}" 2>/dev/null)
   case $nr in 200) ok "9router" ;; *) bad "9router" ;; esac
-  # a exigencia de chave vem de settings.requireApiKey no banco do 9router (desligavel no painel): sem chave tem de dar 401
-  nrk=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${HEALTH_9ROUTER_MODELS_URL:-http://127.0.0.1:20128/v1/models}" 2>/dev/null)
-  case $nrk in 401) ok "9router exige chave de API" ;; 200) bad "9router sem exigir chave de API" ;; *) bad "9router: /v1/models respondeu ${nrk:-sem resposta}" ;; esac
+  # a exigencia de chave vem de settings.requireApiKey no banco do 9router (desligavel no painel): POST /v1/chat/completions sem chave tem de dar 401 (GET /v1/models e publico)
+  nrk=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -X POST -H 'Content-Type: application/json' -d '{"model":"x","messages":[{"role":"user","content":"oi"}]}' "${HEALTH_9ROUTER_CHAT_URL:-http://127.0.0.1:20128/v1/chat/completions}" 2>/dev/null)
+  case $nrk in 401) ok "9router exige chave de API" ;; 2??) bad "9router sem exigir chave de API" ;; *) bad "9router: POST /v1/chat/completions sem chave respondeu ${nrk:-sem resposta}" ;; esac
 fi
 pmo_env=${HEALTH_PMO_ENV:-/etc/pmo/servidor.env}
 if [[ ! -f $pmo_env ]]; then printf '  pend  %s\n' "painel do PMO sem /etc/pmo/servidor.env (34-pmo.sh ainda não rodou)"
