@@ -4,7 +4,10 @@
 # ou viraram nao. Fail-closed: um .job invalido recusa tudo e nada e instalado. Idempotente: unidade
 # igual nao e reescrita. As unidades nao levam segredo (o executor le /srv/dev/secrets/jobs na hora).
 # Uso: sudo ./45-jobs.sh [--listar]   (--listar mostra o estado de cada .job e nao muda nada)
-# Sobrescreviveis nos testes (so com STACK_TESTE=1): JOBS_DIR, JOBS_UNIT_DIR, JOBS_BIN, JOBS_ANALYZE.
+# Pastas do agente/dev: se existem, tem de ser diretorio (nunca link) do dono certo, senao recusa tudo; so as que
+# faltam sao criadas (mkdir + chown -h), nunca chown/chmod em algo que ja existia.
+# Sobrescreviveis nos testes (so com STACK_TESTE=1): JOBS_DIR, JOBS_UNIT_DIR, JOBS_BIN, JOBS_ANALYZE, JOBS_SRV,
+# JOBS_USER_AGENTE, JOBS_USER_DEV, JOBS_GROUP.
 set -euo pipefail
 
 # Em producao o ambiente herdado e ignorado: atribui sem ler.
@@ -12,28 +15,36 @@ set -euo pipefail
 REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 if [[ ${STACK_TESTE:-} != 1 ]]; then
   JOBS_DIR=$REPO/jobs; JOBS_UNIT_DIR=/etc/systemd/system; JOBS_BIN=/opt/stack-vps/bin/stack-job; JOBS_ANALYZE=systemd-analyze
+  JOBS_SRV=/srv/dev; JOBS_USER_AGENTE=agente; JOBS_USER_DEV=dev; JOBS_GROUP=agente
 fi
 # <<< normaliza
 JOBS_DIR=${JOBS_DIR:-$REPO/jobs}; JOBS_UNIT_DIR=${JOBS_UNIT_DIR:-/etc/systemd/system}
 JOBS_BIN=${JOBS_BIN:-/opt/stack-vps/bin/stack-job}; JOBS_ANALYZE=${JOBS_ANALYZE:-systemd-analyze}
+JOBS_SRV=${JOBS_SRV:-/srv/dev}; JOBS_USER_AGENTE=${JOBS_USER_AGENTE:-agente}; JOBS_USER_DEV=${JOBS_USER_DEV:-dev}; JOBS_GROUP=${JOBS_GROUP:-agente}
 
 modo=${1:-}
 case $modo in ""|--listar) ;; *) echo "uso: $0 [--listar]"; exit 2 ;; esac
 [[ $modo == --listar || $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
 
+# o parser roda como root: so de codigo do root (/opt/stack-vps ou dono root)
+if [[ ${STACK_TESTE:-} != 1 && $REPO != /opt/stack-vps && $(stat -c %u -- "$REPO/scripts/lib/job-parse.sh") != 0 ]]; then
+  echo "recuso: $REPO nao e /opt/stack-vps nem do root"; exit 1
+fi
 # shellcheck source=scripts/lib/job-parse.sh
 . "$REPO/scripts/lib/job-parse.sh"
 
 # agenda valida: systemd-analyze quando existir; senao uma regex conservadora
 agenda_ok() {
-  if command -v "$JOBS_ANALYZE" >/dev/null 2>&1; then "$JOBS_ANALYZE" calendar "$1" >/dev/null 2>&1; return; fi
+  if command -v "$JOBS_ANALYZE" >/dev/null 2>&1; then "$JOBS_ANALYZE" calendar -- "$1" >/dev/null 2>&1; return; fi
   local dia='(Mon|Tue|Wed|Thu|Fri|Sat|Sun)' h='[0-9*]{1,2}:[0-9*/]{1,5}(:[0-9*/]{1,5})?'
   [[ $1 =~ ^(minutely|hourly|daily|weekly|monthly|quarterly|semiannually|yearly)$ ]] ||
     [[ $1 =~ ^($dia([,.-]+$dia)* )?([0-9*]{1,4}-[0-9*]{1,2}-[0-9*/,]{1,8} )?$h$ ]]
 }
 
 nomes=(); erros=(); linhas=(); reiniciar=()
-err=$(mktemp); trap 'rm -f "$err"' EXIT
+err=$(mktemp); tmps=()
+# nada de temporario solto em /etc/systemd/system se o script morrer no meio
+trap 'rm -f "$err" "${tmps[@]}"' EXIT
 shopt -s nullglob
 for f in "$JOBS_DIR"/*.job; do
   n=$(basename "$f" .job); t=nao; [[ -f $JOBS_UNIT_DIR/stack-job-$n.timer ]] && t=sim
@@ -57,19 +68,39 @@ if (( ${#erros[@]} > 0 )); then
   echo "jobs: ha .job invalido; nada foi instalado nem removido"; exit 1
 fi
 
+# pastas: <caminho> <dono> <grupo> <modo>. Valida tudo ANTES de escrever qualquer coisa.
+DIRS=("$JOBS_SRV/jobs $JOBS_USER_AGENTE $JOBS_GROUP 750" "$JOBS_SRV/jobs/work $JOBS_USER_AGENTE $JOBS_GROUP 750"
+      "$JOBS_SRV/state/jobs $JOBS_USER_AGENTE $JOBS_GROUP 750"
+      "$JOBS_SRV/secrets/jobs $JOBS_USER_DEV $JOBS_GROUP 2750"   # setgid: o 43-segredos-guiado.sh job (dev) grava 0640 dev:agente
+      "$JOBS_SRV/backups $JOBS_USER_AGENTE $JOBS_GROUP 750")     # destino local do n360-alt-backup (o job cria o 0700)
+recusa_dir() { echo "jobs: $1; nada foi instalado"; exit 1; }
+confere_dir() { # <caminho> <dono>: existente tem de ser diretorio real do dono; ausente passa
+  [[ -L $1 ]] && recusa_dir "$1 e link simbolico"
+  [[ -e $1 ]] || return 0
+  [[ -d $1 ]] || recusa_dir "$1 existe e nao e diretorio"
+  [[ $(stat -c %U -- "$1") == "$2" ]] || recusa_dir "$1 nao e do dono $2"
+}
+for d in "${DIRS[@]}"; do
+  read -r caminho dono _ _ <<<"$d"
+  confere_dir "$caminho" "$dono"
+  pai=$(dirname "$caminho")   # o pai (que o script nao cria, exceto jobs/) tem de existir e ser diretorio real
+  [[ $pai == "$JOBS_SRV/jobs" ]] || [[ -d $pai && ! -L $pai ]] || recusa_dir "$pai ausente ou link simbolico"
+done
+
 mudou=0; declare -A querido=()
 # grava <destino> <conteudo>: so troca o arquivo se o conteudo mudou
 grava() {
   local dest=$1 tmp
-  tmp=$(mktemp "$dest.XXXXXX"); printf '%s\n' "$2" > "$tmp"; chmod 644 "$tmp"
+  tmp=$(mktemp "$dest.XXXXXX"); tmps+=("$tmp"); printf '%s\n' "$2" > "$tmp"; chmod 644 "$tmp"
   if [[ -f $dest ]] && cmp -s "$tmp" "$dest"; then rm -f "$tmp"; return 1; fi
   mv -f "$tmp" "$dest"; mudou=1; return 0
 }
 
 install -d -m 755 "$JOBS_UNIT_DIR"
-if [[ ${STACK_TESTE:-} != 1 ]]; then   # pastas do agente (estado, clone temporario)
-  install -d -m 750 -o agente -g agente /srv/dev/jobs /srv/dev/jobs/work /srv/dev/state/jobs
-fi
+for d in "${DIRS[@]}"; do   # so cria o que falta: mkdir falha em qualquer coisa que ja exista (inclusive link)
+  read -r caminho dono grupo modo <<<"$d"
+  [[ -e $caminho ]] || { mkdir -m "$modo" -- "$caminho" && chown -h "$dono:$grupo" -- "$caminho" && chmod "$modo" -- "$caminho"; }
+done
 
 for f in "$JOBS_DIR"/*.job; do
   [[ -e $f ]] || continue
@@ -87,7 +118,10 @@ User=agente
 WorkingDirectory=/
 ExecStart=$JOBS_BIN $n
 TimeoutStartSec=$((J_TIMEOUT_MIN + 10))min
-NoNewPrivileges=yes" || true
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+MemoryMax=2G" || true
   if grava "$JOBS_UNIT_DIR/stack-job-$n.timer" "[Unit]
 Description=Agenda do job $n
 

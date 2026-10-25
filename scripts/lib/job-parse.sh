@@ -3,6 +3,7 @@
 # Sem source/eval: cada linha e vazia, comentario (#) ou CHAVE=valor com valor em alfabeto fechado.
 # job_carregar <arquivo-absoluto>: define J_NOME J_DESCRICAO J_AGENDA J_COMANDO J_SEGREDOS J_REPO
 # J_TIMEOUT_MIN J_HABILITADO J_CHAVES J_BASE (raiz do repo = pai da pasta jobs/). Erro: mensagem em stderr, rc 1.
+LC_ALL=C   # classes de caractere por byte, igual em qualquer maquina
 JOB_CHAVES=" DESCRICAO AGENDA COMANDO SEGREDOS CHAVES REPO TIMEOUT_MIN HABILITADO "
 
 job_nome_ok() { [[ $1 =~ ^[a-z0-9-]+$ ]]; }
@@ -41,6 +42,7 @@ job_carregar() {
   J_DESCRICAO=${val[DESCRICAO]} J_AGENDA=${val[AGENDA]} J_COMANDO=${val[COMANDO]}
   J_SEGREDOS=${val[SEGREDOS]:-} J_CHAVES=${val[CHAVES]:-} J_REPO=${val[REPO]:-} J_TIMEOUT_MIN=${val[TIMEOUT_MIN]} J_HABILITADO=${val[HABILITADO]:-nao}
 
+  [[ $J_AGENDA != -* ]] || { echo "$f: AGENDA nao pode comecar com '-'" >&2; return 1; }
   c=${J_COMANDO%% *}
   [[ $c =~ $re_cmd && $J_COMANDO != *..* ]] || { echo "$f: COMANDO deve ser jobs/bin/<script> [args], sem '..'" >&2; return 1; }
   [[ -f $J_BASE/$c && -x $J_BASE/$c && ! -L $J_BASE/$c ]] || { echo "$f: $c ausente, nao executavel ou link" >&2; return 1; }

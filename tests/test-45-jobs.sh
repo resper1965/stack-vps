@@ -8,9 +8,12 @@ echo "45-jobs (instalador dos jobs agendados)"
 mundo() {
   novo_tmp
   export JOBS_DIR=$T/jobs JOBS_UNIT_DIR=$T/units JOBS_BIN=/opt/stack-vps/bin/stack-job JOBS_ANALYZE=$STUBS/systemd-analyze
-  mkdir -p "$JOBS_DIR/bin" "$JOBS_UNIT_DIR"
+  export JOBS_SRV=$T/srv JOBS_USER_AGENTE JOBS_USER_DEV JOBS_GROUP
+  JOBS_USER_AGENTE=$(id -un); JOBS_USER_DEV=$JOBS_USER_AGENTE; JOBS_GROUP=$(id -gn)
+  mkdir -p "$JOBS_DIR/bin" "$JOBS_UNIT_DIR" "$JOBS_SRV/state" "$JOBS_SRV/secrets"
   stub systemctl
-  printf '#!/usr/bin/env bash\necho "systemd-analyze $*" >> "$STUB_LOG"\n[[ $2 == banana* ]] && exit 1\nexit 0\n' > "$STUBS/systemd-analyze"
+  # o analyze falso trata um valor que comeca com '-' como opcao (como o real): sem o '--' registra OPCAO
+  printf '#!/usr/bin/env bash\necho "systemd-analyze $*" >> "$STUB_LOG"\n[[ $1 == calendar && $2 == -- ]] || { echo "OPCAO $*" >> "$STUB_LOG"; exit 0; }\n[[ $3 == banana* ]] && exit 1\nexit 0\n' > "$STUBS/systemd-analyze"
   chmod +x "$STUBS/systemd-analyze"
   printf '#!/usr/bin/env bash\necho exemplo\n' > "$JOBS_DIR/bin/exemplo.sh"; chmod +x "$JOBS_DIR/bin/exemplo.sh"
 }
@@ -38,7 +41,9 @@ afirma_log "systemctl daemon-reload" "daemon-reload"
 afirma_log "systemctl enable --now stack-job-a.timer" "enable --now do timer a"
 afirma_log "systemctl enable --now stack-job-c.timer" "enable --now do timer c"
 nega_log "stack-job-b" "nenhum systemctl para o job desligado"
-afirma_log "systemd-analyze calendar *-*-* 03:00:00" "agenda validada pelo systemd-analyze"
+afirma_log "systemd-analyze calendar -- *-*-* 03:00:00" "agenda validada pelo systemd-analyze (com --)"
+nega_log "OPCAO" "analyze sempre chamado com --"
+grep -qx 'PrivateTmp=yes' "$(unid a.service)" && grep -qx 'ProtectSystem=full' "$(unid a.service)" && grep -qx 'MemoryMax=2G' "$(unid a.service)"; afirma "$?" "service: PrivateTmp, ProtectSystem e MemoryMax"
 
 # --- idempotencia ---
 antes=$(snap); : > "$STUB_LOG"; roda
@@ -93,5 +98,47 @@ grep -qE '^a +habilitado' <<<"$saida" && grep -qE '^b +desligado' <<<"$saida" &&
 if [[ $(snap) == "$antes" ]]; then ok "listar: nao muda nada"; else falha "listar: nao muda nada"; fi
 nega_log "systemctl" "listar: nenhum systemctl"
 roda --banana; afirma_rc "$rc" 2 "opcao desconhecida: rc 2"
+
+# --- AGENDA que parece opcao do systemd-analyze ---
+for ag in "--help" "--version" "-x"; do
+  mundo; job a sim; job opc sim "$ag"; roda
+  afirma_rc "$rc" 1 "agenda '$ag': recusa"
+  if [[ ! -e $(unid a.timer) ]]; then ok "agenda '$ag': nada instalado"; else falha "agenda '$ag': nada instalado"; fi
+  nega_log "OPCAO" "agenda '$ag': o analyze nunca recebe o valor como opcao"
+  grep -q "AGENDA nao pode comecar com '-'" <<<"$saida"; afirma "$?" "agenda '$ag': motivo claro"
+done
+
+# --- pastas do agente: link simbolico e dono errado (fail-closed, nada instalado, alvo do link intacto) ---
+mundo; job a sim; mkdir -p "$T/alvo-do-root"; chmod 711 "$T/alvo-do-root"; ln -s "$T/alvo-do-root" "$JOBS_SRV/jobs"; roda
+afirma_rc "$rc" 1 "link em srv/jobs: recusa"
+grep -q 'link simbolico' <<<"$saida"; afirma "$?" "link em srv/jobs: mensagem"
+if [[ ! -e $(unid a.timer) && $(stat -c %a "$T/alvo-do-root") == 711 && -z $(ls -A "$T/alvo-do-root") ]]; then ok "link em srv/jobs: nada instalado e alvo intacto"; else falha "link em srv/jobs: nada instalado e alvo intacto"; fi
+mundo; job a sim; mkdir -p "$T/alvo-do-root" "$JOBS_SRV/jobs"; ln -s "$T/alvo-do-root" "$JOBS_SRV/jobs/work"; roda
+afirma_rc "$rc" 1 "link em srv/jobs/work: recusa"
+mundo; job a sim; mkdir -p "$T/alvo-do-root"; ln -s "$T/alvo-do-root" "$JOBS_SRV/state/jobs"; roda
+afirma_rc "$rc" 1 "link em srv/state/jobs: recusa"
+mundo; job a sim; mkdir -p "$T/alvo-do-root"; ln -s "$T/alvo-do-root" "$JOBS_SRV/backups"; roda
+afirma_rc "$rc" 1 "link em srv/backups: recusa"
+mundo; job a sim; mkdir -p "$T/alvo-do-root"; ln -s "$T/alvo-do-root" "$JOBS_SRV/secrets/jobs"; roda
+afirma_rc "$rc" 1 "link em srv/secrets/jobs: recusa"
+mundo; job a sim; mkdir -p "$T/alvo-do-root"; rmdir "$JOBS_SRV/state"; ln -s "$T/alvo-do-root" "$JOBS_SRV/state"; roda
+afirma_rc "$rc" 1 "pai (srv/state) e link: recusa"
+mundo; job a sim; mkdir -p "$JOBS_SRV/state/jobs"; JOBS_USER_AGENTE=outro-usuario roda
+afirma_rc "$rc" 1 "dono errado em srv/state/jobs: recusa"
+grep -q 'nao e do dono' <<<"$saida"; afirma "$?" "dono errado: mensagem"
+if [[ ! -e $(unid a.timer) ]]; then ok "dono errado: nada instalado"; else falha "dono errado: nada instalado"; fi
+mundo; job a sim; touch "$JOBS_SRV/backups"; roda
+afirma_rc "$rc" 1 "arquivo no lugar da pasta: recusa"
+# pasta existente do dono certo: nao e tocada (modo preservado); ausente e criada com o modo pedido
+mundo; job a sim; mkdir -p "$JOBS_SRV/state/jobs"; chmod 755 "$JOBS_SRV/state/jobs"; roda
+afirma_rc "$rc" 0 "pasta existente do dono certo: ok"
+if [[ $(stat -c %a "$JOBS_SRV/state/jobs") == 755 ]]; then ok "pasta existente: modo intacto (sem chmod)"; else falha "pasta existente: modo intacto (sem chmod)"; fi
+if [[ $(stat -c %a "$JOBS_SRV/jobs/work") == 750 && $(stat -c %a "$JOBS_SRV/secrets/jobs") == 2750 && $(stat -c %a "$JOBS_SRV/backups") == 750 ]]; then ok "pastas ausentes: criadas com o modo certo"; else falha "pastas ausentes: criadas com o modo certo"; fi
+
+# --- temporarios nunca ficam na pasta das unidades (a gravacao morre no meio) ---
+mundo; job a sim
+printf '#!/usr/bin/env bash\nkill -TERM "$PPID"; sleep 1\n' > "$STUBS/mv"; chmod +x "$STUBS/mv"; roda
+if [[ $rc != 0 ]]; then ok "morte no meio da gravacao: o instalador termina com erro"; else falha "morte no meio da gravacao: o instalador termina com erro"; fi
+if [[ -z $(ls -A "$JOBS_UNIT_DIR") ]]; then ok "trap: nenhum temporario sobra na pasta das unidades"; else falha "trap: nenhum temporario sobra ($(ls -A "$JOBS_UNIT_DIR"))"; fi
 
 fim

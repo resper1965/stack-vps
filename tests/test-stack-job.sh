@@ -146,4 +146,41 @@ mundo; job a 'echo "falha com $TOKEN"; exit 1' 'SEGREDOS=s'; seg "TOKEN=$SENT\n"
 ! grep -qF -- "$SENT" <<<"$(campo a resumo)"; afirma "$?" "segredo: fora do resumo"
 nada_vazou "segredo no resumo e no alerta"
 
+# --- .job invalido em runtime: json rc 2 e alerta ---
+mundo; job a 'echo oi'; printf 'DESCRICAO=x\nAGENDA=daily\nCOMANDO=jobs/bin/a.sh\nTIMEOUT_MIN=1\nFOO=1\n' > "$JOBS_DIR/a.job"; roda a
+afirma_rc "$rc" 2 "runtime invalido: rc 2"
+if [[ $(campo a rc) == 2 ]]; then ok "runtime invalido: json com rc 2"; else falha "runtime invalido: json com rc 2"; fi
+grep -q 'chave desconhecida' "$STATE_DIR/a.log"; afirma "$?" "runtime invalido: motivo no log"
+afirma_log "alertar job falhou a rc=2" "runtime invalido: alerta"
+
+# --- clone: rc registrado, json e alerta; tempo esgotado ---
+mundo; job a 'echo nao-devia' 'REPO=resper1965/projeto-x'; export CLONE_FALHA=1; roda a
+if [[ $(campo a rc) == 1 ]]; then ok "clone falho: json com o rc do clone"; else falha "clone falho: json com o rc do clone"; fi
+unset CLONE_FALHA
+mundo; job a 'echo nao-devia' 'REPO=resper1965/projeto-x'; printf '#!/usr/bin/env bash\nexec sleep 30\n' > "$STUBS/clona"; export CLONE_TIMEOUT=1; ini=$SECONDS; roda a
+if [[ $(campo a rc) == 124 ]] && (( SECONDS - ini < 20 )); then ok "clone lento: rc 124 sem esperar"; else falha "clone lento: rc 124 sem esperar"; fi
+afirma_log "alertar job falhou a rc=124" "clone lento: alerta"
+unset CLONE_TIMEOUT
+
+# --- ambiente fechado ---
+mundo; job a 'env | cut -d= -f1 | sort > "'"$T"'/vars"' 'SEGREDOS=s'; seg "TOKEN=x1\n"
+export LEAK_DO_CHAMADOR=1; roda a; unset LEAK_DO_CHAMADOR
+extras=$(grep -vxE 'PATH|HOME|LANG|PWD|OLDPWD|SHLVL|_|TOKEN' "$T/vars" | tr '\n' ' ')
+if [[ -z $extras ]] && grep -qx TOKEN "$T/vars"; then ok "ambiente: so PATH, HOME, LANG e os segredos"; else falha "ambiente: sobrou '$extras'"; fi
+
+# --- um so processo por job (flock) ---
+mundo; export JOB_TIMEOUT_UNIT=m; job a 'sleep 3; echo fim-do-primeiro'
+"$J" a >/dev/null 2>&1 & primeiro=$!
+sleep 1; roda a
+afirma_rc "$rc" 75 "lock: segunda instancia recusada (75)"
+wait "$primeiro"; afirma_rc "$?" 0 "lock: a primeira termina normalmente"
+grep -qF fim-do-primeiro "$STATE_DIR/a.log"; afirma "$?" "lock: o estado da primeira nao foi pisado"
+export JOB_TIMEOUT_UNIT=s
+
+# --- filho em segundo plano nao segura o job nem sobrevive ---
+mundo; job a 'sleep 30 & echo $! > "'"$T"'/filho"; echo pai-saiu'; ini=$SECONDS; roda a
+if (( SECONDS - ini < 15 )); then ok "filho em segundo plano: o job termina logo"; else falha "filho em segundo plano: o job termina logo"; fi
+sleep 0.5
+if ! kill -0 "$(cat "$T/filho")" 2>/dev/null; then ok "filho em segundo plano: morto ao fim do job"; else falha "filho em segundo plano: morto ao fim do job"; kill "$(cat "$T/filho")" 2>/dev/null; fi
+
 fim

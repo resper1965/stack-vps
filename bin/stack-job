@@ -2,40 +2,49 @@
 # Executa um job agendado (jobs/<nome>.job) como agente: clone raso do REPO (token somente leitura pelo
 # git-credential-stack), segredos de /srv/dev/secrets/jobs/<arquivo>.env so no ambiente do comando, timeout,
 # resultado em /srv/dev/state/jobs/<nome>.json e .log. Valor de segredo nunca vai a saida, log, json nem argv:
-# toda saida do comando passa por um filtro que troca os valores carregados por ***. rc != 0 chama o alertar.sh.
+# a saida do comando vai para um arquivo temporario (0700) e so o texto filtrado, com cada valor de segredo
+# trocado por ***, chega ao log e ao resumo. rc != 0 (inclusive .job invalido, clone ou segredos) grava o json
+# e chama o alertar.sh. O comando roda com ambiente fechado (PATH, HOME, LANG e os segredos do arquivo) e um
+# so processo por job (flock). Nao roda como root.
 # Uso: stack-job <nome>
 # Sobrescreviveis nos testes (so com STACK_TESTE=1): JOBS_DIR STATE_DIR WORK_DIR SECRETS_DIR ALERTAR CLONE_CMD
-# JOB_TIMEOUT_UNIT (m|s) JOB_SECRETS_DONO.
+# CLONE_TIMEOUT (s) JOB_TIMEOUT_UNIT (m|s) JOB_SECRETS_DONO.
 set -uo pipefail
 set -f   # COMANDO aceita '*' (nao e glob aqui)
 umask 027
 
 nome=${1:-}
 [[ $nome =~ ^[a-z0-9-]+$ ]] || { echo "uso: stack-job <nome> (nome em [a-z0-9-]+)" >&2; exit 2; }
+[[ $EUID -ne 0 || ${STACK_TESTE:-} == 1 ]] || { echo "stack-job: recuso rodar como root (use o agente)" >&2; exit 2; }
 REPO_DIR=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 
 # >>> normaliza
 if [[ ${STACK_TESTE:-} != 1 ]]; then
   JOBS_DIR=$REPO_DIR/jobs; STATE_DIR=/srv/dev/state/jobs; WORK_DIR=/srv/dev/jobs/work; SECRETS_DIR=/srv/dev/secrets/jobs
-  ALERTAR=/usr/local/lib/stack-vps/alertar.sh; CLONE_CMD=; JOB_TIMEOUT_UNIT=m; JOB_SECRETS_DONO=dev
+  ALERTAR=/usr/local/lib/stack-vps/alertar.sh; CLONE_CMD=; CLONE_TIMEOUT=300; JOB_TIMEOUT_UNIT=m; JOB_SECRETS_DONO=dev
 fi
 # <<< normaliza
 JOBS_DIR=${JOBS_DIR:-$REPO_DIR/jobs}; STATE_DIR=${STATE_DIR:-/srv/dev/state/jobs}; WORK_DIR=${WORK_DIR:-/srv/dev/jobs/work}
 SECRETS_DIR=${SECRETS_DIR:-/srv/dev/secrets/jobs}; ALERTAR=${ALERTAR:-/usr/local/lib/stack-vps/alertar.sh}
-CLONE_CMD=${CLONE_CMD:-}; JOB_TIMEOUT_UNIT=${JOB_TIMEOUT_UNIT:-m}; JOB_SECRETS_DONO=${JOB_SECRETS_DONO:-dev}
+CLONE_CMD=${CLONE_CMD:-}; CLONE_TIMEOUT=${CLONE_TIMEOUT:-300}; JOB_TIMEOUT_UNIT=${JOB_TIMEOUT_UNIT:-m}
+JOB_SECRETS_DONO=${JOB_SECRETS_DONO:-dev}
 
 # shellcheck source=scripts/lib/job-parse.sh
 . "$REPO_DIR/scripts/lib/job-parse.sh"
-job_carregar "$JOBS_DIR/$nome.job" || exit 2
 
 mkdir -p "$STATE_DIR" || { echo "stack-job: nao criei $STATE_DIR" >&2; exit 1; }
 LOG=$STATE_DIR/$nome.log; JSON=$STATE_DIR/$nome.json
+# um so processo por job: a segunda instancia sai sem tocar no estado da primeira
+exec 9>"$STATE_DIR/$nome.lock" || { echo "stack-job: nao abri o lock" >&2; exit 1; }
+flock -n 9 || { echo "stack-job: $nome ja esta rodando" >&2; exit 75; }
+
 tmp=$(mktemp -d) || exit 1
 chmod 700 "$tmp"
 W=$WORK_DIR/$nome
 trap 'rm -rf "$tmp" "$W"' EXIT
 : > "$tmp/segredos"
-SK=(); SV=(); erro=
+SK=(); SV=(); erro=; erro_rc=1; rc=1
+J_SEGREDOS=; J_REPO=; J_COMANDO=; J_TIMEOUT_MIN=1; J_BASE=/
 
 # CHAVE=VALOR linha a linha, sem source. Mensagens citam so o numero da linha, nunca o conteudo.
 carrega_segredos() {
@@ -56,30 +65,46 @@ carrega_segredos() {
     [[ -z $v ]] || printf '%s\n' "$v" >> "$tmp/segredos"
   done < "$f"
 }
-carrega_segredos || true
 
-clona() { # <dono/repo> <destino>
+# .job invalido em runtime (alguem editou o repo depois do 45-jobs.sh) vira rc 2 com json e alerta
+if ! job_carregar "$JOBS_DIR/$nome.job" 2>"$tmp/perr"; then
+  erro="job invalido: $(head -c 500 "$tmp/perr" | tr -d '\000-\010\013-\037')"; erro_rc=2
+else
+  carrega_segredos || true
+fi
+
+clona() { # <dono/repo> <destino>: no maximo CLONE_TIMEOUT segundos, mata o grupo todo
   if [[ -n $CLONE_CMD ]]; then
     # shellcheck disable=SC2086  # comando de teste, word splitting intencional
-    $CLONE_CMD "$1" "$2"
+    timeout -k 10s "${CLONE_TIMEOUT}s" $CLONE_CMD "$1" "$2"
   else
-    GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c "credential.helper=$REPO_DIR/bin/git-credential-stack" \
-      clone --depth 1 -q "https://github.com/$1.git" "$2"
+    GIT_TERMINAL_PROMPT=0 timeout -k 10s "${CLONE_TIMEOUT}s" git -c credential.helper= \
+      -c "credential.helper=$REPO_DIR/bin/git-credential-stack" clone --depth 1 -q "https://github.com/$1.git" "$2"
   fi
 }
 
+# roda na shell principal; toda a saida vai para $tmp/raw (nunca para o terminal nem para o log sem filtro)
 executa() {
-  local palavras i
-  echo 1 > "$tmp/rc"
-  [[ -z $erro ]] || { echo "$erro"; return; }
+  local palavras i v fn crc pid home=${HOME:-/} limite=${J_TIMEOUT_MIN}${JOB_TIMEOUT_UNIT}
+  [[ -z $erro ]] || { echo "$erro"; rc=$erro_rc; return; }
+  rc=1
   rm -rf "$W"; mkdir -p "$WORK_DIR" || { echo "nao criei $WORK_DIR"; return; }
-  if [[ -n $J_REPO ]]; then clona "$J_REPO" "$W" 2>&1 || { echo "clone de $J_REPO falhou"; return; }
+  if [[ -n $J_REPO ]]; then
+    clona "$J_REPO" "$W" 2>&1; crc=$?
+    (( crc == 0 )) || { echo "clone de $J_REPO falhou (rc $crc)"; rc=$crc; return; }
   else mkdir -p "$W"; fi
   cd "$W" || { echo "sem $W"; return; }
   read -ra palavras <<<"$J_COMANDO"; palavras[0]=$J_BASE/${palavras[0]}
-  ( for i in "${!SK[@]}"; do export "${SK[i]}=${SV[i]}"; done
-    exec timeout -k 10s "${J_TIMEOUT_MIN}${JOB_TIMEOUT_UNIT}" "${palavras[@]}" ) </dev/null
-  echo $? > "$tmp/rc"
+  # ambiente fechado: nada do chamador passa (nem variaveis, nem funcoes exportadas); o lock (fd 9) tambem nao
+  ( for v in $(compgen -e); do unset "$v" 2>/dev/null; done
+    while read -r _ _ fn; do unset -f "$fn" 2>/dev/null; done < <(declare -Fx)
+    export PATH="$home/.local/bin:$home/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin" HOME="$home" LANG=C.UTF-8
+    for i in "${!SK[@]}"; do export "${SK[i]}=${SV[i]}"; done
+    exec timeout -k 10s "$limite" "${palavras[@]}" ) </dev/null 9>&- &
+  pid=$!
+  wait "$pid"; rc=$?
+  # o timeout lidera o proprio grupo: o que o comando deixou para tras (filho em segundo plano) morre junto
+  kill -KILL -- "-$pid" 2>/dev/null || true
 }
 
 # filtro: troca cada valor de segredo por *** (maiores primeiro) e guarda so o ultimo 1 MiB
@@ -92,9 +117,10 @@ for v in vs: d = d.replace(v, b"***")
 sys.stdout.buffer.write(d[-1048576:])
 '
 inicio=$(date +%s)
-executa 2>&1 | python3 -I -c "$filtro" "$tmp/segredos" > "$LOG"
+executa > "$tmp/raw" 2>&1
 fim=$(date +%s)
-rc=$(cat "$tmp/rc" 2>/dev/null); [[ $rc =~ ^[0-9]+$ ]] || rc=1
+python3 -I -c "$filtro" "$tmp/segredos" < "$tmp/raw" > "$LOG"
+rm -f "$tmp/raw"
 
 # o resumo sai do log ja filtrado (arquivo, nunca argv); o python grava o json de forma atomica
 python3 -I -c '

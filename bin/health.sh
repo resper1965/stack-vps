@@ -113,20 +113,38 @@ fi
 # confiavel): so numeros e o nome do job (validado pelo nome do arquivo) sao impressos.
 jobs_units=/etc/systemd/system; jobs_state=/srv/dev/state/jobs
 [[ ${STACK_TESTE:-} == 1 ]] && { jobs_units=${HEALTH_JOBS_UNITS:-$jobs_units}; jobs_state=${HEALTH_JOBS_STATE:-$jobs_state}; }
+# limite (horas) de idade do ultimo resultado de um job: 2x o maior intervalo entre execucoes + 1h. O intervalo vem do
+# systemd-analyze (8 iteracoes: cobre fim de semana em Mon..Fri); sem ele, um palpite pelo texto da agenda
+# (diario 36h, semanal ou dias da semana 9d, mensal 33d, anual 400d). Agenda de alta frequencia fica tolerante no palpite.
+jobs_limite() {
+  local an=systemd-analyze out x e prev=0 max=0 ts=() bx=${1,,}
+  [[ ${STACK_TESTE:-} == 1 ]] && an=${HEALTH_ANALYZE:-systemd-analyze}
+  if command -v "$an" >/dev/null 2>&1 && [[ $1 != -* ]] && out=$(timeout 10 "$an" calendar --iterations=8 -- "$1" 2>/dev/null); then
+    mapfile -t ts < <(sed -nE 's/^[[:space:]]*(Next elapse|Iter[^:]*#[0-9]+):[[:space:]]*//p' <<<"$out")
+    for x in "${ts[@]}"; do
+      e=$(date -d "$x" +%s 2>/dev/null) || { max=0; break; }
+      if (( prev != 0 && e - prev > max )); then max=$((e - prev)); fi
+      prev=$e
+    done
+    if (( max > 0 )); then echo $(( 2 * max / 3600 + 1 )); return; fi
+  fi
+  case $bx in
+    *quarterly*|*semiannually*|*yearly*|*annually*) echo 9600 ;;
+    *monthly*) echo 792 ;;
+    [0-9*]*-[0-9][0-9]-[0-9]*|[0-9*]*-[0-9]-[0-9]*) echo 9600 ;;   # *-MM-DD: uma vez por ano
+    [0-9*]*-\*-[0-9]*) echo 792 ;;                                    # *-*-DD: uma vez por mes
+    *weekly*|*mon*|*tue*|*wed*|*thu*|*fri*|*sat*|*sun*) echo 216 ;;
+    *) echo 36 ;;
+  esac
+}
 shopt -s nullglob; jobs_timers=("$jobs_units"/stack-job-*.timer); shopt -u nullglob
 if (( ${#jobs_timers[@]} > 0 )); then
   echo "jobs"
   for t in "${jobs_timers[@]}"; do
     jn=${t##*/stack-job-}; jn=${jn%.timer}
     [[ $jn =~ ^[a-z0-9-]+$ ]] || continue
-    ag=$(sed -n 's/^OnCalendar=//p' "$t" | head -1); ag=${ag,,}
-    # limite fixo por tipo de agenda (2x o intervalo, com folga): diario 36h, semanal 9d, mensal 33d, anual 400d
-    case $ag in
-      *quarterly*|*semiannually*|*yearly*|*annually*) lim=9600 ;;
-      *monthly*) lim=792 ;;
-      *weekly*|*mon*|*tue*|*wed*|*thu*|*fri*|*sat*|*sun*) lim=216 ;;
-      *) lim=36 ;;
-    esac
+    ag=$(sed -n 's/^OnCalendar=//p' "$t" | head -1)
+    lim=$(jobs_limite "$ag")
     jf=$jobs_state/$jn.json; r=invalido
     if [[ -f $jf && ! -L $jf ]]; then
       r=$(timeout 10 python3 -I -c '
