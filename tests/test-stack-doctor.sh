@@ -15,7 +15,7 @@ prepara() {
   mkdir -p "$T/repo/scripts" "$T/repo/opencode/command" "$T/units" "$T/dev" "$T/ci"
   touch "$T/repo/scripts/41-9router.sh" "$T/repo/scripts/42-novo-projeto.py" "$T/repo/opencode/command/novo-projeto.md"
   mkdir -p "$T/srv/projetos" "$T/srv/state" "$T/srv/pareceres"; chmod 751 "$T/srv"; chmod 750 "$T/srv/projetos" "$T/srv/state" "$T/srv/pareceres"
-  A=$T/ah; mkdir -p "$A/.config/9router" "$A/.config/opencode/command" "$A/.local/lib/node_modules/9router" "$A/.local/bin" "$A/.claude" "$A/.codex" "$A/.antigravity"
+  A=$T/ah; mkdir -p "$A/.config/9router" "$A/.config/opencode/command" "$A/.local/lib/node_modules/9router" "$A/.local/bin" "$A/.claude" "$A/.codex" "$A/.gemini/antigravity-cli"
   printf 'INITIAL_PASSWORD=x\n' > "$A/.config/9router/9router.env"; printf 'NINE_ROUTER_API_KEY=%s\n' "$SENT" > "$A/.config/9router/client.env"
   chmod 600 "$A/.config/9router/9router.env" "$A/.config/9router/client.env"
   printf '{"provider":{"9router":{"options":{"baseURL":"http://127.0.0.1:20128/v1"}}}}\n' > "$A/.config/opencode/opencode.json"

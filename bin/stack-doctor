@@ -138,7 +138,7 @@ chave=
 
 echo "clis"
 if [[ $AG_OK ]]; then
-  for c in "claude .claude" "codex .codex" "agy .antigravity"; do
+  for c in "claude .claude" "codex .codex" "agy .gemini/antigravity-cli"; do
     set -- $c
     if ag env "PATH=$AH/.local/bin:$AH/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin" bash -c 'command -v "$1"' _ "$1" >/dev/null 2>&1; then
       ok "$1 no PATH do $AGENTE"
