@@ -1,0 +1,9 @@
+# Substitui o workflow dnscheck.yml (cron 0 10 * * * UTC). Le o DNS vivo na Cloudflare; nao altera nada.
+DESCRICAO=Verificacao diaria de DNS (dnscheck e wpaudit) do dns-repair
+AGENDA=*-*-* 10:00:00 UTC
+COMANDO=jobs/bin/dnscheck.sh dns-repair-dnscheck
+TIMEOUT_MIN=15
+REPO=resper1965/dns-repair
+SEGREDOS=dns-repair
+CHAVES=CLOUDFLARE_API_TOKEN,HOSTINGER_API?
+HABILITADO=nao

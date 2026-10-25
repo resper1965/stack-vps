@@ -104,4 +104,67 @@ invalida "senha com tab" "senha-com-tab"$'\t'"-longa-123" "$JWT"
 # sem terminal e sem entrada de teste: mensagem clara, nada escrito
 prepara; setsid -w bash "$S" cliente < /dev/null > "$T/saida" 2>&1; RC=$?; afirma_rc $RC 1 "sem terminal"
 grep -qF "sem terminal para ler o valor" "$T/saida" && r=0 || r=1; afirma $r "mensagem de sem terminal"; [[ ! -e $DIR/client.env ]] && r=0 || r=1; afirma $r "sem terminal: nada escrito"
+# job <nome>: chaves do CHAVES= do .job, 0640, nada na saida; opcional com Enter vazio; recusa sem --trocar
+prepara_job() {
+  prepara; export SEG_JOBS_DEF=$T/repo/jobs SEG_JOBS_SEG=$T/segjobs; mkdir -p "$SEG_JOBS_DEF/bin" "$SEG_JOBS_SEG"
+  printf '#!/usr/bin/env bash
+:
+' > "$SEG_JOBS_DEF/bin/x.sh"; chmod +x "$SEG_JOBS_DEF/bin/x.sh"
+  printf 'DESCRICAO=t
+AGENDA=daily
+COMANDO=jobs/bin/x.sh
+TIMEOUT_MIN=1
+SEGREDOS=meu-seg
+CHAVES=DATABASE_URL,OPC?,BACKUP_PASSPHRASE
+' > "$SEG_JOBS_DEF/meu.job"
+  printf 'DESCRICAO=t
+AGENDA=daily
+COMANDO=jobs/bin/x.sh
+TIMEOUT_MIN=1
+' > "$SEG_JOBS_DEF/sem.job"
+  F=$SEG_JOBS_SEG/meu-seg.env
+}
+URL=postgres://u:SENTINELA-url-987@h:5432/db; PASS=passphrase-sentinela-654
+prepara_job; roda job meu < <(printf '%s
+%s
+%s
+' "$URL" "" "$PASS"); afirma_rc $RC 0 "job grava"
+grep -qx "DATABASE_URL=$URL" "$F" && grep -qx "BACKUP_PASSPHRASE=$PASS" "$F" && ! grep -q '^OPC=' "$F"; afirma $? "job: chaves certas, opcional vazia pulada"
+modo "$F" 640; afirma $? "job: arquivo 0640"
+sem_valor "job" "$URL" "$PASS" SENTINELA-url-987
+roda job meu < <(printf '%s
+%s
+%s
+' "$URL" "" "$PASS"); afirma_rc $RC 1 "job recusa sobrescrever sem --trocar"
+roda job meu --trocar < <(printf '%s
+%s
+%s
+' "$URL" "x" "outra-pass"); afirma_rc $RC 0 "job --trocar"
+grep -qx "BACKUP_PASSPHRASE=outra-pass" "$F" && grep -qx OPC=x "$F" && [[ $(grep -c '^DATABASE_URL=' "$F") == 1 ]]; afirma $? "job --trocar recomeca sem duplicar"
+prepara_job; roda job meu < <(printf '%s
+%s
+%s
+' "" "" "$PASS"); afirma_rc $RC 1 "job: chave obrigatoria vazia recusa"; [[ ! -e $F ]]; afirma $? "job: nada escrito"
+prepara_job; roda job meu < <(printf '%s
+%s
+%s
+' "$URL" "" "com espaco"); afirma_rc $RC 1 "job: valor invalido recusa"; [[ ! -e $F ]]; afirma $? "job invalido: nada escrito"
+prepara_job; roda job sem </dev/null; afirma_rc $RC 1 "job sem SEGREDOS/CHAVES recusa"
+prepara_job; roda job nao-existe </dev/null; afirma_rc $RC 1 "job inexistente recusa"
+prepara_job; roda job "../x" </dev/null; afirma_rc $RC 2 "job com nome invalido: uso"
+prepara_job; roda job </dev/null; afirma_rc $RC 2 "job sem nome: uso"
+prepara_job; ln -s "$T/alvo" "$F"; roda job meu --trocar < <(printf '%s
+%s
+%s
+' "$URL" "" "$PASS"); afirma_rc $RC 1 "job recusa link"
+# CHAVES invalida no .job: o parser recusa e nada e gravado
+for ch in "CHAVES=minuscula" "CHAVES=PATH" "CHAVES=A,,B"; do
+  prepara_job; sed -i "s/^CHAVES=.*/$ch/" "$SEG_JOBS_DEF/meu.job"; roda job meu < <(printf '%s
+%s
+%s
+' "$URL" "" "$PASS")
+  afirma_rc $RC 1 "job: $ch recusado"; [[ ! -e $F ]]; afirma $? "job: $ch: nada escrito"
+done
+prepara_job; sed -i '/^SEGREDOS=/d' "$SEG_JOBS_DEF/meu.job"; roda job meu </dev/null; afirma_rc $RC 1 "job: CHAVES sem SEGREDOS recusado"
+
 fim

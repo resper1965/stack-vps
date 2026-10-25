@@ -3,3 +3,6 @@ systemd/* text eol=lf
 bin/* text eol=lf
 pmo/** text eol=lf
 *.conf text eol=lf
+jobs/*.job text eol=lf
+jobs/bin/* text eol=lf
+scripts/lib/* text eol=lf

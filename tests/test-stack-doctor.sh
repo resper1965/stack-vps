@@ -262,4 +262,25 @@ novo_tmp; prepara; printf 'NINE_ROUTER_API_KEY=ab"%s\n' "$SENT" > "$T/agente.env
 tem "FALTA NINE_ROUTER_API_KEY com caracteres inválidos"; afirma "$?" "chave com aspas: FALTA"
 ! tem "$SENT"; afirma "$?" "chave invalida: valor fora da saida"
 
+# jobs: cada .job (mesmo parser do stack-job); habilitado+timer ativo ok, nao => pend, invalido => FALTA
+jobs_doctor() { novo_tmp; prepara; mkdir -p "$T/repo/jobs/bin" "$T/repo/scripts/lib"; cp "$RAIZ_REPO/scripts/lib/job-parse.sh" "$T/repo/scripts/lib/"
+  printf '#!/bin/sh\n' > "$T/repo/jobs/bin/x.sh"; chmod +x "$T/repo/jobs/bin/x.sh"; }
+# jdef <nome> <habilitado>
+jdef() { printf 'DESCRICAO=d\nAGENDA=daily\nCOMANDO=jobs/bin/x.sh\nTIMEOUT_MIN=5\nHABILITADO=%s\n' "$2" > "$T/repo/jobs/$1.job"; }
+novo_tmp; prepara; roda
+! grep -qx jobs <<<"$saida"; afirma "$?" "jobs: sem .job, sem secao"
+jobs_doctor; jdef a sim; roda
+tem "ok    job a habilitado, timer ativo"; afirma "$?" "jobs: habilitado e timer ativo: ok"
+! tem "  FALTA "; afirma "$?" "jobs: tudo ok: zero FALTA"
+jobs_doctor; jdef a sim; export STUB_INATIVAS=stack-job-a.timer; roda
+tem "FALTA job a habilitado e timer inativo"; afirma "$?" "jobs: habilitado e timer inativo: FALTA"
+afirma_rc "$rc" 1 "jobs: timer inativo: rc 1"
+jobs_doctor; jdef b nao; roda
+tem "pend  job b desligado"; afirma "$?" "jobs: HABILITADO=nao: pend com o nome"
+! tem "  FALTA "; afirma "$?" "jobs: desligado nao e FALTA"
+jobs_doctor; jdef c sim; echo 'FOO=1' >> "$T/repo/jobs/c.job"; roda
+tem "FALTA job c: .job inválido"; afirma "$?" "jobs: .job invalido: FALTA"
+jobs_doctor; jdef d sim; sed -i 's#jobs/bin/x.sh#/bin/true#' "$T/repo/jobs/d.job"; roda
+tem "FALTA job d: .job inválido"; afirma "$?" "jobs: comando fora de jobs/bin: FALTA"
+
 fim

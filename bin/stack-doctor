@@ -171,6 +171,23 @@ else
   fi
 fi
 
+# jobs agendados: cada jobs/*.job validado pelo mesmo parser do stack-job e do 45-jobs.sh
+shopt -s nullglob; jobs_defs=("$REPO"/jobs/*.job); shopt -u nullglob
+if (( ${#jobs_defs[@]} > 0 )); then
+  echo "jobs"
+  if [[ -r $REPO/scripts/lib/job-parse.sh ]]; then
+    # shellcheck source=scripts/lib/job-parse.sh
+    . "$REPO/scripts/lib/job-parse.sh"
+    for jf in "${jobs_defs[@]}"; do
+      jn=$(basename "$jf" .job)
+      if ! job_carregar "$jf" 2>/dev/null; then falta "job $jn: .job inválido (rode scripts/45-jobs.sh --listar)"
+      elif [[ $J_HABILITADO != sim ]]; then pend "job $jn desligado (HABILITADO=nao)"
+      elif systemctl is-active --quiet "stack-job-$jn.timer"; then ok "job $jn habilitado, timer ativo"
+      else falta "job $jn habilitado e timer inativo (rode scripts/45-jobs.sh)"; fi
+    done
+  else pend "jobs: $REPO/scripts/lib/job-parse.sh ausente"; fi
+fi
+
 echo "restos"
 dpkg -s sysbox-ce >/dev/null 2>&1 && falta "sysbox-ce ainda instalado" || ok "sysbox ausente"
 for h in "$AH" "$DEVH"; do
