@@ -33,7 +33,7 @@
 <body>
 <main>
 <h1>Manual do dono: o que falta fazer</h1>
-<p class="sub">Estado de 25/10/2026. Faça na ordem. O que é "Claude" eu faço; o que é "você" só você consegue.</p>
+<p class="sub">Estado de 26/10/2026. O 9router está na 0.5.109, os jobs agendados e o @ness/auth estão prontos (jobs desligados). Faça na ordem. O que é "Claude" eu faço; o que é "você" só você consegue.</p>
 
 <section class="step">
   <h2>Antes de tudo</h2>
@@ -114,13 +114,45 @@ agy</code></pre></li>
 <section class="step">
   <h2><span>7</span>Opcional, mas recomendado <span class="tag">você</span></h2>
   <ul>
-    <li><b>Aviso no celular quando o agente termina:</b> preencha <code>NTFY_TOPIC=</code> em <code>/srv/dev/secrets/aviso.env</code>. O arquivo é criado pelo <code>16-agente.sh</code>; me avise e eu rodo.</li>
+    <li><b>Aviso no celular (agente terminou e job falhou):</b> instale o app ntfy no celular, escolha um tópico longo e secreto e preencha <code>NTFY_TOPIC=</code> em <code>/srv/dev/secrets/aviso.env</code>:
+<pre><code>ssh -t stack "sudo nano /srv/dev/secrets/aviso.env"</code></pre>O arquivo já existe (root:agente, 0640).</li>
     <li><b>Revogar o token antigo dos runners:</b> GitHub → Settings → Developer settings → Personal access tokens. Apague o que estava em <code>/srv/runners</code>. Não confunda com o <code>RUNNER_TOKEN</code> atual do CI.</li>
   </ul>
 </section>
 
 <section class="step">
-  <h2><span>8</span>Decisões que só você toma <span class="tag">você</span></h2>
+  <h2><span>8</span>Jobs agendados (substituem os workflows sem créditos) <span class="tag">você + Claude</span></h2>
+  <p>Todos estão <b>desligados</b>. Ligue um por vez, só depois de testar à mão. Nenhum job altera projeto: só clona raso para ler.</p>
+  <ol>
+    <li><b>Ver os jobs definidos:</b>
+<pre><code>ssh stack "sudo /opt/stack-vps/scripts/45-jobs.sh --listar"</code></pre></li>
+    <li><b>Dar os segredos do job</b> (você digita, direto na VPS; eu nunca vejo). Exemplo do backup do <code>n.360-alternative</code>, que hoje está <b>sem backup nenhum</b>:
+<pre><code>ssh -t stack "/opt/stack-vps/scripts/43-segredos-guiado.sh job n360-alt-backup"</code></pre>Ele pede <code>DATABASE_URL</code> e <code>BACKUP_PASSPHRASE</code>. Guarde a senha de backup num cofre: sem ela o backup não abre.</li>
+    <li><b>Testar à mão:</b>
+<pre><code>ssh stack "sudo -u agente -H bash -c 'cd ~ &amp;&amp; /opt/stack-vps/bin/stack-job n360-alt-backup'"</code></pre>Esperado: <code>rc=0</code>. O estado fica em <code>/srv/dev/state/jobs/n360-alt-backup.json</code>.</li>
+    <li><b>Ligar:</b> me peça ("ligue o job X"). Eu mudo <code>HABILITADO=sim</code> por PR e rodo <code>45-jobs.sh</code>.</li>
+  </ol>
+  <div class="note">O backup é local (<code>/srv/dev/backups/</code>). Sem cópia fora da VPS até o restic/R2 (adiado). A varredura do <code>be-secure</code> já rodou à mão: 8 possíveis segredos, 26 dependências críticas e 2 erros do Semgrep. Posso revisar os 8 achados (só caminho e tipo, nunca o valor).</div>
+</section>
+
+<section class="step">
+  <h2><span>9</span>Adequar um projeto, um por vez <span class="tag">você + agente</span></h2>
+  <p>Eu não mexo nos projetos. Para cada um, abra o OpenCode ou o Claude <b>dentro da pasta do projeto</b> e cole um prompt de <code>docs/prompts/</code>:</p>
+  <ul>
+    <li><code>01-ci-local.md</code>: tirar a dependência de minutos do GitHub (comando único de CI).</li>
+    <li><code>02-agendado-para-job.md</code>: transformar um workflow agendado em job da VPS.</li>
+    <li><code>03-padrao-projeto.md</code>: STATE.md, AGENTS.md e checagem de segredos.</li>
+  </ul>
+  <p>Todos só leem e propõem; só aplicam depois do seu "aplique", e nunca fazem push sozinhos.</p>
+</section>
+
+<section class="step">
+  <h2><span>10</span>Usar o @ness/auth num sistema novo <span class="tag">quando precisar</span></h2>
+  <p>Repositório privado: <code>github.com/resper1965/ness-auth</code> (v0.1.1). Num sistema criado com <code>/novo-projeto</code>, leia o <code>docs/AUTH.md</code> gerado: ele diz como ligar o pacote ao destino escolhido (D1 para Cloudflare, Postgres para os demais). O README do pacote tem o checklist de produção. Para o primeiro administrador use <code>semearAdmin</code>.</p>
+</section>
+
+<section class="step">
+  <h2><span>11</span>Decisões que só você toma <span class="tag">você</span></h2>
   <ul>
     <li><b>Subir o código novo do PMO na VPS</b> (<code>34-pmo.sh</code>, reinicia o painel). Eu recomendo. Escreva "rode o 34".</li>
     <li><b>Remover o <code>stack-rede-containers</code></b> (regra de firewall que não faz mais falta). Escreva "autorizo remover o stack-rede-containers".</li>
@@ -129,7 +161,7 @@ agy</code></pre></li>
 </section>
 
 <section class="step">
-  <h2><span>9</span>Conferir que está tudo certo</h2>
+  <h2><span>12</span>Conferir que está tudo certo</h2>
 <pre><code>ssh stack "/opt/stack-vps/bin/stack-doctor"</code></pre>
   <div class="expect">Esperado: nenhuma linha <b>FALTA</b>. O <code>agy</code> aparece como <b>pend</b> até o login do passo 5.</div>
 </section>
