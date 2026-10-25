@@ -7,7 +7,7 @@ import tempfile
 from datetime import datetime, timezone
 
 from pmo.executor import aplicar_ajustes
-from pmo.regras import aplicar_classes, contar
+from pmo.regras import aplicar_classes, contar, esquecido, estagio_sugerido
 
 SAIDA = "/srv/dev/state/pmo/painel.json"
 SESSOES = "/srv/dev/state/pmo/sessoes.json"   # 0600, escrito pelo coletor do próprio agente
@@ -21,6 +21,14 @@ _ESTADOS = {"ok": "ok", "FALHA": "falha", "pend": "pend"}
 def montar(dados, ajustes, classes):
     """Painel final: ajustes do executor e depois classes. Servidor e espelho do Linear usam esta, para nao divergirem."""
     return aplicar_classes(aplicar_ajustes(dados, ajustes), classes)
+
+
+def _dias_desde(ms, agora):
+    """Dias inteiros entre um epoch em milissegundos e agora; None se agora for inutilizavel."""
+    try:
+        return max(0, int((agora.timestamp() * 1000 - ms) // 86400000))
+    except (AttributeError, TypeError, ValueError, OverflowError, OSError):
+        return None
 
 
 def a_destinar(raiz="/srv/dev/laptop"):
@@ -107,7 +115,14 @@ def fundir(dados, sessoes, agora):
         p["ultima_sessao"] = atualizada or None
         p["sessao_id"] = sid
         com += 1
+        dias = _dias_desde(atualizada, agora) if atualizada else None
+        if dias is not None and dias < p.get("dias", 9999):  # sessao de agente tambem e atividade
+            p["dias"], p["atividade_origem"] = dias, "sessão"
+            p["estagio_sugerido"] = estagio_sugerido(dias, p.get("prs") or 0, p.get("arquivado"))
+            p["esquecido"] = esquecido(p.get("estagio") or p["estagio_sugerido"], dias, p.get("proximo"),
+                                       p.get("arquivado"), declarado=p.get("estagio") is not None)
     if isinstance(dados.get("contadores"), dict):
+        dados["contadores"].update(contar(dados.get("projetos", []), len(dados.get("a_destinar", []))))
         dados["contadores"]["projetos_com_sessao"] = com
     gerado = sessoes.get("gerado_em")
     gerado = gerado.strip() if isinstance(gerado, str) else ""

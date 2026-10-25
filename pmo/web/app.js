@@ -103,7 +103,7 @@ function abrir(p) {
       el("dt", {}, "Linear"), el("dd", {}, classe(p).linear || "—"),
       el("dt", {}, "Estágio"), el("dd", {}, etiquetaEstagio(p)),
       el("dt", {}, "Tipo"), el("dd", {}, tipoDe(p) || "não declarado"),
-      el("dt", {}, "Última atividade"), el("dd", {}, quando(p.dias)),
+      el("dt", {}, "Última atividade"), el("dd", {}, quando(p.dias) + (p.atividade_origem ? ` (${p.atividade_origem})` : "")),
       ...sessoesPar(p),
       el("dt", {}, "Pasta na VPS"), el("dd", {}, p.pasta || "sem clone na VPS"),
       el("dt", {}, "PRs / issues"), el("dd", {}, `${p.prs || 0} / ${p.issues || 0}`),

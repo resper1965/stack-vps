@@ -157,6 +157,40 @@ class Sessoes(unittest.TestCase):
                 self.assertEqual(d["projetos"][0]["sessoes"], 1, "a fusão acontece apesar da data")
                 self.assertNotIn("sessoes_defasada", d, "data inválida/sem tz/incompatível não marca nem lança")
 
+    def antigo(self, id_, dias, esquecido_="sem atividade há 40 dias"):
+        r = dict(reg(id_, esquecido=esquecido_), dias=dias, proximo="seguir")
+        return gerar([r], [], None, AGORA)
+
+    def test_sessao_recente_tira_do_esquecido(self):
+        d = self.antigo("o/a", 40)
+        ontem = int(AGORA.timestamp() * 1000) - 86400000
+        fundir(d, self.sessoes(("ses_1", "o/a", ontem)), AGORA)
+        p = d["projetos"][0]
+        self.assertEqual((p["dias"], p["atividade_origem"]), (1, "sessão"))
+        self.assertIsNone(p["esquecido"])
+        self.assertEqual(d["contadores"]["esquecidos"], 0, "contadores refeitos depois da fusão")
+
+    def test_sessao_mais_antiga_que_o_push_nao_muda(self):
+        d = self.antigo("o/a", 3, esquecido_=None)
+        velha = int(AGORA.timestamp() * 1000) - 30 * 86400000
+        fundir(d, self.sessoes(("ses_1", "o/a", velha)), AGORA)
+        p = d["projetos"][0]
+        self.assertEqual(p["dias"], 3)
+        self.assertNotIn("atividade_origem", p)
+
+    def test_sessao_no_futuro_vira_zero_dias(self):
+        d = self.antigo("o/a", 40)
+        futuro = int(AGORA.timestamp() * 1000) + 5 * 86400000
+        fundir(d, self.sessoes(("ses_1", "o/a", futuro)), AGORA)
+        self.assertEqual(d["projetos"][0]["dias"], 0)
+
+    def test_sessao_sem_data_nao_conta_como_atividade(self):
+        d = self.antigo("o/a", 40)
+        fundir(d, self.sessoes(("ses_1", "o/a", None)), AGORA)
+        p = d["projetos"][0]
+        self.assertEqual(p["dias"], 40)
+        self.assertEqual(p["esquecido"], "sem atividade há 40 dias")
+
 
 class LerSessoes(unittest.TestCase):
     def test_ausente_corrupto_e_fora_de_contrato(self):
