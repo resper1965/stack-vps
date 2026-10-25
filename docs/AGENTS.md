@@ -61,6 +61,9 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 ## Ambiente (VPS `stack`)
 
 - Você roda como `agente`: sem sudo, Docker rootless. Faltou ferramenta ou permissão: peça, não contorne.
+- CI: antes de commit e de PR, rode o comando de CI local do projeto (o comando único dele). O padrão é
+  `ci: local-vps`. `runs-on: [self-hosted, stack]` só em repositório privado de organização com runner instalado
+  (hoje nenhum; há um piloto previsto). Nunca `ubuntu-latest` em repositório privado.
 - Projetos em `/srv/dev/projetos`; material do laptop em `/srv/dev/laptop` até o Ricardo destinar.
   `/srv/dev/data` e `/srv/forense` estão fora do seu alcance.
 - Segredo vem do ambiente (`agente.env`, `projetos.env`, `.envrc` via direnv). Use a variável; nunca
@@ -70,11 +73,14 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
   up -d --wait`, sempre com `-p <projeto>`, e `down` ao terminar. Só dado sintético.
 - API da Hostinger e gateway Composio: leitura livre; chamada que altera estado pede confirmação
   dizendo endpoint e efeito.
-- CI: `runs-on: [self-hosted, stack]` (runners da VPS, sem minutos pagos).
-- Desenvolvimento do dia a dia é com Claude e Codex. O comando `modelo` (OpenRouter e Featherless,
-  catálogo em `docs/modelos.tsv`) e o Continue no VS Code são para **teste de segurança**: `glm`/`glm-flash`
+- Desenvolvimento do dia a dia é com Claude e Codex. O comando `modelo` (catálogo em `docs/modelos.tsv`) existe
+  para **teste de segurança** e passará a apontar para o 9router (ainda não instalado na VPS): `glm`/`glm-flash`
   planejam e analisam, `primus` analisa, `livre` cobre passo que um modelo comum recusaria — sempre contra
   alvo autorizado por escrito.
+- Modelos pelo 9router, faixa 1: OpenRouter, DeepSeek e Featherless, só por chave de API. Assinaturas
+  (Claude Code x2, Codex/ChatGPT, Antigravity) ficam nos CLIs oficiais, com login próprio, fora do 9router:
+  os termos de uso da Anthropic são restritivos e o 9router roteia conta automaticamente.
+- Projeto novo: `/novo-projeto` no OpenCode (templates `sistema`, `agente` e `parecer`); ainda não instalado na VPS.
 
 ## Git e projetos
 
@@ -87,7 +93,7 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 - Issue do GitHub ligada ao trabalho: ao concluir, comente nela o que mudou (commit ou PR) e feche com
   `Closes #N` no PR quando resolver. Trabalho sem issue e relevante: abra uma antes.
 - Linear (conta resper@bekaa.eu): se o projeto tem time ou projeto no Linear — campo `classe.linear` em
-  `curl -s http://100.76.167.6:8080/painel.json` —, atualize também a issue de lá (status e comentário)
+  `curl -s https://stack.<tailnet>.ts.net:8443/painel.json` —, atualize também a issue de lá (status e comentário)
   pelo MCP `linear`. MCP sem login: avise o Ricardo para rodar `/mcp`; não use outro meio.
 - Documento, planilha, PDF, dado pessoal e material de caso nunca vão ao Git, nem em branch:
   ficam na VPS, fora do repositório. Fixture e exemplo usam dado sintético.
@@ -99,3 +105,4 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 - Citação de norma, cláusula ou prazo vinda de skill de GRC é apoio: confira na fonte original e
   sinalize o que não foi verificado. Material de caso forense: custódia e apagamento em D+30 na VPS;
   faltou material, registre o que falta — não busque por outro meio.
+- Critério de pronto da instalação da VPS: `stack-doctor` sem nenhum `FALTA` (`docs/runbooks/2026-10-go-live.md`).

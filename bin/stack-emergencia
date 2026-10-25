@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Liga/desliga a rota da web de emergencia (emergencia.esper.ws -> OpenCode) no cloudflared. Desligada por padrao.
+# Uso: stack-emergencia on|off|status   (root)
+set -uo pipefail
+CFG=${STACK_CF_DIR:-/etc/cloudflared}/config.yml
+ALERTAR=${EMERGENCIA_ALERTAR:-/usr/local/lib/stack-vps/alertar.sh}
+HOST=emergencia.esper.ws
+CATCHALL='  - service: http_status:404'
+
+uso() { echo "uso: stack-emergencia on|off|status" >&2; exit 2; }
+ligada() { grep -qxF "  - hostname: $HOST" "$CFG" 2>/dev/null; }
+
+[[ $# -eq 1 ]] || uso
+case $1 in on|off|status) ;; *) uso ;; esac
+if [[ $1 == status ]]; then ligada && echo ligada || echo desligada; exit 0; fi
+[[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "stack-emergencia: precisa de root" >&2; exit 1; }
+
+if [[ $1 == on ]]; then
+  [[ -f $CFG ]] || { echo "stack-emergencia: sem $CFG" >&2; exit 1; }
+  grep -qxF "$CATCHALL" "$CFG" || { echo "stack-emergencia: sem a regra final '$CATCHALL' em $CFG; nao vou adivinhar onde inserir" >&2; exit 1; }
+else
+  [[ -f $CFG ]] || { echo "stack-emergencia: sem $CFG" >&2; exit 1; }
+fi
+
+tmp=$(mktemp "$CFG.XXXXXX") || exit 1
+trap 'rm -f "$tmp"' EXIT
+falhou() { echo "stack-emergencia: falha ao gravar o config; nada foi alterado" >&2; exit 1; }
+cp -p "$CFG" "$tmp" || falhou   # herda modo e dono
+if [[ $1 == on ]]; then
+  # tira qualquer rota antiga antes de inserir: duas chamadas dao uma regra so
+  awk -v h="  - hostname: $HOST" -v c="$CATCHALL" '
+    $0 == h { skip = 1; next }
+    skip && /^    service:/ { skip = 0; next }
+    { skip = 0 }
+    $0 == c { print h; print "    service: http://localhost:4096" }
+    { print }' "$CFG" > "$tmp" || falhou
+else
+  awk -v h="  - hostname: $HOST" '
+    $0 == h { skip = 1; next }
+    skip && /^    service:/ { skip = 0; next }
+    { skip = 0; print }' "$CFG" > "$tmp" || falhou
+fi
+[[ -s $tmp ]] || falhou
+mv "$tmp" "$CFG" || falhou
+
+systemctl restart cloudflared || { echo "stack-emergencia: cloudflared nao reiniciou" >&2; exit 1; }
+if [[ $1 == on ]]; then titulo='stack: emergência LIGADA'; else titulo='stack: emergência desligada'; fi
+"$ALERTAR" "$titulo" "${SUDO_USER:-${USER:-root}} em $(date -Iseconds)" || echo "aviso: alerta nao entregue" >&2
+echo "emergencia: $1"

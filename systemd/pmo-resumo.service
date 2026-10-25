@@ -2,5 +2,6 @@
 Description=Resumo semanal de projetos esquecidos
 [Service]
 Type=oneshot
+EnvironmentFile=-/etc/pmo/servidor.env
 Environment=PYTHONPATH=/opt
 ExecStart=/usr/bin/python3 -m pmo.resumo

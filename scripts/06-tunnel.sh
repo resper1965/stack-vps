@@ -42,6 +42,10 @@ echo "tunnel: $TID"
 # Hostnames extras em TUNNEL_EXTRA (admin.env): "host=servico host2=servico2",
 # ex.: TUNNEL_EXTRA="app.exemplo.com.br=http://localhost:3000"
 EXTRAS=()
+# a emergencia (bin/stack-emergencia) so liga inserindo a regra; reescrever o config a desliga
+if grep -qs 'hostname: emergencia\.' "$CFD/config.yml"; then
+  echo "AVISO: a web de emergência estava ligada e foi desligada ao reescrever o config.yml"
+fi
 for par in ${TUNNEL_EXTRA-}; do EXTRAS+=("$par"); done
 { printf 'tunnel: %s
 credentials-file: %s/credentials.json
@@ -68,22 +72,27 @@ cname() {
   else api -X POST "https://api.cloudflare.com/client/v4/zones/$zid/dns_records" -d "$body" >/dev/null; fi
   echo "dns: $h -> $TID.cfargotunnel.com"
 }
+EMERG=emergencia.$ZONA  # DNS e Access sempre prontos; a rota so entra no ingress via stack-emergencia
 cname "$HOST"
+cname "$EMERG"
 for par in "${EXTRAS[@]}"; do cname "${par%%=*}"; done
 
-# 4. Access: aplicacao + politica de e-mail
-APP=$(api "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps" \
-      | jq_ "r=[x for x in (d.get('result') or []) if x.get('domain')=='$HOST'];print(r[0]['id'] if r else '')")
-APPBODY="{\"name\":\"SSH stack-vps\",\"domain\":\"$HOST\",\"type\":\"self_hosted\",\"session_duration\":\"24h\"}"
-if [[ -z $APP ]]; then
-  APP=$(api -X POST "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps" -d "$APPBODY" | jq_ 'print(d["result"]["id"] if d["success"] else "")')
-fi
-POL=$(api "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps/$APP/policies" \
-      | jq_ "r=[x for x in (d.get('result') or []) if x['name']=='so-o-dono'];print(r[0]['id'] if r else '')")
-POLBODY="{\"name\":\"so-o-dono\",\"decision\":\"allow\",\"include\":[{\"email\":{\"email\":\"$EMAIL\"}}]}"
-if [[ -z $POL ]]; then api -X POST "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps/$APP/policies" -d "$POLBODY" >/dev/null
-else api -X PUT "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps/$APP/policies/$POL" -d "$POLBODY" >/dev/null; fi
-echo "access: $HOST liberado apenas para $EMAIL"
+# 4. Access: aplicacao + politica de e-mail (mesma politica nos dois hosts)
+access_app() {
+  local nome=$1 h=$2 sessao=$3 app pol appbody polbody
+  app=$(api "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps"         | jq_ "r=[x for x in (d.get('result') or []) if x.get('domain')=='$h'];print(r[0]['id'] if r else '')")
+  appbody="{\"name\":\"$nome\",\"domain\":\"$h\",\"type\":\"self_hosted\",\"session_duration\":\"$sessao\"}"
+  if [[ -z $app ]]; then
+    app=$(api -X POST "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps" -d "$appbody" | jq_ 'print(d["result"]["id"] if d["success"] else "")')
+  fi
+  pol=$(api "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps/$app/policies"         | jq_ "r=[x for x in (d.get('result') or []) if x['name']=='so-o-dono'];print(r[0]['id'] if r else '')")
+  polbody="{\"name\":\"so-o-dono\",\"decision\":\"allow\",\"include\":[{\"email\":{\"email\":\"$EMAIL\"}}]}"
+  if [[ -z $pol ]]; then api -X POST "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps/$app/policies" -d "$polbody" >/dev/null
+  else api -X PUT "https://api.cloudflare.com/client/v4/accounts/$AID/access/apps/$app/policies/$pol" -d "$polbody" >/dev/null; fi
+  echo "access: $h liberado apenas para $EMAIL"
+}
+access_app "SSH stack-vps" "$HOST" 24h
+access_app "Emergencia stack-vps" "$EMERG" 1h
 
 # 5. servico (reinicia para pegar ingress novo)
 [[ -f /etc/systemd/system/cloudflared.service ]] || cloudflared service install

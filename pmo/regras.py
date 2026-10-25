@@ -5,8 +5,10 @@ import unicodedata
 
 TIPOS = ("app", "site", "agente", "dados", "infra", "documento", "conhecimento")
 EMPRESAS = ("ness", "bekaa", "ionic", "forense", "pessoal", "trustness")
-ESTAGIOS = ("ideia", "em andamento", "em revisão", "entregue", "encerrado", "parado")
-INATIVOS = ("encerrado", "parado", "entregue")
+ESTAGIOS_STATE = ("ideia", "em andamento", "em revisão", "entregue", "encerrado", "parado")  # valores do STATE.md (AGENTS.md)
+ESTAGIOS = ESTAGIOS_STATE + ("congelado",)  # congelado so se escolhe no painel, nunca no STATE.md
+# congelado suspende apenas os alarmes operacionais do PMO; backup e verificacoes de seguranca nao dependem disso
+INATIVOS = ("encerrado", "parado", "entregue", "congelado")
 LIMITE_ANDAMENTO = 14
 LIMITE_REVISAO = 30
 
@@ -32,7 +34,7 @@ def ler_state(texto):
     tipo = (_campo(texto, "Tipo") or "").lower() or None
     est = (_campo(texto, "Estágio") or "").lower() or None
     if est:
-        est = next((e for e in ESTAGIOS if _sem_acento(e) == _sem_acento(est)), None)
+        est = next((e for e in ESTAGIOS_STATE if _sem_acento(e) == _sem_acento(est)), None)
     return {"tipo": tipo if tipo in TIPOS else None, "estagio": est, "proximo": _campo(texto, "Próximo passo")}
 
 
@@ -138,6 +140,7 @@ def contar(ativos, n_destinar):
         "em_andamento": sum(1 for r in ativos if est(r) == "em andamento"),
         "em_revisao": sum(1 for r in ativos if est(r) == "em revisão"),
         "parados": sum(1 for r in ativos if est(r) == "parado"),
+        "congelados": sum(1 for r in ativos if est(r) == "congelado"),
         "prs_abertos": sum(r.get("prs") or 0 for r in ativos),
         "ci_vermelho": sum(1 for r in ativos if r.get("ci") == "failure"),
         "a_destinar": n_destinar,

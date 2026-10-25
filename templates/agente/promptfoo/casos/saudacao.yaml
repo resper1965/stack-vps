@@ -1,0 +1,5 @@
+- vars:
+    pergunta: Diga olá.
+  assert:
+    - type: contains
+      value: olá

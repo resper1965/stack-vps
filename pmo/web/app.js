@@ -4,6 +4,7 @@
 const CORES = {
   "ideia": "var(--e-ideia)", "em andamento": "var(--e-andamento)", "em revisão": "var(--e-revisao)",
   "entregue": "var(--e-entregue)", "encerrado": "var(--e-encerrado)", "parado": "var(--e-parado)",
+  "congelado": "var(--e-congelado)",
 };
 const ESTAGIOS = Object.keys(CORES);
 const TIPOS = ["app", "site", "agente", "dados", "infra", "documento", "conhecimento"];
@@ -123,8 +124,11 @@ function abrir(p) {
       github ? el("a", { class: "bt", href: github, target: "_blank", rel: "noopener" }, "Abrir no GitHub") : null,
       !p.pasta && !p.arquivado ? el("button", { class: "bt primario", onclick: () => clonar(p) }, "Clonar na VPS") : null,
       el("button", { class: "bt", onclick: () => classificar(p) }, "Classificar"),
-      !["parado", "encerrado", "entregue"].includes(estagio(p)) ? el("button", { class: "bt",
+      !["parado", "encerrado", "entregue", "congelado"].includes(estagio(p)) ? el("button", { class: "bt",
         onclick: () => acao("classificar", p.id, null, { classe: classeAtual(p, { estagio: "parado" }) }) }, "Marcar como parado") : null,
+      estagio(p) === "congelado"
+        ? el("button", { class: "bt", onclick: () => acao("classificar", p.id, null, { classe: classeAtual(p, { estagio: "" }) }) }, "Descongelar")
+        : el("button", { class: "bt", onclick: () => acao("classificar", p.id, null, { classe: classeAtual(p, { estagio: "congelado" }) }) }, "Congelar"),
       p.arquivado
         ? el("button", { class: "bt", onclick: () => acao("restaurar", p.id) }, "Restaurar")
         : el("button", { class: "bt perigo", onclick: () => descartar(p) }, "Descartar"))].filter(Boolean));
@@ -214,7 +218,36 @@ function filtrar() {
   else g.append(...lista.map(cartao));
 }
 
+// Saude da VPS (health.txt servido em painel.json). Estado sai em texto + icone, nao so em cor.
+const ROTULO_SAUDE = { ok: ["✓", "ok"], falha: ["✗", "falha"], pend: ["…", "pendente"] };
+const haMinutos = (iso, agora = Date.now()) => {
+  const m = Math.max(0, Math.floor((agora - new Date(iso).getTime()) / 60000));
+  return m < 1 ? "agora há pouco" : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.floor(m / 60)} h` : `há ${Math.floor(m / 1440)} d`;
+};
+function renderSaude() {
+  const s = dados.saude, caixa = $("saude"), at = dados.atalhos || {};
+  const url = typeof at.opencode === "string" && at.opencode.startsWith("https://") ? at.opencode : null;
+  caixa.hidden = !s && !url;
+  if (caixa.hidden) return;
+  const partes = [];
+  if (s) {
+    const quando = s.gerado_em ? `atualizado ${haMinutos(s.gerado_em)}` : "sem dado";
+    partes.push(el("h2", {}, "Saúde da VPS", el("small", { class: "saude-quando" }, quando)));
+    if (s.velho) partes.push(el("p", { class: "saude-velho", role: "alert" },
+      s.gerado_em ? "Dado antigo: o vigia pode ter parado." : "Sem dado: o vigia ainda não gravou o estado."));
+    const secoes = [...new Set((s.itens || []).map((i) => i.secao))];
+    for (const sec of secoes) partes.push(el("div", { class: "saude-secao" }, el("h3", {}, sec || "geral"),
+      ...s.itens.filter((i) => i.secao === sec).map((i) => {
+        const [icone, rotulo] = ROTULO_SAUDE[i.estado] || ["?", i.estado];
+        return el("div", { class: `saude-item ${i.estado}` }, el("span", { class: "saude-estado" }, `${icone} ${rotulo}`), el("span", {}, i.texto));
+      })));
+  }
+  if (url) partes.push(el("p", { class: "saude-atalhos" }, el("a", { class: "bt", href: url, rel: "noopener noreferrer", target: "_blank" }, "Abrir OpenCode")));
+  caixa.replaceChildren(...partes);
+}
+
 function render() {
+  renderSaude();
   const c = dados.contadores;
   const quandoGerado = new Date(dados.gerado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   const at = $("atualizado"); at.textContent = `atualizado ${quandoGerado}` + (dados.coleta_incompleta ? " · coleta incompleta" : "");
@@ -228,6 +261,7 @@ function render() {
   add(c.em_andamento, "em andamento", () => { $("f-estagio").value = "em andamento"; filtrar(); });
   add(c.em_revisao, "em revisão", () => { $("f-estagio").value = "em revisão"; filtrar(); });
   add(c.parados, "parados", () => { $("f-estagio").value = "parado"; filtrar(); });
+  add(c.congelados, "congelados", () => { $("f-estagio").value = "congelado"; filtrar(); });
   add(c.prs_abertos, "PRs abertos");
   add(c.ci_vermelho, "CI vermelho", null, true);
   add(c.a_destinar, "a destinar", () => $("secao-destinar").scrollIntoView({ behavior: "smooth" }));
