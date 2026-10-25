@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# Instala o supervisor dos runners efemeros do GitHub (ci/runners.py) para a conta "ci".
+# Entradas (admin.env, lido com sed, nunca com source): RUNNER_TOKEN e CI_ORGS no formato
+# org:grupo:quantidade[,org2:grupo2:quantidade2]. Grava em /etc/stack-ci (root:ci 0750, a conta ci nao cria
+# nem troca nada ali) o token (0400 ci:ci, nunca em argv) e o config.json (0640 root:ci, so legivel), o pacote
+# em /opt/ci (root) e a unidade systemd; /srv/ci (da conta ci) guarda so o status.json.
+# So habilita com --habilitar, e so com o isolamento de rede (39) ativo.
+# Uso: sudo ./40-ci-runners.sh [--habilitar | --parar | --status]   (depois do 38 e do 39 --instalar)
+# Sobrescreviveis nos testes (so com STACK_TESTE=1): CI_ADMIN_ENV, CI_DIR, CI_CFG, CI_OPT, CI_REDE_SCRIPT,
+# CI_UNIT, CI_PULAR_PULL, CI_RUN_USER.
+set -euo pipefail
+[[ $EUID -eq 0 || ${STACK_TESTE:-} == 1 ]] || { echo "rode como root"; exit 1; }
+
+# Em producao o ambiente herdado (sudo -E, export vazado) e ignorado: atribui sem ler.
+# >>> normaliza
+if [[ ${STACK_TESTE:-} != 1 ]]; then
+  CI_ADMIN_ENV=/srv/dev/secrets/admin.env; CI_DIR=/srv/ci; CI_CFG=/etc/stack-ci; CI_OPT=/opt/ci
+  CI_REDE_SCRIPT=/usr/local/lib/stack-vps/39-ci-rede.sh; CI_UNIT=/etc/systemd/system
+  CI_PULAR_PULL=0; CI_RUN_USER=/run/user
+fi
+# <<< normaliza
+
+CI_ADMIN_ENV=${CI_ADMIN_ENV:-/srv/dev/secrets/admin.env}
+CI_DIR=${CI_DIR:-/srv/ci}
+CI_CFG=${CI_CFG:-/etc/stack-ci}
+CI_OPT=${CI_OPT:-/opt/ci}
+CI_REDE_SCRIPT=${CI_REDE_SCRIPT:-/usr/local/lib/stack-vps/39-ci-rede.sh}
+CI_UNIT=${CI_UNIT:-/etc/systemd/system}
+CI_PULAR_PULL=${CI_PULAR_PULL:-0}
+CI_RUN_USER=${CI_RUN_USER:-/run/user}
+REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+
+UNIDADE=stack-ci-runners.service
+IMAGEM=ghcr.io/actions/actions-runner:latest
+# nivel de organizacao recusado por decisao (spec 2026-10-19-ci-sem-creditos-design.md); editar o script e o override
+BLOQUEADAS=" nessenergy "
+
+modo=${1:-}
+case $modo in
+  ""|--habilitar|--parar|--status) ;;
+  *) echo "uso: $0 [--habilitar | --parar | --status]"; exit 2 ;;
+esac
+
+# runners ociosos sao containers do Docker rootless da conta ci e sobrevivem a unidade parada; o rotulo
+# "stack-ci" (sem valor) pega todos. Pode derrubar job em andamento: so para --parar, nunca na rotacao.
+para_containers() {
+  local u
+  if ! u=$(id -u ci 2>/dev/null) || [[ ! $u =~ ^[1-9][0-9]*$ ]]; then
+    echo "AVISO: conta ci nao encontrada; containers (se houver) nao foram parados"; return 0
+  fi
+  cd /
+  sudo -u ci env XDG_RUNTIME_DIR="$CI_RUN_USER/$u" DOCKER_HOST="unix://$CI_RUN_USER/$u/docker.sock"     sh -c 'ids=$(docker ps -q --filter label=stack-ci) || exit 1; [ -z "$ids" ] || docker stop $ids >/dev/null' ||
+    echo "AVISO: nao consegui parar os containers dos runners; confira com: sudo -u ci docker ps"
+}
+
+if [[ $modo == --parar ]]; then
+  # unidade ausente nao pode impedir a parada dos containers
+  systemctl disable --now "$UNIDADE" || echo "AVISO: systemctl disable --now $UNIDADE falhou (unidade ausente?); parando os containers mesmo assim"
+  para_containers
+  echo "ci-runners: parado e desabilitado (arquivos mantidos)"; exit 0
+fi
+
+if [[ $modo == --status ]]; then
+  est=$(systemctl is-active "$UNIDADE" 2>/dev/null || true)
+  echo "unidade: ${est:-desconhecido}"
+  # o arquivo e da conta ci (nao confiavel): abre sem seguir link nem bloquear em FIFO, aceita so arquivo
+  # regular <= 64 KiB e imprime o comeco sem caracteres de controle (o supervisor nunca grava segredo ali)
+  if timeout 10 python3 -I -c '
+import os, re, stat, sys
+fd = os.open(sys.argv[1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+if not stat.S_ISREG(os.fstat(fd).st_mode): sys.exit(1)
+bruto = os.read(fd, 65537)
+if len(bruto) > 65536: sys.exit(1)
+sys.stdout.buffer.write(re.sub(rb"[\x00-\x08\x0b-\x1f\x7f]", b"", bruto[:4096]) + b"\n")
+' "$CI_DIR/status.json" 2>/dev/null; then :
+  else
+    echo "status.json ausente ou indisponivel (o supervisor ainda nao rodou, ou nao e arquivo regular)"
+  fi
+  exit 0
+fi
+
+# --- pre-requisitos: tudo conferido ANTES da primeira escrita ---
+if ! uid=$(id -u ci 2>/dev/null) || [[ ! $uid =~ ^[1-9][0-9]*$ ]] || (( uid < 1000 )); then
+  echo "a conta ci nao existe ou tem UID invalido ('${uid:-}', esperado >= 1000); rode o 38-ci-conta.sh antes"; exit 1
+fi
+[[ -d $CI_DIR ]] || { echo "$CI_DIR nao existe; rode o 38-ci-conta.sh antes"; exit 1; }
+# fail-closed: o que ja existir onde vamos gravar tem de ser arquivo regular (nunca link nem diretorio)
+[[ ! -L $CI_CFG ]] || { echo "$CI_CFG e link simbolico; recuso (nada foi escrito)"; exit 1; }
+for f in token token.novo config.json config.json.novo; do
+  if [[ -e $CI_CFG/$f || -L $CI_CFG/$f ]] && { [[ -L $CI_CFG/$f ]] || [[ ! -f $CI_CFG/$f ]]; }; then
+    echo "$CI_CFG/$f existe e nao e arquivo regular; recuso (nada foi escrito)"; exit 1
+  fi
+done
+[[ -r $CI_ADMIN_ENV ]] || { echo "$CI_ADMIN_ENV ilegivel ou ausente"; exit 1; }
+
+# valor de uma chave (nome fixo) do admin.env, sem source e sem eco; aceita export e aspas
+le() {
+  sed -n -E "s/^[[:space:]]*(export[[:space:]]+)?$1=(.*)\$/\\2/p" "$CI_ADMIN_ENV" | tail -n 1 | tr -d '\r' |
+    sed -E "s/^(['\"])(.*)\\1\$/\\2/"
+}
+TOKEN=$(le RUNNER_TOKEN); ORGS=$(le CI_ORGS)
+[[ -n $TOKEN ]] || { echo "RUNNER_TOKEN ausente no admin.env"; exit 1; }
+[[ -n $ORGS ]] || { echo "CI_ORGS ausente no admin.env (formato org:grupo:quantidade,...)"; exit 1; }
+# mesmo alfabeto do supervisor; a mensagem nunca traz o valor
+[[ $TOKEN =~ ^[A-Za-z0-9_]{20,255}$ ]] || { echo "RUNNER_TOKEN fora do formato esperado (20 a 255 caracteres de A-Z a-z 0-9 _)"; exit 1; }
+
+declare -A visto=(); orgs_json=""
+IFS=, read -ra itens <<<"$ORGS"
+(( ${#itens[@]} > 0 )) || { echo "CI_ORGS vazio"; exit 1; }
+for it in "${itens[@]}"; do
+  sep=${it//[!:]/}
+  [[ ${#sep} == 2 ]] || { echo "CI_ORGS: '$it' fora do formato org:grupo:quantidade"; exit 1; }
+  IFS=: read -r org grupo qtd <<<"$it"
+  [[ $org =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,38}$ ]] || { echo "CI_ORGS: nome de organizacao invalido: '$org'"; exit 1; }
+  [[ $grupo =~ ^[A-Za-z0-9\ _.-]{1,64}$ && -n ${grupo// /} ]] || { echo "CI_ORGS: grupo invalido em '$org'"; exit 1; }
+  [[ $qtd =~ ^([0-9]|10)$ ]] || { echo "CI_ORGS: quantidade de '$org' deve ser inteiro de 0 a 10"; exit 1; }
+  baixo=${org,,}
+  [[ $BLOQUEADAS != *" $baixo "* ]] || {
+    echo "CI_ORGS: nivel de organizacao nao e permitido para '$org' (ver docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md)"; exit 1; }
+  [[ -z ${visto[$baixo]:-} ]] || { echo "CI_ORGS: organizacao repetida: '$org'"; exit 1; }
+  visto[$baixo]=1
+  orgs_json+="${orgs_json:+,}\"$org\":{\"grupo\":\"$grupo\",\"quantidade\":$qtd}"
+done
+
+cd /   # o cwd do chamador pode ser ilegivel para ci
+ci_run() { sudo -u ci env XDG_RUNTIME_DIR="$CI_RUN_USER/$uid" "$@"; }
+ci_run systemctl --user is-active --quiet docker || { echo "Docker rootless do ci nao esta ativo; rode o 38-ci-conta.sh"; exit 1; }
+
+if [[ $modo == --habilitar ]]; then
+  systemctl is-active --quiet stack-ci-rede.service && [[ $("$CI_REDE_SCRIPT" --status 2>/dev/null || true) == ativa ]] ||
+    { echo "isolamento de rede não está ativo (stack-ci-rede.service); rode 39-ci-rede.sh --instalar"; exit 1; }
+fi
+
+# --- escrita ---
+# area privada do root; o segredo so passa por redirecionamento e por arquivo, nunca por argv
+stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
+( umask 077
+  printf '%s' "$TOKEN" > "$stage/token"
+  printf '{"imagem":"%s","cpus":"2","memoria":"4g","docker_socket":false,"orgs":{%s}}\n' "$IMAGEM" "$orgs_json" > "$stage/config.json" )
+unset TOKEN
+
+# dir do root: a conta ci le (grupo) mas nao cria, troca nem planta nada ali
+install -d -m 0750 -o root -g ci "$CI_CFG"
+# instala ao lado e renomeia: quem le nunca ve arquivo pela metade; -T nunca trata o destino como diretorio
+coloca() { install -T -m "$1" -o "$2" -g ci "$3" "$4.novo" && mv -fT "$4.novo" "$4"; }
+coloca 0400 ci "$stage/token" "$CI_CFG/token"
+coloca 0640 root "$stage/config.json" "$CI_CFG/config.json"
+
+# codigo do root: a conta ci le e executa, mas nao altera
+install -d -m 755 -o root -g root "$CI_OPT"
+install -m 644 -o root -g root "$REPO/ci/__init__.py" "$REPO/ci/runners.py" "$CI_OPT/"
+# %U numa unidade de sistema seria o UID 0: grava o UID numerico da conta ci
+sed "s/@CI_UID@/$uid/g" "$REPO/systemd/$UNIDADE" > "$stage/$UNIDADE"
+install -m 644 "$stage/$UNIDADE" "$CI_UNIT/$UNIDADE"
+systemctl daemon-reload
+
+# a imagem tem ~2 GB: o pull a frio estouraria o timeout de 120 s do supervisor
+if [[ $CI_PULAR_PULL != 1 ]]; then
+  ci_run DOCKER_HOST="unix://$CI_RUN_USER/$uid/docker.sock" timeout 900 docker pull "$IMAGEM" >/dev/null ||
+    { echo "docker pull $IMAGEM falhou ou passou de 900 s; arquivos instalados, unidade NAO habilitada"
+      systemctl is-active --quiet "$UNIDADE" &&
+        echo "ATENCAO: a unidade ativa segue com o token e a config antigos (nao foi reiniciada); corrija o pull e rode de novo"
+      exit 1; }
+fi
+
+# o supervisor le config e token uma vez, ao subir: unidade ativa precisa reiniciar para ver a rotacao
+if systemctl is-active --quiet "$UNIDADE"; then
+  systemctl restart "$UNIDADE"
+  echo "ci-runners: unidade ativa reiniciada para carregar token/config novos"
+fi
+
+if [[ $modo == --habilitar ]]; then
+  systemctl enable --now "$UNIDADE"
+  echo "ci-runners: instalado e habilitado"
+else
+  echo "ci-runners: instalado; habilite com --habilitar (exige o isolamento de rede ativo)"
+fi

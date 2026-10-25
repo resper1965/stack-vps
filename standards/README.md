@@ -16,5 +16,5 @@ O comando aceita somente pasta inexistente ou vazia; a prévia não escreve nada
 - Para projetos novos: escolher stack e provider no bootstrap; aplicar design e receitas aprovadas conforme necessidade.
 - `skills/ness-design` permanece fonte dos padrões de marca.
 - Nunca carregar segredos globais indiscriminadamente.
-- Sem GitHub Actions, novas assinaturas ou migração automática.
+- CI local (`ci: local-vps`); `runs-on: [self-hosted, stack]` só em repositório privado de organização com runner. Sem novas assinaturas ou migração automática.
 - O futuro PMO pode oferecer um assistente de **Novo Projeto** e apenas **exibir** a stack de projetos existentes, sem alterá-la.
