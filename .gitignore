@@ -6,3 +6,4 @@ secrets/
 repos.json
 .tmp/
 __pycache__/
+*.pyc

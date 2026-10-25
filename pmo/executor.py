@@ -80,7 +80,8 @@ def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora
         os.makedirs(d, mode=0o700, exist_ok=True)
     data = agora.strftime("%Y%m%d-%H%M%S")
     try:
-        ajustados = json.load(open(ajustes, encoding="utf-8"))
+        with open(ajustes, encoding="utf-8") as f:
+            ajustados = json.load(f)
     except (OSError, ValueError):
         ajustados = {}
 
@@ -95,7 +96,8 @@ def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora
     recentes = {}
     for nome in os.listdir(feitos):
         try:
-            p = json.load(open(os.path.join(feitos, nome), encoding="utf-8"))
+            with open(os.path.join(feitos, nome), encoding="utf-8") as f:
+                p = json.load(f)
             if not str(p.get("resultado", "")).startswith("erro"):
                 recentes[(p["acao"], p["alvo"])] = max(recentes.get((p["acao"], p["alvo"]), 0), p.get("pedido_em", 0))
         except (OSError, ValueError, KeyError):
@@ -127,11 +129,15 @@ def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora
                 recentes[chave] = ped.get("pedido_em", 0)
         registrar(acao, alvo, resultado)
         ped["resultado"] = resultado
-        json.dump(ped, open(os.path.join(feitos, nome), "w", encoding="utf-8"), ensure_ascii=False)
+        destino = os.path.join(feitos, nome)
+        with open(destino + ".tmp", "w", encoding="utf-8") as f:
+            json.dump(ped, f, ensure_ascii=False)
+        os.replace(destino + ".tmp", destino)
         os.remove(caminho)
 
     tmp = ajustes + ".tmp"
-    json.dump(ajustados, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(ajustados, f, ensure_ascii=False)
     os.replace(tmp, ajustes)
 
     if painel and classes and verticais_estado:
@@ -149,9 +155,11 @@ def processar(fila, gh, raiz_projetos, raiz_laptop, arquivo, log, ajustes, agora
 
 def _sincronizar_verticais(painel, ajustados, classes, estado, pasta):
     """Refaz /srv/dev/verticais (como agente) so quando o mapa empresa/area/pasta mudou."""
-    d = aplicar_ajustes(json.load(open(painel, encoding="utf-8")), ajustados)
+    with open(painel, encoding="utf-8") as f:
+        d = aplicar_ajustes(json.load(f), ajustados)
     try:
-        cls = json.load(open(classes, encoding="utf-8"))
+        with open(classes, encoding="utf-8") as f:
+            cls = json.load(f)
     except (OSError, ValueError):
         cls = {}
     aplicar_classes(d, cls)
@@ -160,8 +168,9 @@ def _sincronizar_verticais(painel, ajustados, classes, estado, pasta):
                   key=lambda x: x["pasta"])
     novo = json.dumps(mapa, ensure_ascii=False, sort_keys=True)
     try:
-        if open(estado, encoding="utf-8").read() == novo:
-            return
+        with open(estado, encoding="utf-8") as f:
+            if f.read() == novo:
+                return
     except OSError:
         pass
     pasta("verticais", "-", entrada=novo.encode())
@@ -248,8 +257,10 @@ def _executar(acao, alvo, conf, gh, raiz_projetos, raiz_laptop, arquivo, lixeira
 
 def main():
     from pmo.github import GitHub
-    token = open("/etc/pmo/token", encoding="utf-8").read().strip() or sys.exit("token vazio em /etc/pmo/token")
-    donos = open(os.path.join(os.path.dirname(__file__), "donos.txt"), encoding="utf-8").read().split()
+    with open("/etc/pmo/token", encoding="utf-8") as f:
+        token = f.read().strip() or sys.exit("token vazio em /etc/pmo/token")
+    with open(os.path.join(os.path.dirname(__file__), "donos.txt"), encoding="utf-8") as f:
+        donos = f.read().split()
     processar("/var/lib/pmo/fila", GitHub(token), "/srv/dev/projetos", "/srv/dev/laptop", "/srv/dev/arquivo",
               "/var/lib/pmo/acoes.log", "/var/lib/pmo/ajustes.json", datetime.now(timezone.utc), donos,
               painel="/srv/dev/state/pmo/painel.json", classes="/var/lib/pmo/classes.json",

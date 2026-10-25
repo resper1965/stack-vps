@@ -31,6 +31,12 @@ from pmo.regras import EMPRESAS, ESTAGIOS, TIPOS
 ACOES = {"arquivar", "excluir", "restaurar", "trazer", "descartar", "clonar"}
 
 
+def _exigir(condicao):
+    """Como assert, mas nao some com python -O: validacao de entrada nao pode ser desligavel."""
+    if not condicao:
+        raise ValueError("entrada invalida")
+
+
 def _ler_json(caminho, padrao):
     try:
         with open(caminho, encoding="utf-8") as f:
@@ -42,12 +48,12 @@ def _ler_json(caminho, padrao):
 def _classe_valida(c):
     """Classe vinda do painel: empresa, tipo e estagio da lista; area, cliente e linear texto curto."""
     campos = ("empresa", "area", "cliente", "tipo", "linear", "estagio")
-    assert isinstance(c, dict) and set(c) <= set(campos)
-    assert (c.get("empresa") or "") in EMPRESAS + ("",) and (c.get("tipo") or "") in TIPOS + ("",)
-    assert (c.get("estagio") or "") in ESTAGIOS + ("",)
+    _exigir(isinstance(c, dict) and set(c) <= set(campos))
+    _exigir((c.get("empresa") or "") in EMPRESAS + ("",) and (c.get("tipo") or "") in TIPOS + ("",))
+    _exigir((c.get("estagio") or "") in ESTAGIOS + ("",))
     for k in ("area", "cliente", "linear"):
         v = c.get(k) or ""
-        assert isinstance(v, str) and len(v) <= 60 and (not v or NOME.fullmatch(v))
+        _exigir(isinstance(v, str) and len(v) <= 60 and (not v or NOME.fullmatch(v)))
     return {k: (c.get(k) or "").strip() for k in campos}
 
 
@@ -170,17 +176,17 @@ def criar(host, porta, web, painel, fila, ajustes, bloquear_local=True, classes=
                 ped = json.loads(bruto or b"null")
                 acao, alvo = ped["acao"], ped["alvo"]
                 conf = ped.get("confirmacao")
-                assert (acao in ACOES or acao == "classificar") and isinstance(alvo, str) and alvo.isprintable() and len(alvo) < 300
-                assert conf is None or isinstance(conf, str) and len(conf) < 200
+                _exigir((acao in ACOES or acao == "classificar") and isinstance(alvo, str) and alvo.isprintable() and len(alvo) < 300)
+                _exigir(conf is None or isinstance(conf, str) and len(conf) < 200)
                 d = ler_painel()
                 if acao == "classificar":
-                    assert alvo in {x["id"] for k in ("projetos", "arquivados") for x in d.get(k, [])}
+                    _exigir(alvo in {x["id"] for k in ("projetos", "arquivados") for x in d.get(k, [])})
                     classificar(alvo, _classe_valida(ped.get("classe")))
                     return self._resposta(200, "classificado")
                 validos = {x["id"] for chave in ("projetos", "arquivados", "a_destinar") for x in d.get(chave, [])}
-                assert alvo in validos
+                _exigir(alvo in validos)
                 destino = ped.get("pasta")
-                assert acao != "clonar" or isinstance(destino, str) and NOME.fullmatch(destino)
+                _exigir(acao != "clonar" or isinstance(destino, str) and NOME.fullmatch(destino))
             except Exception:  # noqa: BLE001 — qualquer pedido malformado e recusado igual
                 return self._resposta(400, "pedido invalido")
             nome = f"{int(time.time() * 1000)}-{acao}-{hashlib.sha1(alvo.encode()).hexdigest()[:10]}.json"

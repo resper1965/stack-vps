@@ -241,8 +241,10 @@ def main(argv=None):
     o = a.parse_args(argv)
     try:
         from pmo.painel import montar
-        token = open(TOKEN, encoding="utf-8").read().strip()
-        time_key = open(TIME, encoding="utf-8").read().strip()
+        with open(TOKEN, encoding="utf-8") as f:
+            token = f.read().strip()
+        with open(TIME, encoding="utf-8") as f:
+            time_key = f.read().strip()
         # montar muta a entrada: sempre dicts recém-lidos do disco, uma única vez
         painel = montar(_json(PAINEL), _json(AJUSTES, {}), _json(CLASSES, {}))
         ops = sincronizar(Linear(token), painel, VINCULOS, TRAVA, o.previa, o.confirmar_lote, time_key)
