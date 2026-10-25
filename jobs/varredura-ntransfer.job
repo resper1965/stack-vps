@@ -1,0 +1,8 @@
+# Substitui a varredura CodeQL/Security desligada (semgrep + gitleaks + osv-scanner). So le o clone.
+# Ferramentas: scripts/46-ferramentas-varredura.sh (como agente)
+DESCRICAO=Varredura semanal de seguranca do resper1965/nTransfer
+AGENDA=Sun *-*-* 00:00:00 UTC
+COMANDO=jobs/bin/varredura.sh . ntransfer
+TIMEOUT_MIN=30
+REPO=resper1965/nTransfer
+HABILITADO=nao

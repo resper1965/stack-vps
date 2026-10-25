@@ -109,6 +109,78 @@ except Exception:
   else printf '  pend  %s\n' "runners instalados, mas não habilitados"; fi
 fi
 
+# jobs agendados (scripts/45-jobs.sh): so aparece se ha timer stack-job-* instalado. O JSON e do agente (nao
+# confiavel): so numeros e o nome do job (validado pelo nome do arquivo) sao impressos.
+jobs_units=/etc/systemd/system; jobs_state=/srv/dev/state/jobs
+[[ ${STACK_TESTE:-} == 1 ]] && { jobs_units=${HEALTH_JOBS_UNITS:-$jobs_units}; jobs_state=${HEALTH_JOBS_STATE:-$jobs_state}; }
+# limite (horas) de idade do ultimo resultado de um job: 2x o maior intervalo entre execucoes + 1h. O intervalo vem do
+# systemd-analyze (8 iteracoes: cobre fim de semana em Mon..Fri); sem ele, um palpite pelo texto da agenda
+# (diario 36h, semanal ou dias da semana 9d, mensal 33d, anual 400d). Agenda de alta frequencia fica tolerante no palpite.
+jobs_limite() {
+  local an=systemd-analyze out x e prev=0 max=0 ts=() bx=${1,,}
+  [[ ${STACK_TESTE:-} == 1 ]] && an=${HEALTH_ANALYZE:-systemd-analyze}
+  if command -v "$an" >/dev/null 2>&1 && [[ $1 != -* ]] && out=$(timeout 10 "$an" calendar --iterations=8 -- "$1" 2>/dev/null); then
+    mapfile -t ts < <(sed -nE 's/^[[:space:]]*(Next elapse|Iter[^:]*#[0-9]+):[[:space:]]*//p' <<<"$out")
+    for x in "${ts[@]}"; do
+      e=$(date -d "$x" +%s 2>/dev/null) || { max=0; break; }
+      if (( prev != 0 && e - prev > max )); then max=$((e - prev)); fi
+      prev=$e
+    done
+    if (( max > 0 )); then echo $(( 2 * max / 3600 + 1 )); return; fi
+  fi
+  case $bx in
+    *quarterly*|*semiannually*|*yearly*|*annually*) echo 9600 ;;
+    *monthly*) echo 792 ;;
+    [0-9*]*-[0-9][0-9]-[0-9]*|[0-9*]*-[0-9]-[0-9]*) echo 9600 ;;   # *-MM-DD: uma vez por ano
+    [0-9*]*-\*-[0-9]*) echo 792 ;;                                    # *-*-DD: uma vez por mes
+    *weekly*|*mon*|*tue*|*wed*|*thu*|*fri*|*sat*|*sun*) echo 216 ;;
+    *) echo 36 ;;
+  esac
+}
+shopt -s nullglob; jobs_timers=("$jobs_units"/stack-job-*.timer); shopt -u nullglob
+if (( ${#jobs_timers[@]} > 0 )); then
+  echo "jobs"
+  for t in "${jobs_timers[@]}"; do
+    jn=${t##*/stack-job-}; jn=${jn%.timer}
+    [[ $jn =~ ^[a-z0-9-]+$ ]] || continue
+    ag=$(sed -n 's/^OnCalendar=//p' "$t" | head -1)
+    lim=$(jobs_limite "$ag")
+    jf=$jobs_state/$jn.json; r=invalido
+    if [[ -f $jf && ! -L $jf ]]; then
+      r=$(timeout 10 python3 -I -c '
+import json, os, sys, time
+try:
+    fd = os.open(sys.argv[1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    bruto = os.read(fd, 65536 + 1)
+    if len(bruto) > 65536: raise ValueError
+    d = json.loads(bruto.decode("utf-8"))
+    if not isinstance(d, dict): raise ValueError
+    rc, fim = d["rc"], d["fim"]
+    if isinstance(rc, bool) or not isinstance(rc, int) or not 0 <= rc <= 100000: raise ValueError
+    if isinstance(fim, bool) or not isinstance(fim, (int, float)) or not 0 < fim < 4e9: raise ValueError
+    idade = time.time() - fim
+    if idade < -60: raise ValueError
+    h = int(idade // 3600)
+    print("rc %d" % rc if rc != 0 else "velho %d" % h if h > int(sys.argv[2]) else "ok %d" % h)
+except Exception:
+    print("invalido")
+' "$jf" "$lim" 2>/dev/null) || r=invalido
+    elif [[ ! -e $jf && ! -L $jf ]]; then
+      r=ausente
+    fi
+    case $r in
+      ok\ *) ok "job $jn (rc 0 há ${r#ok }h)" ;;
+      rc\ *) bad "job $jn falhou (rc ${r#rc })" ;;
+      velho\ *) bad "job $jn sem rodar há ${r#velho }h (limite ${lim}h)" ;;
+      ausente)
+        ti=$(( ($(date +%s) - $(stat -c %Y "$t")) / 3600 ))
+        if (( ti < lim )); then printf '  pend  %s\n' "job $jn aguardando o primeiro ciclo"
+        else bad "job $jn nunca rodou (timer instalado há ${ti}h)"; fi ;;
+      *) bad "job $jn com status inválido" ;;
+    esac
+  done
+fi
+
 echo "disco"
 use=$(df --output=pcent /srv | tail -1 | tr -dc '0-9')
 (( use < 85 )) && ok "/srv em ${use}%" || bad "/srv em ${use}%"
