@@ -158,6 +158,14 @@ falta_com "0.0.0.0:20128" "9router escutando fora do loopback" 'export STUB_SS="
 falta_com "[::]:20128" "9router escutando fora do loopback" 'export STUB_SS="LISTEN 0 511 [::]:20128 [::]:*"'
 falta_com "chave ausente" "NINE_ROUTER_API_KEY ausente" 'echo OUTRA=1 > "$T/agente.env"'
 falta_com "chave sem modelos" "/v1/models com a chave não lista" 'export STUB_BODY="{\"data\":[]}"'
+novo_tmp; prepara; roda
+tem "pend  claude-9r ausente"; afirma "$?" "claude-9r ausente: pend (opt-in)"
+tem "pend  codex-9r ausente"; afirma "$?" "codex-9r ausente: pend (opt-in)"
+! tem "FALTA claude-9r"; afirma "$?" "wrapper ausente nunca e FALTA"
+echo "#!/bin/sh" | tee "$T/ah/.local/bin/claude-9r" > "$T/ah/.local/bin/codex-9r"; chmod +x "$T/ah/.local/bin/claude-9r" "$T/ah/.local/bin/codex-9r"; roda
+tem "ok    claude-9r presente"; afirma "$?" "claude-9r presente: ok"
+tem "ok    codex-9r presente"; afirma "$?" "codex-9r presente: ok"
+
 falta_com "CLI ausente" "codex fora do PATH" 'rm "$T/ah/.local/bin/codex"'
 falta_com "sysbox" "sysbox-ce ainda instalado" 'export STUB_SYSBOX=0'
 falta_com ".continue" "@T/ah/.continue existe" 'mkdir "$T/ah/.continue"'

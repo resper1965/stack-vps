@@ -62,6 +62,7 @@ Notas:
 | `14-backup.sh` / `15-restore.sh` | backup restic no R2 (desligado até a decisão pós-migração) |
 | `bin/stack-doctor` | verificador só leitura da VPS (seções código, acesso, permissões, opencode, 9router, modelos, clis, ci, restos); `ok`, `pend` (depende do dono) ou `FALTA`; exit 1 se houver `FALTA`; critério de pronto do go-live (`docs/runbooks/2026-10-go-live.md`); não afirma nada instalado |
 | `43-segredos-guiado.sh` | `9router`, `cliente`, `agente` e `linear`: pede cada segredo com entrada oculta (ou gera aleatório com `--gerar`, só `9router`) e grava em arquivo 0600 do usuário certo, sem imprimir valor; recusa sobrescrever sem `--trocar`; roda na VPS, cada subcomando como o usuário indicado no runbook |
+| `44-clis-via-9router.sh` | opt-in, como `agente`: instala `~/.local/bin/claude-9r` e `codex-9r` (usam a assinatura conectada ao 9router; `claude` e `codex` seguem com login próprio) e o provedor `9router` no `~/.codex/config.toml` (perfil `~/.codex/9router.config.toml`); lê a chave de `client.env` (0600) sem imprimi-la; `claude-9r` usa `~/.claude-9router`; **ainda não instalado na VPS** |
 | `20-laptop-github.sh` | envia o trabalho do laptop ao GitHub, com bloqueio de segredo e documento de cliente (roda no WSL) |
 | `health.sh` | tem seção do 9router, que só aparece se a unidade existir |
 | `alertar.sh`, `vigia-health.sh` | alertas por ntfy, e-mail e Telegram na mudança de estado do `health.sh` |

@@ -147,6 +147,9 @@ if [[ $AG_OK ]]; then
       ag test -d "$AH/$2" && ok "$1: configuração presente (login não verificado)" || pend "$1: login pendente (sem $2)"
     else falta "$1 fora do PATH do $AGENTE"; fi
   done
+  for w in claude-9r codex-9r; do
+    ag test -x "$AH/.local/bin/$w" && ok "$w presente (opt-in: assinatura pelo 9router)" || pend "$w ausente (opt-in; scripts/44-clis-via-9router.sh)"
+  done
 else pend "claude, codex e agy: $SEMAG"; fi
 
 echo "ci"
