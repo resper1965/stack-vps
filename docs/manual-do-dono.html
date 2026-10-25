@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual do dono: o que falta fazer</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --mut:#5a6270; --card:#f5f7fa; --bd:#d9dee5; --ac:#0b7fb0; --ok:#1c7c3c; --warn:#a15c00; --code:#0f1720; --codefg:#e6edf3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#12161b; --fg:#e6e9ee; --mut:#9aa4b2; --card:#1a2028; --bd:#2b3440; --ac:#4cb8e8; --ok:#4cc27a; --warn:#e6a23c; --code:#0a0e13; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h2 { font-size: 1.2rem; margin: 0 0 8px; }
+  .sub { color: var(--mut); margin: 0 0 24px; }
+  .step { background: var(--card); border: 1px solid var(--bd); border-radius: 10px; padding: 16px; margin: 0 0 16px; }
+  .step > h2 span { display:inline-block; min-width: 1.9em; height: 1.9em; line-height: 1.9em; text-align:center; border-radius: 50%; background: var(--ac); color:#fff; font-size: .9rem; margin-right: 8px; }
+  .tag { font-size:.75rem; padding:2px 8px; border-radius: 999px; border:1px solid var(--bd); color: var(--mut); margin-left: 8px; vertical-align: middle; }
+  ol, ul { padding-left: 1.3em; margin: 8px 0; }
+  li { margin: 4px 0; }
+  pre { position:relative; background: var(--code); color: var(--codefg); padding: 12px 56px 12px 12px; border-radius: 8px; overflow-x:auto; font: 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; margin: 8px 0; }
+  code { font: 13px ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--card); border:1px solid var(--bd); padding: 1px 5px; border-radius: 4px; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; }
+  button.cp { position:absolute; top:8px; right:8px; border:1px solid #3a4756; background:#1d2733; color:#cdd6e0; border-radius:6px; padding:3px 8px; font-size:12px; cursor:pointer; }
+  .note { border-left: 4px solid var(--warn); padding: 6px 12px; margin: 10px 0; color: var(--mut); }
+  .expect { border-left: 4px solid var(--ok); padding: 6px 12px; margin: 10px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: .95rem; }
+  th, td { border: 1px solid var(--bd); padding: 6px 10px; text-align: left; }
+  th { background: var(--card); }
+  a { color: var(--ac); }
+</style>
+</head>
+<body>
+<main>
+<h1>Manual do dono: o que falta fazer</h1>
+<p class="sub">Estado de 25/10/2026. Faça na ordem. O que é "Claude" eu faço; o que é "você" só você consegue.</p>
+
+<section class="step">
+  <h2>Antes de tudo</h2>
+  <ul>
+    <li>Tailscale ligado no seu computador.</li>
+    <li>Um terminal aberto no seu computador (não na VPS). Os comandos <code>ssh stack</code> já funcionam com o seu <code>~/.ssh/config</code>.</li>
+  </ul>
+  <table>
+    <tr><th>O quê</th><th>Endereço (só pela tailnet)</th></tr>
+    <tr><td>Painel do 9router</td><td><a href="https://stack.tail985643.ts.net:20128">https://stack.tail985643.ts.net:20128</a></td></tr>
+    <tr><td>OpenCode Web</td><td><a href="https://stack.tail985643.ts.net">https://stack.tail985643.ts.net</a></td></tr>
+    <tr><td>Painel do PMO</td><td><a href="https://stack.tail985643.ts.net:8443">https://stack.tail985643.ts.net:8443</a></td></tr>
+  </table>
+</section>
+
+<section class="step">
+  <h2><span>1</span>Entrar no painel do 9router <span class="tag">você</span></h2>
+  <ol>
+    <li>Leia a senha. Ela aparece na sua tela, então use um terminal só seu:
+<pre><code>ssh stack "sudo -u agente grep -m1 '^INITIAL_PASSWORD=' /home/agente/.config/9router/9router.env"</code></pre></li>
+    <li>Abra o endereço do painel e entre com o que vem depois do <code>=</code>.</li>
+    <li>Se o painel pedir para trocar a senha, troque e guarde a nova. A do arquivo deixa de valer.</li>
+  </ol>
+</section>
+
+<section class="step">
+  <h2><span>2</span>Cadastrar OpenRouter e DeepSeek <span class="tag">você</span></h2>
+  <ol>
+    <li>No painel, abra <b>Providers</b>. O Featherless já está conectado.</li>
+    <li>Adicione <b>OpenRouter</b> e cole a chave. Depois <b>DeepSeek</b>, do mesmo jeito.</li>
+  </ol>
+  <div class="expect">Esperado: cada um aparece como ativo na lista.</div>
+</section>
+
+<section class="step">
+  <h2><span>3</span>Conectar as assinaturas (Codex/ChatGPT e Claude Code) <span class="tag">você</span></h2>
+  <p><b>Codex precisa de um túnel</b>: o login volta para a porta 1455 do seu computador.</p>
+  <ol>
+    <li>Em um terminal novo, deixe aberto:
+<pre><code>ssh -L 1455:127.0.0.1:1455 -L 20128:127.0.0.1:20128 stack</code></pre></li>
+    <li>No navegador, abra <code>http://localhost:20128</code> (não o endereço <code>.ts.net</code>) e entre no painel.</li>
+    <li><b>Providers → Codex</b> e faça o login do ChatGPT no navegador.</li>
+    <li>Terminado, feche o túnel.</li>
+  </ol>
+  <p><b>Claude Code:</b> no mesmo painel, <b>Providers → Claude Code</b> e faça o login no navegador. Se pedir <code>localhost</code>, use o mesmo túnel.</p>
+  <div class="note">Os termos da Anthropic restringem o uso de OAuth de assinatura por intermediários, e a conta pode ser bloqueada. Você já aceitou esse risco. Com duas contas Claude, o 9router escolhe a conta sozinho; não dá para escolher por requisição.</div>
+</section>
+
+<section class="step">
+  <h2><span>4</span>Me avisar <span class="tag">você → Claude</span></h2>
+  <p>Escreva <b>"conectei"</b>. Eu listo os modelos que apareceram, configuro o <code>claude-9r</code> e o <code>codex-9r</code> (já instalados na VPS) e acrescento os modelos ao OpenCode.</p>
+</section>
+
+<section class="step">
+  <h2><span>5</span>Logins dos CLIs na VPS <span class="tag">você</span></h2>
+  <ol>
+    <li>Entre no terminal do agente:
+<pre><code>ssh -t stack
+sudo -u agente -H -i</code></pre></li>
+    <li>Rode um de cada vez e siga o link no navegador do seu computador:
+<pre><code>claude        # depois digite /login
+codex login
+agy</code></pre></li>
+    <li>Para a segunda conta Claude (ionic), peça que eu rode o <code>28-contas-claude.sh</code>; depois use <code>claude-ionic</code>.</li>
+  </ol>
+  <div class="note">Se o <code>agy</code> não abrir o login, o token do Antigravity vem de uma máquina já logada, em <code>~/.gemini/antigravity-cli/</code>.</div>
+</section>
+
+<section class="step">
+  <h2><span>6</span>Escolher o modelo padrão do OpenCode <span class="tag">você</span></h2>
+  <ol>
+    <li>Abra o OpenCode Web. Usuário <code>opencode</code>; a senha:
+<pre><code>ssh stack "sudo -u agente grep -m1 '^OPENCODE_SERVER_PASSWORD=' /home/agente/.config/opencode/web.env"</code></pre></li>
+    <li>No seletor de modelos, escolha um dos <code>9router</code> e deixe como padrão.</li>
+  </ol>
+</section>
+
+<section class="step">
+  <h2><span>7</span>Opcional, mas recomendado <span class="tag">você</span></h2>
+  <ul>
+    <li><b>Aviso no celular quando o agente termina:</b> preencha <code>NTFY_TOPIC=</code> em <code>/srv/dev/secrets/aviso.env</code>. O arquivo é criado pelo <code>16-agente.sh</code>; me avise e eu rodo.</li>
+    <li><b>Revogar o token antigo dos runners:</b> GitHub → Settings → Developer settings → Personal access tokens. Apague o que estava em <code>/srv/runners</code>. Não confunda com o <code>RUNNER_TOKEN</code> atual do CI.</li>
+  </ul>
+</section>
+
+<section class="step">
+  <h2><span>8</span>Decisões que só você toma <span class="tag">você</span></h2>
+  <ul>
+    <li><b>Subir o código novo do PMO na VPS</b> (<code>34-pmo.sh</code>, reinicia o painel). Eu recomendo. Escreva "rode o 34".</li>
+    <li><b>Remover o <code>stack-rede-containers</code></b> (regra de firewall que não faz mais falta). Escreva "autorizo remover o stack-rede-containers".</li>
+    <li><b>Jobs agendados, <code>/migrar-ci</code> e <code>@ness/auth</code>:</b> o desenho está aprovado e em execução.</li>
+  </ul>
+</section>
+
+<section class="step">
+  <h2><span>9</span>Conferir que está tudo certo</h2>
+<pre><code>ssh stack "/opt/stack-vps/bin/stack-doctor"</code></pre>
+  <div class="expect">Esperado: nenhuma linha <b>FALTA</b>. O <code>agy</code> aparece como <b>pend</b> até o login do passo 5.</div>
+</section>
+
+<p class="sub">Se algum passo falhar, copie a mensagem de erro e me envie.</p>
+</main>
+<script>
+  document.querySelectorAll('pre').forEach(function (pre) {
+    var b = document.createElement('button');
+    b.className = 'cp'; b.type = 'button'; b.textContent = 'Copiar';
+    b.addEventListener('click', function () {
+      var t = pre.querySelector('code').innerText;
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () {
+        b.textContent = 'Copiado'; setTimeout(function () { b.textContent = 'Copiar'; }, 1500);
+      }).catch(function () { b.textContent = 'Selecione e copie'; });
+    });
+    pre.appendChild(b);
+  });
+</script>
+</body>
+</html>
