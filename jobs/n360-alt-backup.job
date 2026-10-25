@@ -1,0 +1,9 @@
+# D5: backup local cifrado do banco do n.360-alternative. Sem copia fora da VPS (restic/R2 adiado).
+# So liga depois de: scripts/43-segredos-guiado.sh job n360-alt-backup
+DESCRICAO=Backup diario cifrado do banco do n.360-alternative (local, 14 dumps)
+AGENDA=*-*-* 06:17:00 UTC
+COMANDO=jobs/bin/backup-n360.sh
+TIMEOUT_MIN=30
+SEGREDOS=n360-alt-backup
+CHAVES=DATABASE_URL,BACKUP_PASSPHRASE
+HABILITADO=nao

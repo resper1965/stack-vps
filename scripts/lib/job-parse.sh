@@ -2,8 +2,8 @@
 # Leitura estrita de jobs/<nome>.job, compartilhada por bin/stack-job, scripts/45-jobs.sh e bin/stack-doctor.
 # Sem source/eval: cada linha e vazia, comentario (#) ou CHAVE=valor com valor em alfabeto fechado.
 # job_carregar <arquivo-absoluto>: define J_NOME J_DESCRICAO J_AGENDA J_COMANDO J_SEGREDOS J_REPO
-# J_TIMEOUT_MIN J_HABILITADO J_BASE (raiz do repo = pai da pasta jobs/). Erro: mensagem em stderr, rc 1.
-JOB_CHAVES=" DESCRICAO AGENDA COMANDO SEGREDOS REPO TIMEOUT_MIN HABILITADO "
+# J_TIMEOUT_MIN J_HABILITADO J_CHAVES J_BASE (raiz do repo = pai da pasta jobs/). Erro: mensagem em stderr, rc 1.
+JOB_CHAVES=" DESCRICAO AGENDA COMANDO SEGREDOS CHAVES REPO TIMEOUT_MIN HABILITADO "
 
 job_nome_ok() { [[ $1 =~ ^[a-z0-9-]+$ ]]; }
 
@@ -11,7 +11,7 @@ job_carregar() {
   local f=$1 n=0 linha k v c
   local -A vistas=() val=()
   local re_vazia='^[[:space:]]*(#.*)?$' re_par='^([A-Z_]+)=(.*)$'
-  local re_valor='^[A-Za-z0-9_./:@,*~=+ -]*$' re_ctl='[[:cntrl:]]' re_desc='[$`\\%]'
+  local re_valor='^[A-Za-z0-9_./:@,*~=+? -]*$' re_ctl='[[:cntrl:]]' re_desc='[$`\\%]'
   local re_cmd='^jobs/bin/[A-Za-z0-9][A-Za-z0-9._-]*$' re_repo='^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$'
   J_NOME=$(basename "$f" .job)
   J_BASE=$(dirname "$(dirname "$f")")
@@ -39,7 +39,7 @@ job_carregar() {
     [[ -n ${val[$c]:-} ]] || { echo "$f: falta a chave $c" >&2; return 1; }
   done
   J_DESCRICAO=${val[DESCRICAO]} J_AGENDA=${val[AGENDA]} J_COMANDO=${val[COMANDO]}
-  J_SEGREDOS=${val[SEGREDOS]:-} J_REPO=${val[REPO]:-} J_TIMEOUT_MIN=${val[TIMEOUT_MIN]} J_HABILITADO=${val[HABILITADO]:-nao}
+  J_SEGREDOS=${val[SEGREDOS]:-} J_CHAVES=${val[CHAVES]:-} J_REPO=${val[REPO]:-} J_TIMEOUT_MIN=${val[TIMEOUT_MIN]} J_HABILITADO=${val[HABILITADO]:-nao}
 
   c=${J_COMANDO%% *}
   [[ $c =~ $re_cmd && $J_COMANDO != *..* ]] || { echo "$f: COMANDO deve ser jobs/bin/<script> [args], sem '..'" >&2; return 1; }
@@ -47,6 +47,15 @@ job_carregar() {
   [[ $J_TIMEOUT_MIN =~ ^[1-9][0-9]{0,3}$ ]] && (( J_TIMEOUT_MIN <= 1440 )) || { echo "$f: TIMEOUT_MIN deve ser de 1 a 1440" >&2; return 1; }
   [[ $J_HABILITADO == sim || $J_HABILITADO == nao ]] || { echo "$f: HABILITADO deve ser sim ou nao" >&2; return 1; }
   [[ -z $J_REPO ]] || { [[ $J_REPO =~ $re_repo && $J_REPO != *..* ]] || { echo "$f: REPO deve ser dono/nome" >&2; return 1; }; }
+  # CHAVES: nomes das variaveis do arquivo de segredos (sufixo ? = opcional); so o 43-segredos-guiado.sh usa
+  if [[ -n $J_CHAVES ]]; then
+    [[ -n $J_SEGREDOS ]] || { echo "$f: CHAVES exige SEGREDOS" >&2; return 1; }
+    local ch chs
+    IFS=, read -ra chs <<<"$J_CHAVES"
+    for ch in "${chs[@]}"; do
+      [[ $ch =~ ^[A-Z][A-Z0-9_]*\??$ && ! $ch =~ ^(PATH|IFS|HOME|SHELL|ENV|BASH_ENV|LD_|PYTHON) ]] || { echo "$f: CHAVES com nome invalido" >&2; return 1; }
+    done
+  fi
   [[ -z $J_SEGREDOS ]] || { job_nome_ok "$J_SEGREDOS" || { echo "$f: SEGREDOS deve ser [a-z0-9-]+" >&2; return 1; }; }
   return 0
 }

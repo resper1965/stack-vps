@@ -2,27 +2,36 @@
 # Segredos guiados da VPS: pede o valor oculto (TTY) ou gera aleatorio, valida e grava com umask 077 e
 # escrita atomica (mktemp no mesmo diretorio + mv). Nenhum valor vai para saida, argv, log ou erro.
 # Uso: 43-segredos-guiado.sh {9router|cliente|agente|linear} [--gerar] [--trocar]
+#      43-segredos-guiado.sh job <nome> [--trocar]
 #   9router  (como agente) ~/.config/9router/9router.env: INITIAL_PASSWORD (>=16) e JWT_SECRET
 #   cliente  (como agente) ~/.config/9router/client.env: NINE_ROUTER_API_KEY (chave criada no painel do 9router)
 #   agente   (como dev)    /srv/dev/secrets/agente.env: linha NINE_ROUTER_API_KEY= (dono/modo preservados)
+#   job <nome> (como dev)  /srv/dev/secrets/jobs/<SEGREDOS>.env 0640 dev:agente, uma chave por item de CHAVES= do
+#            jobs/<nome>.job (sufixo ? = opcional: Enter vazio pula); lido pelo bin/stack-job
 #   linear   (como root)   /etc/pmo/linear-token e linear-team (root:pmo 640, lidos por pmo/linear.py)
 # --gerar: so 9router (senha e JWT aleatorios; leia-os do proprio arquivo). --trocar: permite sobrescrever.
 set -euo pipefail
 umask 077
 TESTE=${STACK_TESTE:-}
 ALVO=${1:-}; shift || true
+JOB_NOME=; if [[ $ALVO == job ]]; then JOB_NOME=${1:-}; shift || true; fi
 GERAR=0; TROCAR=0
 for a in "$@"; do
   case $a in --gerar) GERAR=1 ;; --trocar) TROCAR=1 ;; *) echo "opcao desconhecida: $a"; exit 2 ;; esac
 done
-uso() { echo "uso: ${0##*/} {9router|cliente|agente|linear} [--gerar] [--trocar]"; exit 2; }
-[[ $ALVO =~ ^(9router|cliente|agente|linear)$ ]] || uso
+uso() { echo "uso: ${0##*/} {9router|cliente|agente|linear} [--gerar] [--trocar] | job <nome> [--trocar]"; exit 2; }
+[[ $ALVO =~ ^(9router|cliente|agente|linear|job)$ ]] || uso
+[[ $ALVO != job || $JOB_NOME =~ ^[a-z0-9-]+$ ]] || uso
 [[ $GERAR == 0 || $ALVO == 9router ]] || { echo "--gerar so vale para 9router"; exit 2; }
 
 DIR_9R=$HOME/.config/9router
 AGENTE_ENV=/srv/dev/secrets/agente.env
 LINEAR_DIR=/etc/pmo
-if [[ $TESTE == 1 ]]; then AGENTE_ENV=${SEG_AGENTE_ENV:-$AGENTE_ENV}; LINEAR_DIR=${SEG_LINEAR_DIR:-$LINEAR_DIR}; fi
+JOBS_DEF=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)/jobs; JOBS_SEG=/srv/dev/secrets/jobs
+if [[ $TESTE == 1 ]]; then
+  AGENTE_ENV=${SEG_AGENTE_ENV:-$AGENTE_ENV}; LINEAR_DIR=${SEG_LINEAR_DIR:-$LINEAR_DIR}
+  JOBS_DEF=${SEG_JOBS_DEF:-$JOBS_DEF}; JOBS_SEG=${SEG_JOBS_SEG:-$JOBS_SEG}
+fi
 fim() { echo "$*"; exit 1; }
 
 tmp=""; tmp2=""
@@ -99,6 +108,31 @@ agente)
   le_segredo "NINE_ROUTER_API_KEY (do painel do 9router)"; valida NINE_ROUTER_API_KEY "$REPLY" 8
   grava "$f" NINE_ROUTER_API_KEY "$REPLY"
   echo "NINE_ROUTER_API_KEY gravada em $f (dono e modo preservados)." ;;
+job)
+  [[ $(id -un) == dev || $TESTE == 1 ]] || fim "rode como dev: /opt/stack-vps/scripts/43-segredos-guiado.sh job $JOB_NOME"
+  # shellcheck source=scripts/lib/job-parse.sh
+  . "$(dirname "$(readlink -f "$0")")/lib/job-parse.sh"
+  job_carregar "$JOBS_DEF/$JOB_NOME.job" || fim "jobs/$JOB_NOME.job ausente ou invalido (rode scripts/45-jobs.sh --listar)"
+  [[ -n $J_SEGREDOS && -n $J_CHAVES ]] || fim "o job $JOB_NOME nao declara SEGREDOS e CHAVES; nada a gravar"
+  [[ -d $JOBS_SEG ]] || fim "$JOBS_SEG nao existe (rode: sudo scripts/45-jobs.sh)"
+  f=$JOBS_SEG/$J_SEGREDOS.env
+  if [[ -e $f ]]; then recusa_se_existe "$f"; fi
+  IFS=, read -ra chaves <<<"$J_CHAVES"
+  args=()
+  for c in "${chaves[@]}"; do
+    nome=${c%\?}; opcional=0; [[ $c == *\? ]] && opcional=1
+    le_segredo "$nome$([[ $opcional == 1 ]] && echo ' (opcional, Enter pula)')"
+    if [[ $opcional == 1 && -z $REPLY ]]; then continue; fi
+    valida "$nome" "$REPLY" 1
+    args+=("$nome" "$REPLY")
+  done
+  (( ${#args[@]} > 0 )) || fim "nenhuma chave informada; nada gravado"
+  # --trocar sobre arquivo existente: recomeca do zero (as chaves antigas do job nao sobrevivem)
+  [[ ! -L $f ]] || fim "$f e link; recuso"
+  rm -f "$f"
+  grava "$f" "${args[@]}"
+  chmod 640 "$f"
+  echo "gravado $f (0640). Nenhum valor foi impresso. Proximo: editar HABILITADO=sim em jobs/$JOB_NOME.job (PR) e sudo scripts/45-jobs.sh." ;;
 linear)
   euid=$EUID; [[ $TESTE == 1 ]] && euid=${SEG_EUID:-$EUID}
   [[ $euid -eq 0 ]] || fim "o Linear grava em /etc/pmo (root:pmo): precisa de sudo. Rode: sudo /opt/stack-vps/scripts/43-segredos-guiado.sh linear"

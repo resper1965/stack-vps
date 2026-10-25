@@ -5,8 +5,8 @@ cd "$(dirname "$0")/.." || exit 1
 shopt -s nullglob   # scripts/lib/ so passa a existir na Task 8
 rc=0
 echo "shellcheck"
-if shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/*.sh bin/ia bin/stack-doctor bin/stack-job tests/*.sh >/dev/null 2>&1; then echo "  ok"; else
-  shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/*.sh bin/ia bin/stack-doctor bin/stack-job tests/*.sh; rc=1; fi
+if shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/*.sh bin/ia bin/stack-doctor bin/stack-job jobs/bin/*.sh tests/*.sh >/dev/null 2>&1; then echo "  ok"; else
+  shellcheck -x -S warning scripts/*.sh scripts/lib/*.sh bin/*.sh bin/ia bin/stack-doctor bin/stack-job jobs/bin/*.sh tests/*.sh; rc=1; fi
 if [[ -d pmo/tests ]]; then
   echo "pmo (python)"
   if python3 -m unittest discover -s pmo/tests -t . -q 2>"$HOME/.pmo-testes.log"; then echo "  ok"; else cat "$HOME/.pmo-testes.log"; rc=1; fi
