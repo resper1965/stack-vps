@@ -23,13 +23,13 @@ fi
 exit 0
 ' "$1" > "$STUBS/systemctl"
   chmod +x "$STUBS/systemctl"; }
-# curl_com <codigo-opencode/9router> <codigo-pmo> [codigo-/v1/models, padrao 401]: o stub distingue pelo --unix-socket e pela URL
+# curl_com <codigo-opencode/9router> <codigo-pmo> [codigo-POST /v1/chat/completions, padrao 401]: o stub distingue pelo --unix-socket e pela URL
 curl_com() {
   cat > "$STUBS/curl" <<STUB
 #!/usr/bin/env bash
 echo "curl \$*" >> "\$STUB_LOG"
 [[ "$2" == fail && "\$*" == *--unix-socket* ]] && exit 7
-[[ "\$*" == */v1/models* ]] && { printf '%s' "${3:-401}"; exit 0; }
+[[ "\$*" == */v1/chat/completions* && "\$*" == *POST* ]] && { printf '%s' "${3:-401}"; exit 0; }
 [[ "$1" == fail && "\$*" != *--unix-socket* ]] && exit 7
 [[ "\$*" == *--unix-socket* ]] && printf '%s' "$2" || printf '%s' "$1"
 STUB
@@ -61,16 +61,16 @@ novo_tmp; prepara; rm "$HEALTH_PMO_ENV"; curl_com 200 fail; roda
 tem "pend  painel do PMO sem /etc/pmo/servidor.env"; afirma "$?" "sem servidor.env: pend"
 ! tem "FALHA painel do PMO"; afirma "$?" "sem servidor.env: nao e falha"
 
-# 9router: sem unidade, sem secao; com unidade, /api/health 200 + /v1/models sem chave 401 = ok, senao FALHA
+# 9router: sem unidade, sem secao; com unidade, /api/health 200 + POST /v1/chat/completions sem chave 401 = ok, senao FALHA
 novo_tmp; prepara; roda
 ! tem "9router"; afirma "$?" "9router sem unidade: sem secao"
 touch "$T/9router.service"; export HEALTH_9ROUTER_UNIT=$T/9router.service
 roda; tem "ok    9router"; afirma "$?" "9router HTTP 200: ok"
-tem "ok    9router exige chave de API"; afirma "$?" "9router /v1/models 401 sem chave: ok"
+tem "ok    9router exige chave de API"; afirma "$?" "9router POST chat 401 sem chave: ok"
 afirma_log "http://127.0.0.1:20128/api/health" "9router: checa /api/health"
-curl_com 200 200 200; roda; tem "FALHA 9router sem exigir chave de API"; afirma "$?" "9router /v1/models 200 sem chave: FALHA"
+curl_com 200 200 200; roda; tem "FALHA 9router sem exigir chave de API"; afirma "$?" "9router POST chat 200 sem chave: FALHA"
 afirma_rc "$rc" 1 "9router sem exigir chave: rc 1"
-curl_com 200 200 500; roda; tem "FALHA 9router: /v1/models respondeu 500"; afirma "$?" "9router /v1/models 500: FALHA"
+curl_com 200 200 500; roda; tem "FALHA 9router: POST /v1/chat/completions sem chave respondeu 500"; afirma "$?" "9router POST chat 500: FALHA"
 curl_com 401 200; roda; tem "FALHA 9router"; afirma "$?" "9router /api/health 401: FALHA"
 curl_com 500 200; roda; tem "FALHA 9router"; afirma "$?" "9router HTTP 500: FALHA"
 afirma_rc "$rc" 1 "9router HTTP 500: rc 1"

@@ -105,3 +105,4 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 - Citação de norma, cláusula ou prazo vinda de skill de GRC é apoio: confira na fonte original e
   sinalize o que não foi verificado. Material de caso forense: custódia e apagamento em D+30 na VPS;
   faltou material, registre o que falta — não busque por outro meio.
+- Critério de pronto da instalação da VPS: `stack-doctor` sem nenhum `FALTA` (`docs/runbooks/2026-10-go-live.md`).

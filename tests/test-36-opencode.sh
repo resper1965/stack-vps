@@ -122,8 +122,8 @@ printf 'a\nb\nc\nd\ne\nf\n<!-- stack-vps -->\n' > "$CMD"; roda
 if [[ $(head -n1 "$CMD") == a ]]; then ok "marcador na linha 7: arquivo do dono"; else falha "marcador na linha 7: arquivo do dono"; fi
 # repo mudou depois da 1a instalacao: reexecucao converge (repo falso em arvore temporaria)
 prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
-FAKE=$T/repo; mkdir -p "$FAKE/scripts" "$FAKE/opencode/command"
-cp "$S" "$FAKE/scripts/"; cp "$RAIZ_REPO"/opencode/*.* "$FAKE/opencode/"; cp "$CMDREPO" "$FAKE/opencode/command/"
+FAKE=$T/repo; mkdir -p "$FAKE/scripts" "$FAKE/opencode/command" "$FAKE/opencode/plugin"
+cp "$S" "$FAKE/scripts/"; cp "$RAIZ_REPO/opencode/plugin/aviso.js" "$FAKE/opencode/plugin/";cp "$RAIZ_REPO"/opencode/*.* "$FAKE/opencode/"; cp "$CMDREPO" "$FAKE/opencode/command/"
 bash "$FAKE/scripts/36-opencode.sh" >/dev/null 2>&1; printf 'novidade\n' >> "$FAKE/opencode/command/novo-projeto.md"
 bash "$FAKE/scripts/36-opencode.sh" >/dev/null 2>&1; cmp -s "$HOME/.config/opencode/command/novo-projeto.md" "$FAKE/opencode/command/novo-projeto.md"; afirma $? "repo alterado: reexecucao converge"
 # repo sem o comando: exit 1
@@ -137,6 +137,23 @@ if [[ -L $CMD ]] && cmp -s "$T/alvo.md" "$CMDREPO"; then ok "symlink com marcado
 echo 'do dono' > "$T/alvo.md"; roda
 if [[ -L $CMD && $(cat "$T/alvo.md") == 'do dono' ]]; then ok "symlink sem marcador: intocado"; else falha "symlink sem marcador: intocado"; fi
 if ls "$T"/alvo.md.* >/dev/null 2>&1; then falha "sem temporario do comando sobrando"; else ok "sem temporario do comando sobrando"; fi
+
+# plugin de aviso: mesma disciplina do comando (marcador na 1a linha, dono preservado, link mantido)
+prepara; echo "OPENCODE_SERVER_PASSWORD=$SENHA" > "$ENV"; chmod 600 "$ENV"
+PLGREPO=$RAIZ_REPO/opencode/plugin/aviso.js; PLG=$HOME/.config/opencode/plugin/aviso.js
+head -n 1 "$PLGREPO" | grep -qF '// stack-vps'; afirma $? "plugin no repo: marcador na primeira linha"
+roda; afirma_rc $RC 0 "instala o plugin"
+cmp -s "$PLG" "$PLGREPO"; afirma $? "plugin igual ao do repo"
+SUM=$(cat "$PLG"); roda; if [[ $SUM == "$(cat "$PLG")" ]]; then ok "plugin idempotente"; else falha "plugin idempotente"; fi
+printf '// stack-vps\nantigo\n' > "$PLG"; roda; cmp -s "$PLG" "$PLGREPO"; afirma $? "plugin com marcador: atualiza"
+echo '// meu plugin' > "$PLG"; roda; afirma_rc $RC 0 "plugin do dono: segue"
+if [[ $(cat "$PLG") == '// meu plugin' ]]; then ok "plugin do dono preservado"; else falha "plugin do dono preservado"; fi
+grep -qF 'AVISO' "$T/saida"; afirma $? "plugin do dono: avisa"
+printf '// stack-vps\nvelho\n' > "$T/alvo.js"; rm "$PLG"; ln -s "$T/alvo.js" "$PLG"; roda
+if [[ -L $PLG ]] && cmp -s "$T/alvo.js" "$PLGREPO"; then ok "plugin symlink com marcador: alvo atualizado, link mantido"; else falha "plugin symlink com marcador: alvo atualizado, link mantido"; fi
+echo '// do dono' > "$T/alvo.js"; roda
+if [[ -L $PLG && $(cat "$T/alvo.js") == '// do dono' ]]; then ok "plugin symlink sem marcador: intocado"; else falha "plugin symlink sem marcador: intocado"; fi
+if ls "$T"/alvo.js.* "$HOME"/.config/opencode/plugin/aviso.js.* >/dev/null 2>&1; then falha "sem temporario do plugin sobrando"; else ok "sem temporario do plugin sobrando"; fi
 
 # flags, caminho e valores citados no comando vs. gerador: conjuntos exatos
 GER=$RAIZ_REPO/scripts/42-novo-projeto.py

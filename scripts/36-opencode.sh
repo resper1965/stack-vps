@@ -29,6 +29,7 @@ if [[ -e $CLIENTE_9R || -L $CLIENTE_9R ]]; then
 fi
 command -v "$JQ" >/dev/null || { echo "jq nao encontrado (apt install jq)"; exit 1; }
 [[ -f $REPO/opencode/command/novo-projeto.md ]] || { echo "falta $REPO/opencode/command/novo-projeto.md"; exit 1; }
+[[ -f $REPO/opencode/plugin/aviso.js ]] || { echo "falta $REPO/opencode/plugin/aviso.js"; exit 1; }
 [[ -f $REPO/opencode/provider-9router.json ]] || { echo "falta $REPO/opencode/provider-9router.json"; exit 1; }
 
 install -d "$UNIDADES/opencode-web.service.d"
@@ -38,7 +39,8 @@ install -m 644 "$REPO/opencode/password.conf" "$UNIDADES/opencode-web.service.d/
 install -d "$HOME/.config/opencode/command"  # readlink -f exige o diretorio
 CMD=$(readlink -f "$HOME/.config/opencode/command/novo-projeto.md")  # link do dono: decide e escreve no alvo
 novo=""; cmd_novo=""
-trap 'rm -f "$novo" "$cmd_novo"' EXIT
+plg_novo=""
+trap 'rm -f "$novo" "$cmd_novo" "$plg_novo"' EXIT
 if [[ -e $CMD ]] && ! head -n 6 "$CMD" | grep -qF '<!-- stack-vps -->'; then
   echo "AVISO: $CMD e do dono (sem o marcador <!-- stack-vps -->); comando /novo-projeto nao instalado"
 else
@@ -46,6 +48,17 @@ else
   cmd_novo=$(mktemp "$CMD.XXXXXX")
   install -m 644 "$REPO/opencode/command/novo-projeto.md" "$cmd_novo"
   mv "$cmd_novo" "$CMD"
+fi
+# plugin de aviso (celular): mesma disciplina; o marcador "// stack-vps" esta na primeira linha da copia do repo
+install -d "$HOME/.config/opencode/plugin"
+PLG=$(readlink -f "$HOME/.config/opencode/plugin/aviso.js")
+if [[ -e $PLG ]] && ! head -n 6 "$PLG" | grep -qF '// stack-vps'; then
+  echo "AVISO: $PLG e do dono (sem o marcador // stack-vps); plugin de aviso nao instalado"
+else
+  install -d "$(dirname "$PLG")"
+  plg_novo=$(mktemp "$PLG.XXXXXX")
+  install -m 644 "$REPO/opencode/plugin/aviso.js" "$plg_novo"
+  mv "$plg_novo" "$PLG"
 fi
 # provedor 9router: o bloco do repo vence, o resto do opencode.json (e os modelos do dono) fica; model/small_model nunca
 CONFIG=$(readlink -f "$CONFIG")  # link do dono: escreve no alvo, nunca troca o link

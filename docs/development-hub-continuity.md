@@ -122,3 +122,39 @@ concessão de acesso (grupo/ACL): esses passos ficam com o dono.
 5. VPS: spike do 9router (`requireApiKey` no painel, túnel embutido desligado, permissão de `~/.9router`), depois `41-9router.sh`.
 6. Dono: logins `claude`, `codex`, `agy` no `agente`; escolher o modelo padrão do OpenCode.
 7. Depois: timers dos jobs agendados parados (backup do `n.360-alternative` primeiro), `@ness/auth` (opcional), espelho no Linear (chaves).
+
+**Go-live:** o roteiro por fases (portões, quem faz, rollback) está em `docs/runbooks/2026-10-go-live.md`; o critério de pronto é o `bin/stack-doctor` sem `FALTA`. Nada dele foi executado na VPS.
+
+## Atualização 2026-10-25 (noite) — execução na VPS
+
+- **Feito com aprovação do dono:** `usermod -aG agente pmo`; `/srv/dev` 751, `projetos` e `state` 750, `/srv/dev/pareceres` criado (agente, 750);
+  Coder apagado por completo sem backup (container de teste, 2 volumes, `/srv/coder`, rede e imagens `coder`/`postgres:17`); restos dos runners
+  (redes, imagem, `/srv/runners`); Continue, OpenRig (pacote, estado, linhas do `.bashrc` com backup), sysbox (pacote; Docker reiniciado sem
+  containers) e a regra 8080 do UFW.
+- **Não feito:** `stack-rede-containers` (barrado pelo classificador como enfraquecimento de segurança; precisa de autorização explícita do dono;
+  hoje sem efeito, não há containers de terceiros no Docker do sistema) e a imagem `stack/web` (5,28 GB; decisão do dono).
+- **`stack-doctor` na VPS (leitura):** 29 ok, 1 pend, 16 FALTA. O CI (conta `ci`, regra de rede, `stack-ci-runners`, `status.json`) já aparece
+  instalado e fresco: foi feito fora desta sessão. Faltam o 9router (aguarda merge do #20 e as chaves pelo `43-segredos-guiado.sh`), o clone de
+  `/opt/stack-vps` fora do `main` e o login do `agy`.
+- **PRs:** #19 mergeado; #20 e #21 abertos (#21 empilhado sobre #20); #16 e #17 abertos.
+
+## Atualização 2026-10-25 (9router no ar)
+
+- **9router 0.5.104 instalado e ativo** (`127.0.0.1:20128`; painel só na tailnet em `https://stack.tail985643.ts.net:20128`). `9router.env`
+  gerado com `43-segredos-guiado.sh 9router --gerar` (senha e `JWT_SECRET` nunca impressos). A unidade precisou de `Environment=PATH` com os
+  shims do mise (o shebang `env node` caía no `/usr/local/bin` do dev: "Permission denied").
+- **Fatos medidos:** `GET /v1/models` é público (catálogo embutido); a exigência de chave vale para `POST /v1/chat/completions` (sem chave: 401).
+  `requireApiKey` é `true` por padrão; `tunnelEnabled` é `false` e `tunnelDashboardAccess` foi posto em `false` pela API do painel.
+- **Chave de API `stack-vps`** criada pela API do painel e gravada em `~agente/.config/9router/client.env` e em `/srv/dev/secrets/agente.env`
+  (valor nunca impresso). `opencode-web` reiniciado para enxergá-la; `36-opencode.sh` reaplicado (provedor `9router` com `models: {}` e comando
+  `/novo-projeto`).
+- **Imagem `stack/web` removida:** era a imagem de workspace do Coder (usuário `coder`).
+- **`stack-doctor` na VPS:** 45 ok, 1 pend, 1 FALTA (`/opt/stack-vps` fixado na branch do go-live; volta ao `main` após o merge do #20 e do #21).
+- **Falta (dono):** cadastrar no painel os provedores (OpenRouter, DeepSeek, Featherless; nenhuma conexão cadastrada ainda), acrescentar os
+  modelos ao `opencode.json`, logins de `claude`, `codex` e `agy`, escolher o modelo padrão, merge do #20 e #21, autorizar a remoção do
+  `stack-rede-containers`.
+- **Featherless conectado ao 9router** pela API do painel (`POST /api/providers`, provedor `featherless`, chave lida do `agente.env`, nunca
+  impressa; validação `valid: true`). Prova de ponta a ponta: `POST /v1/chat/completions` com a chave `stack-vps` e o modelo
+  `fl/deepseek-ai/DeepSeek-V4-Pro` respondeu 200 ("ok"). Modelos `fl/…` (DeepSeek V4 Pro/Flash, GLM 5.2/5.1, Kimi K2.7 Code/K2.6/K2.5)
+  acrescentados ao provedor `9router` do `opencode.json` (sem `model` padrão). OpenRouter e DeepSeek direto seguem sem cadastro: as chaves
+  não estão nos arquivos de segredo da VPS.

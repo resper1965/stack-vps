@@ -51,6 +51,14 @@ install -m 755 "$REPO/bin/git-credential-stack" /usr/local/bin/git-credential-st
 install -m 755 "$REPO/bin/modelo" /usr/local/bin/modelo   # catalogo OpenRouter/Featherless (docs/modelos.tsv)
 install -D -m 644 "$REPO/docs/modelos.tsv" /usr/local/share/stack-vps/modelos.tsv
 
+# aviso no celular quando o agente termina: o alertar.sh le NTFY_TOPIC deste arquivo (plugin do OpenCode).
+# Criado so se nao existir, nunca sobrescrito; o topico (segredo proprio deste aviso) o dono preenche depois.
+if [[ ! -e /srv/dev/secrets/aviso.env ]]; then
+  install -d -m 750 -o root -g agente /srv/dev/secrets
+  ( umask 027; printf '%s\n' '# topico ntfy so do aviso "agente terminou" (o plugin aviso.js passa so o caminho deste arquivo)' 'NTFY_TOPIC=' > /srv/dev/secrets/aviso.env )
+  chown root:agente /srv/dev/secrets/aviso.env; chmod 640 /srv/dev/secrets/aviso.env
+fi
+
 # Docker rootless: o AppArmor do Ubuntu 24.04 bloqueia namespace de usuario sem este perfil
 cat > /etc/apparmor.d/usr.bin.rootlesskit <<'AA'
 abi <abi/4.0>,
