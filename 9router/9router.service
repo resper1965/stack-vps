@@ -5,6 +5,8 @@ After=network.target
 [Service]
 Type=simple
 Environment=HOSTNAME=127.0.0.1 PORT=20128 DATA_DIR=%h/.9router
+# a unidade de usuario nao herda o PATH do mise: sem isto o shebang "env node" cai no /usr/local/bin do dev (Permission denied)
+Environment=PATH=%h/.local/bin:%h/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin
 EnvironmentFile=%h/.config/9router/9router.env
 # lancador interativo: --host vence o HOSTNAME do ambiente (sem ele escuta em todas as interfaces); --skip-update sem TTY entra em modo bandeja e fica vivo
 ExecStart=%h/.local/bin/9router --host 127.0.0.1 --port 20128 --no-browser --skip-update

@@ -60,6 +60,7 @@ for a in '--host 127.0.0.1' '--port 20128' '--no-browser' '--skip-update'; do
   grep -qF -- " $a" <<<"$EX"; afirma $? "ExecStart com $a"
 done
 grep -q '^ExecStart=%h/.local/bin/9router ' "$U"; afirma $? "ExecStart no 9router de ~/.local/bin"
+grep -q '^Environment=PATH=%h/.local/bin:%h/.local/share/mise/shims:' "$U"; afirma $? "PATH da unidade com os shims do mise (shebang env node)"
 if [[ $(stat -c %a "$HOME/.9router") == 700 ]]; then ok "DATA_DIR 0700"; else falha "DATA_DIR 0700"; fi
 ! grep -qF -e "$SENHA" -e "$JWT" "$T/saida" "$STUB_LOG"; afirma $? "segredos fora da saida e do log"
 afirma_log "--user try-restart 9router.service" "try-restart para pegar unidade ou ambiente novos"
