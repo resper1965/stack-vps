@@ -1,0 +1,90 @@
+# Autenticação em {{nome}} (opcional)
+
+Este arquivo é opcional: apague-o se o sistema não tiver login. O template **não** traz o `@ness/auth` no
+`package.json`; ligue-o só quando precisar. Destino(s) deste projeto: {{destino}}.
+
+## 1. Dependência
+
+O pacote é privado e não está publicado. Instale como dependência git, fixada numa tag (nunca numa branch):
+
+```
+npm install github:resper1965/ness-auth#v0.1.0
+```
+
+Precisa de acesso ao repositório `resper1965/ness-auth` na máquina que instala (e no build). O pacote é TypeScript:
+o `tsx` (já no `package.json`) e o `wrangler` transpilam sem passo extra. Documentação completa: README do pacote.
+
+## 2. Qual store usar
+
+| Destino | Store | Por quê |
+|---|---|---|
+| `cloudflare` | D1 (`@ness/auth/d1`) | O Worker já tem o binding; sem servidor de banco. |
+| `gcp`, `vercel`, `fora-das-nuvens` | Postgres (`@ness/auth/postgres`) | Um Postgres gerenciado (Cloud SQL, Neon/Supabase) ou o da própria VPS. |
+
+Para Postgres, instale também o cliente: `npm install pg`.
+
+## 3. Ligar no app
+
+Em `src/index.ts`, monte as rotas em `/auth` e proteja o que for restrito com `exigir`:
+
+```ts
+import { criarAuth, type AuthEnv } from '@ness/auth';
+import { criarStorePostgres } from '@ness/auth/postgres'; // D1: import { criarStoreD1 } from '@ness/auth/d1'
+
+const auth = criarAuth({
+  store: criarStorePostgres({ db: pool }), // D1: criarStoreD1({ db: env.DB })
+  trilha: { registrar: async (e) => console.log(JSON.stringify(e)) },
+  mensageiro: { enviar: async (para, assunto, texto) => { /* provedor de e-mail */ } },
+  rbac: { papeis: { admin: ['usuarios:*', 'chaves:*', 'sso:*'], leitor: ['relatorio:ler'] } },
+  ambiente: 'producao',
+  ipDe, // ver a seção 6
+});
+app.route('/auth', auth.rotas);
+app.get('/relatorio', auth.exigir('relatorio:ler'), (c) => c.json({ ok: true }));
+```
+
+Há exemplos completos e testados no repositório do pacote: `exemplo/workers-d1` e `exemplo/node-postgres`.
+
+## 4. Migrações e primeiro admin
+
+- Postgres: `migrar(pool, 'postgres')` (de `@ness/auth/migrar`) num script, antes de subir a versão.
+- D1: `wrangler d1 migrations apply DB --remote`, com `migrations_dir` apontando para
+  `node_modules/@ness/auth/migracoes/d1` no `wrangler.jsonc`.
+- Primeiro admin: script que chama `semearAdmin(store, { email, senha })`, com a senha vinda do ambiente (nunca
+  de argumento de linha de comando nem de arquivo versionado). No D1 o exemplo gera o SQL com o hash para o
+  `wrangler d1 execute`. A senha precisa ter 12+ caracteres, com minúscula, maiúscula, dígito e símbolo.
+
+## 5. Variáveis de ambiente
+
+Os valores ficam no gerenciador de segredos do destino. Nada disto entra no repositório, em `.env` versionado,
+em `wrangler.jsonc` ou em log.
+
+| Nome | Para quê | Obrigatória |
+|---|---|---|
+| `DATABASE_URL` | Conexão do Postgres (destinos que não são `cloudflare`) | sim, no Postgres |
+| `URL_PUBLICA` | URL https pública do sistema, sem barra final | sim, em produção |
+| `SSO_CHAVE_CIFRA` | Cifra o segredo do IdP (32+ caracteres) | só com SSO |
+| `EMERGENCIA_SEGREDO` | Login de emergência (32+ caracteres) | só se ligar a emergência |
+| `PROXIES` | IPs dos proxies reversos de confiança | só em Node atrás de proxy |
+
+No Cloudflare: `wrangler secret put NOME`. Na VPS com Kamal: `.kamal/secrets` (já ignorado pelo Git), citado pelo nome
+em `config/deploy.yml`. No GCP: Secret Manager. Na Vercel: variáveis de ambiente do projeto.
+
+## 6. IP do cliente (`ipDe`) por destino
+
+Em produção o pacote se recusa a subir sem uma fonte confiável de IP, porque o limite de tentativas depende dela.
+
+| Destino | O que fazer |
+|---|---|
+| `cloudflare` | `confiarCloudflare: true` (lê `cf-connecting-ip`), ou `ipDe` com `getConnInfo` de `hono/cloudflare-workers`. |
+| `fora-das-nuvens` (Kamal, proxy próprio) | `ipDe` com `getConnInfo` de `@hono/node-server/conninfo`, aceitando `X-Forwarded-For` só dos IPs do seu proxy. |
+| `gcp` (Cloud Run) | `ipDe` lendo `X-Forwarded-For` do front do Google: o último endereço da cadeia é o do balanceador; use o anterior. Valide no ambiente. |
+| `vercel` | `ipDe` lendo `x-real-ip` ou `x-forwarded-for`, que a Vercel define e sobrescreve. |
+
+Nunca leia `X-Forwarded-For` de qualquer cliente sem saber quem o escreveu: o código de exemplo está no README do
+pacote, na seção "IP do cliente".
+
+## 7. Antes de ir para produção
+
+Siga o "Checklist de produção" do README do pacote: https em tudo, segredos de 32+ caracteres, trilha durável com
+alertas, backup do banco e limite também no proxy. MFA não existe na v1 do pacote.
