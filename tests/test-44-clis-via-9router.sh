@@ -8,14 +8,15 @@ echo "44-clis-via-9router (claude-9r e codex-9r opt-in)"
 prepara() {
   novo_tmp; export HOME=$T/home; mkdir -p "$HOME/.config/9router"
   CL=$HOME/.config/9router/client.env; B=$HOME/.local/bin; CFG=$HOME/.codex/config.toml
-  unset NINE_ROUTER_CODEX_MODEL NINE_ROUTER_CLAUDE_MODEL ANTHROPIC_API_KEY
+  unset NINE_ROUTER_CODEX_MODEL NINE_ROUTER_CLAUDE_MODEL NINE_ROUTER_CLAUDE_SMALL_MODEL ANTHROPIC_API_KEY
   # stub de claude/codex: argv numa linha, variaveis de interesse em outro arquivo
   for c in claude codex; do
     cat > "$STUBS/$c" <<'EOS'
 #!/usr/bin/env bash
 echo "$(basename "$0") $*" >> "$STUB_LOG"
 { echo "BASE=${ANTHROPIC_BASE_URL:-}"; echo "TOKEN=${ANTHROPIC_AUTH_TOKEN:-}"; echo "MODEL=${ANTHROPIC_MODEL:-}"
-  echo "CFGDIR=${CLAUDE_CONFIG_DIR:-}"; echo "APIKEY=${ANTHROPIC_API_KEY:-}"; echo "NRKEY=${NINE_ROUTER_API_KEY:-}"; } > "$STUB_ENV"
+  echo "CFGDIR=${CLAUDE_CONFIG_DIR:-}"; echo "APIKEY=${ANTHROPIC_API_KEY:-}"; echo "NRKEY=${NINE_ROUTER_API_KEY:-}"; echo "HP=${HTTP_PROXY:-}${http_proxy:-}${ALL_PROXY:-}"; echo "NP=${NO_PROXY:-}"
+  echo "BED=${CLAUDE_CODE_USE_BEDROCK:-}${ANTHROPIC_CUSTOM_HEADERS:-}${ANTHROPIC_SMALL_FAST_MODEL:-}"; echo "CH=${CODEX_HOME:-}"; } > "$STUB_ENV"
 EOS
     chmod +x "$STUBS/$c"
   done
@@ -33,7 +34,8 @@ nao "chave fora dos wrappers e da saida" grep -qF "$CHAVE" "$B/claude-9r" "$B/co
 grep -qx '\[model_providers.9router\]' "$CFG" && grep -qx 'wire_api = "responses"' "$CFG" && grep -qx 'base_url = "http://127.0.0.1:20128/v1"' "$CFG" && grep -qx 'env_key = "NINE_ROUTER_API_KEY"' "$CFG"; afirma $? "provedor 9router no config.toml"
 nao "config.toml sem model_provider no topo" grep -qE '^model_provider' "$CFG"
 P=$HOME/.codex/9router.config.toml
-grep -qx 'model_provider = "9router"' "$P" && grep -qx 'model = "cx/gpt-5"' "$P"; afirma $? "perfil com modelo padrao cx/gpt-5"
+grep -qx 'model_provider = "9router"' "$P" && [[ $(sed -n 1p "$P") == "# stack-vps" ]] && ! grep -q "^model" <(grep -v model_provider "$P"); afirma $? "perfil com marcador, sem model= quando a variavel nao vem"
+grep -q "modelo nao definido" "$T/saida"; afirma $? "aviso de modelo nao definido"
 nao "sem temporarios sobrando" compgen -G "$B/*.??????"
 [[ ! -e $HOME/.claude ]] && ok "config do claude padrao intocado" || falha "config do claude padrao intocado"
 
@@ -43,7 +45,7 @@ if [[ $SUM == "$(cat "$B/claude-9r" "$B/codex-9r" "$CFG" "$P")" ]]; then ok "ide
 [[ $(grep -c '^\[model_providers.9router\]' "$CFG") == 1 ]] && ok "provedor nao duplicado" || falha "provedor nao duplicado"
 
 # modelo na instalacao
-NINE_ROUTER_CODEX_MODEL=cx/gpt-5-codex roda; grep -qx 'model = "cx/gpt-5-codex"' "$P"; afirma $? "NINE_ROUTER_CODEX_MODEL vai para o perfil"
+NINE_ROUTER_CODEX_MODEL=cx/gpt-5-codex roda; ! grep -q "modelo nao definido" "$T/saida" && ok "sem aviso com modelo" || falha "sem aviso com modelo"; grep -qx 'model = "cx/gpt-5-codex"' "$P"; afirma $? "NINE_ROUTER_CODEX_MODEL vai para o perfil"
 NINE_ROUTER_CODEX_MODEL='x"
 model_provider = "y' roda; afirma_rc $RC 1 "modelo com caracteres invalidos: recusa"
 
@@ -60,6 +62,31 @@ grep -qx "NRKEY=$CHAVE" "$STUB_ENV"; afirma $? "codex-9r exporta NINE_ROUTER_API
 nao "chave fora do argv do codex" grep -qF "$CHAVE" "$STUB_LOG"
 NINE_ROUTER_CODEX_MODEL=cx/gpt-5 "$B/codex-9r"; afirma_log "codex -p 9router -m cx/gpt-5" "NINE_ROUTER_CODEX_MODEL vira -m"
 
+# ambiente hostil herdado: nada chega ao stub
+ANTHROPIC_BASE_URL=http://evil ANTHROPIC_AUTH_TOKEN=x HTTP_PROXY=http://proxy http_proxy=http://proxy ALL_PROXY=http://proxy CLAUDE_CODE_USE_BEDROCK=1 ANTHROPIC_CUSTOM_HEADERS=h ANTHROPIC_SMALL_FAST_MODEL=s "$B/claude-9r"
+grep -qx 'BASE=http://127.0.0.1:20128' "$STUB_ENV" && grep -qx "TOKEN=$CHAVE" "$STUB_ENV"; afirma $? "BASE e TOKEN herdados sao sobrescritos"
+grep -qx 'HP=' "$STUB_ENV"; afirma $? "proxy herdado nao chega ao stub"
+grep -qx 'NP=127.0.0.1,localhost' "$STUB_ENV"; afirma $? "NO_PROXY inclui 127.0.0.1"
+grep -qx 'BED=' "$STUB_ENV"; afirma $? "Bedrock, headers e modelo pequeno herdados nao chegam"
+NINE_ROUTER_CLAUDE_SMALL_MODEL=cc/haiku "$B/claude-9r"; grep -qx 'BED=cc/haiku' "$STUB_ENV"; afirma $? "NINE_ROUTER_CLAUDE_SMALL_MODEL vira ANTHROPIC_SMALL_FAST_MODEL"
+"$B/codex-9r"; grep -qx "CH=$HOME/.codex" "$STUB_ENV"; afirma $? "codex-9r exporta CODEX_HOME"
+# client.env com CRLF
+printf 'NINE_ROUTER_API_KEY=%s\r\n' "$CHAVE" > "$CL"; "$B/claude-9r"; grep -qx "TOKEN=$CHAVE" "$STUB_ENV"; afirma $? "CRLF: TOKEN sem \r"
+chave
+# base_url diferente: codex-9r recusa e a chave nao chega ao stub
+: > "$STUB_LOG"; rm -f "$STUB_ENV"; sed -i 's|http://127.0.0.1:20128/v1|http://evil/v1|' "$CFG"
+"$B/codex-9r" > "$T/w.out" 2>&1; afirma_rc $? 1 "base_url alterado: codex-9r recusa"
+[[ ! -e $STUB_ENV && ! -s $STUB_LOG ]] && ok "base_url alterado: sem exec, chave fora do stub" || falha "base_url alterado: sem exec, chave fora do stub"
+nao "base_url alterado: chave fora da saida" grep -qF "$CHAVE" "$T/w.out"
+roda; afirma_rc $RC 1 "script 44 com base_url diferente: falha"
+sed -i 's|http://evil/v1|http://127.0.0.1:20128/v1|' "$CFG"
+# trava com indentacao
+printf '  model_provider = "x"\n' >> "$CFG"; roda; afirma_rc $RC 1 "model_provider indentado: recusa"
+sed -i '/model_provider = "x"/d' "$CFG"
+# link no destino e perfil do dono
+rm "$B/codex-9r"; ln -s "$T/alvo" "$B/codex-9r"; roda; [[ -L $B/codex-9r && ! -e $T/alvo ]] && ok "destino link: recusado" || falha "destino link: recusado"; grep -q 'AVISO:.*codex-9r.*link' "$T/saida" && ok "destino link: aviso" || falha "destino link: aviso"
+rm "$B/codex-9r"; roda
+echo 'model = "meu"' > "$P"; roda; [[ $(cat "$P") == 'model = "meu"' ]] && ok "perfil do dono sem marcador intocado" || falha "perfil do dono sem marcador intocado"
 # client.env invalido: wrapper falha sem exec
 recusa() { # $1 descricao
   : > "$STUB_LOG"
