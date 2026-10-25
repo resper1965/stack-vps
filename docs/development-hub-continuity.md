@@ -122,3 +122,5 @@ concessão de acesso (grupo/ACL): esses passos ficam com o dono.
 5. VPS: spike do 9router (`requireApiKey` no painel, túnel embutido desligado, permissão de `~/.9router`), depois `41-9router.sh`.
 6. Dono: logins `claude`, `codex`, `agy` no `agente`; escolher o modelo padrão do OpenCode.
 7. Depois: timers dos jobs agendados parados (backup do `n.360-alternative` primeiro), `@ness/auth` (opcional), espelho no Linear (chaves).
+
+**Go-live:** o roteiro por fases (portões, quem faz, rollback) está em `docs/runbooks/2026-10-go-live.md`; o critério de pronto é o `bin/stack-doctor` sem `FALTA`. Nada dele foi executado na VPS.
