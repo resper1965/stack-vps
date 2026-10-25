@@ -33,7 +33,7 @@ trap 'rm -f "$tmp" "$tmp2"' EXIT
 le_segredo() {
   if [[ $TESTE == 1 && -n ${SEG_ENTRADA:-} ]]; then IFS= read -r REPLY <&3 || REPLY=""
   else
-    [[ -r /dev/tty ]] || fim "sem terminal para ler $1 (rode num terminal interativo)"
+    { : < /dev/tty; } 2>/dev/null || fim "sem terminal para ler o valor (rode num terminal interativo)"
     printf '%s: ' "$1" > /dev/tty; IFS= read -rs REPLY < /dev/tty || REPLY=""; echo > /dev/tty
   fi
 }
@@ -42,11 +42,13 @@ gera() { local s; s=$(head -c 192 /dev/urandom | base64 -w0 | tr -dc 'A-Za-z0-9'
 valida() {
   [[ -n $2 ]] || fim "$1 vazio"
   [[ ${#2} -ge $3 ]] || fim "$1 curto (minimo $3 caracteres)"
-  [[ $2 != *$'\r'* && $2 != *$'\n'* ]] || fim "$1 tem CR ou quebra de linha"
+  [[ $2 != *[[:cntrl:]]* ]] || fim "$1 tem caractere de controle (CR, quebra de linha, tab...)"
   [[ $2 != [\'\"]* ]] || fim "$1 nao pode comecar com aspas"
   case $2 in *'"'*|*\\*|*' '*) fim "$1 nao pode ter aspas, barra invertida ou espaco" ;; esac
 }
-# grava <arquivo> <CHAVE> <valor>...: troca/acrescenta as chaves; preserva as outras linhas, dono e modo do existente
+# grava <arquivo> <CHAVE> <valor>...: troca/acrescenta as chaves; preserva as outras linhas.
+# Arquivo existente: grava no MESMO inode (cat > f), sem mv nem chown: dono, grupo e modo ficam como estao
+# (agente.env e dev:agente 640 e o dev nao pertence ao grupo agente). Backup em temporario 0600 restaura se falhar.
 grava() {
   local f=$1; shift
   local args=("$@") i linha pula
@@ -56,16 +58,18 @@ grava() {
   if [[ -f $f ]]; then
     while IFS= read -r linha || [[ -n $linha ]]; do
       pula=0
-      for ((i=0; i<${#args[@]}; i+=2)); do [[ $linha == "${args[i]}="* ]] && pula=1; done
+      for ((i=0; i<${#args[@]}; i+=2)); do [[ $linha == "${args[i]}="* || $linha == "export ${args[i]}="* ]] && pula=1; done
       [[ $pula == 1 ]] || printf '%s\n' "$linha" >> "$tmp"
     done < "$f"
-    chmod --reference="$f" "$tmp"
-    chown --reference="$f" "$tmp" 2>/dev/null || chgrp --reference="$f" "$tmp" 2>/dev/null || fim "nao consegui preservar o dono de $f"
+    for ((i=0; i<${#args[@]}; i+=2)); do printf '%s=%s\n' "${args[i]}" "${args[i+1]}" >> "$tmp"; done
+    tmp2=$(mktemp "$f.XXXXXX"); cat "$f" > "$tmp2" || fim "nao consegui ler $f"
+    if ! cat "$tmp" > "$f"; then cat "$tmp2" > "$f" || true; fim "falha ao gravar $f; conteudo original restaurado"; fi
+    return 0
   fi
   for ((i=0; i<${#args[@]}; i+=2)); do printf '%s=%s\n' "${args[i]}" "${args[i+1]}" >> "$tmp"; done
   mv "$tmp" "$f"; tmp=""
 }
-tem_chave() { [[ -f $1 ]] && grep -q "^$2=" "$1"; }
+tem_chave() { [[ -f $1 ]] && grep -Eq "^(export )?$2=" "$1"; }
 recusa_se_existe() { [[ $TROCAR == 1 ]] || fim "$1 ja existe; use --trocar para sobrescrever"; }
 
 case $ALVO in
@@ -86,6 +90,7 @@ case $ALVO in
     le_segredo "NINE_ROUTER_API_KEY (do painel do 9router)"; valida NINE_ROUTER_API_KEY "$REPLY" 8
     grava "$f" NINE_ROUTER_API_KEY "$REPLY"
     echo "gravado $f (0600)."
+    echo "proxima etapa, como dev: /opt/stack-vps/scripts/43-segredos-guiado.sh agente"
   fi ;;
 agente)
   f=$AGENTE_ENV

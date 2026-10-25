@@ -44,11 +44,15 @@ existente sem `--trocar`:
 
 - `9router`: cria `~/.config/9router/9router.env` (0600) com `INITIAL_PASSWORD` (≥ 16; `--gerar` cria aleatório de 24+ caracteres) e
   `JWT_SECRET` (sempre gerado, 48+ caracteres). Com `--gerar` a senha **não** é impressa: o dono a lê uma vez com `cat` do arquivo para entrar no painel.
-- `cliente`: pede `NINE_ROUTER_API_KEY` (a chave criada no painel) com entrada oculta e grava em `~/.config/9router/client.env` (0600);
-  e acrescenta a mesma linha em `/srv/dev/secrets/agente.env` sem duplicar, preservando o modo e o dono do arquivo.
-- `linear`: pede `LINEAR_API_KEY` e `LINEAR_TEAM_KEY` e grava onde o `pmo-linear` lê (conferir no código; se for em `/etc/pmo`, o subcomando roda com sudo).
+- `cliente` (como `agente`): pede `NINE_ROUTER_API_KEY` (a chave criada no painel) com entrada oculta e grava em `~/.config/9router/client.env` (0600).
+  Ao fim imprime a etapa seguinte, sem valor: `como dev: /opt/stack-vps/scripts/43-segredos-guiado.sh agente`.
+- `agente` (como `dev`): pede a mesma chave e grava a linha `NINE_ROUTER_API_KEY=` em `/srv/dev/secrets/agente.env`, sem duplicar (reconhece `export`).
+  Existe separado porque o `agente.env` e `dev:agente` 0640 (criado pelo `02-layout.sh`): o `agente` nao escreve nele e o `dev` nao pertence ao grupo `agente`,
+  entao o subcomando grava no mesmo inode (`cat > arquivo`), sem `mv` nem `chown`, preservando dono, grupo e modo; restaura o original se a gravacao falhar.
+- `linear` (como root): pede `LINEAR_API_KEY` e `LINEAR_TEAM_KEY` e grava `/etc/pmo/linear-token` e `/etc/pmo/linear-team` (root:pmo 0640, valor cru), onde `pmo/linear.py` le;
+  sem root o subcomando diz `sudo /opt/stack-vps/scripts/43-segredos-guiado.sh linear`.
 
-Valores recusados: vazios, com aspas no início, com CR/quebra de linha, e senha < 16.
+Valores recusados: vazios, com aspas no início, com qualquer caractere de controle (CR, quebra de linha, tab), e senha < 16.
 
 ## 3. Runbook `docs/runbooks/2026-10-go-live.md`
 

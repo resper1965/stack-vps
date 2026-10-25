@@ -86,4 +86,22 @@ roda linear < <(printf '%s\n%s\n' "outro_token_123456" "ABC"); afirma_rc $RC 1 "
 prepara; SEG_EUID=1000 roda linear < <(printf '%s\n%s\n' "lin_api_teste_123456" "ABC"); afirma_rc $RC 1 "linear sem root"
 grep -q sudo "$T/saida"; afirma $? "linear sem root diz sudo"; [[ ! -e $SEG_LINEAR_DIR/linear-token ]] && r=0 || r=1; afirma $r "nada escrito sem root"
 prepara; roda linear < <(printf '%s\n%s\n' "lin_api_teste_123456" ""); afirma_rc $RC 1 "linear time vazio"; [[ ! -e $SEG_LINEAR_DIR/linear-token ]] && r=0 || r=1; afirma $r "time vazio: nada escrito"
+# agente.env real: chown/chgrp proibidos (dev fora do grupo agente); mesmo inode, dono, grupo e modo; export reconhecido
+prepara; stub chown 1; stub chgrp 1; printf 'GITHUB_TOKEN=abc\nexport NINE_ROUTER_API_KEY=velha-chave-123\n' > "$SEG_AGENTE_ENV"; chmod 640 "$SEG_AGENTE_ENV"
+antes=$(stat -c '%i %U:%G %a' "$SEG_AGENTE_ENV")
+roda agente < <(printf '%s\n' "$CHAVE"); afirma_rc $RC 1 "export existente recusa sem --trocar"
+roda agente --trocar < <(printf '%s\n' "$CHAVE"); afirma_rc $RC 0 "agente --trocar com chown proibido"
+[[ $(stat -c '%i %U:%G %a' "$SEG_AGENTE_ENV") == "$antes" ]] && r=0 || r=1; afirma $r "mesmo inode, dono, grupo e modo"
+nega_log chown "chown nao chamado"; nega_log chgrp "chgrp nao chamado"
+[[ $(grep -c 'NINE_ROUTER_API_KEY=' "$SEG_AGENTE_ENV") == 1 ]] && grep -qx "NINE_ROUTER_API_KEY=$CHAVE" "$SEG_AGENTE_ENV" && grep -qx GITHUB_TOKEN=abc "$SEG_AGENTE_ENV" && r=0 || r=1; afirma $r "chave entrou, export antigo saiu"
+n=$(find "$T" -maxdepth 1 -name 'agente.env.*' | wc -l); [[ $n == 0 ]] && r=0 || r=1; afirma $r "temporarios removidos"
+sem_valor "agente real" "$CHAVE" velha-chave-123
+
+# cliente indica a segunda etapa; tab recusado
+prepara; roda cliente < <(printf '%s\n' "$CHAVE"); grep -qF "como dev: /opt/stack-vps/scripts/43-segredos-guiado.sh agente" "$T/saida" && r=0 || r=1; afirma $r "cliente imprime a proxima etapa"
+invalida "senha com tab" "senha-com-tab"$'\t'"-longa-123" "$JWT"
+
+# sem terminal e sem entrada de teste: mensagem clara, nada escrito
+prepara; setsid -w bash "$S" cliente < /dev/null > "$T/saida" 2>&1; RC=$?; afirma_rc $RC 1 "sem terminal"
+grep -qF "sem terminal para ler o valor" "$T/saida" && r=0 || r=1; afirma $r "mensagem de sem terminal"; [[ ! -e $DIR/client.env ]] && r=0 || r=1; afirma $r "sem terminal: nada escrito"
 fim
