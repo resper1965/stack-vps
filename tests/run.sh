@@ -15,5 +15,7 @@ if [[ -d ci/tests ]]; then
   echo "ci (python)"
   if python3 -m unittest discover -s ci/tests -t . -q 2>"$HOME/.ci-testes.log"; then echo "  ok"; else cat "$HOME/.ci-testes.log"; rc=1; fi
 fi
+for t in tests/test-*.py; do
+  [[ -e $t ]] || continue; echo "$t"; python3 "$t" || rc=1; done
 for t in tests/test-*.sh; do [[ -e $t ]] || continue; echo "$t"; bash "$t" || rc=1; done
 exit $rc

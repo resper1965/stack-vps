@@ -22,7 +22,7 @@ Resolver a dor de **um desenvolvedor** que trabalha no escritório e continua em
 
 - **Prioridade:** continuidade remota, sessões persistentes, integração com PMO, depois Project Factory e skills.
 - PMO é **o único painel**. Reaproveitar serviços e padrão existente; não criar novo produto/painel.
-- Projetos podem ser software, análise, GRC, forense, docs ou arquitetura. Bootstrap, perfis GCP/Vercel/Cloudflare/Azure/local e escolha de stack são **somente para novos projetos**. Existentes permanecem intactos.
+- Projetos podem ser software, análise, GRC, forense, docs ou arquitetura. Bootstrap, perfis GCP/Vercel/Cloudflare/fora-das-nuvens e escolha de stack são **somente para novos projetos**. Existentes permanecem intactos.
 - Skills são reutilizáveis; Ponytail prioritariamente para código, Superpowers para planejamento/testes; práticas SSDLC proporcionais ao risco.
 - Respeitar freeze de projetos: suspende análises/alertas periódicos, não backups nem segurança (requisito planejado, não afirmar implementado).
 - Privacidade e mínimos privilégios: nada de segredos em Git, coleta de prompts/transcrições para PMO, exposição pública do OpenCode ou automação destrutiva.
@@ -88,3 +88,37 @@ Levantamento somente leitura na VPS, sem segredo e sem URL de pareamento. Nada f
 - **Decisão nova:** o dono não tem créditos de GitHub Actions. Runners na VPS voltam (containers isolados sob a conta `ci`,
   só repositórios privados das organizações), com CI local como padrão e jobs agendados como timers systemd. **Planejado,
   nada implementado ainda.** Ver `docs/superpowers/specs/2026-10-19-ci-sem-creditos-design.md`.
+
+## Atualização 2026-10-25 — estado e processo
+
+**Na VPS (leitura de 2026-10-25, nada alterado hoje):** PMO em socket Unix, OpenCode Web e `tailscale serve` (etapa 2, PR #18 mergeado
+em 2026-10-23). `/srv/dev`, `/srv/dev/projetos` e `/srv/dev/state` ainda em 755; o usuário `ci` existe (UID 1003) e hoje leria essas
+pastas; `/srv/dev/pareceres` não existe. O usuário `pmo` lê `/srv/dev/projetos` e `/srv/dev/state/pmo/painel.json` mas não está no grupo
+`agente`: apertar essas pastas para 750 exige antes `usermod -aG agente pmo` (concessão de acesso, **aguarda o dono**) e reiniciar o
+`pmo.service`. Restos do runbook de remoções (sysbox, `stack-rede-containers`, `.continue`, OpenRig, regra 8080 do UFW, imagens/redes/
+volumes do Coder) seguem na VPS. Dados do Coder: apagar é irreversível, decisão do dono pendente.
+
+**No GitHub:**
+- #18 (lugar de trabalho): mergeado.
+- #19 (runners de CI isolados, Tasks 2 a 7): aberto, revisado, **nada instalado**; a Task 8 (instalar e piloto em `bekaa-trusted-advisors`)
+  depende de snapshot e aprovação por passo. Decisão do dono (2026-10-23): manter o `RUNNER_TOKEN` (PAT clássico `admin:org`) e aceitar o risco.
+- #20 (9router faixa 1 + `/novo-projeto` + 3 templates): aberto, revisado contra o pacote real `9router@0.5.104`, **nada instalado**.
+- #16 e #17 (correções do PMO): abertos.
+
+**Decisões vigentes:** 9router e `/novo-projeto` são obrigatórios. 9router só com chaves de API (OpenRouter, DeepSeek, Featherless); as
+assinaturas (Claude Code x2, Codex, Antigravity) ficam nos CLIs oficiais do `agente`, fora do 9router (termos da Anthropic, roteamento de
+conta automático, CVEs). Conta pessoal sem runner; CI local como padrão.
+
+**Processo de entrega (como estamos trabalhando):** spec e plano por etapa em `docs/superpowers/`; execução por subagentes com revisão
+por task, revisão final da branch e re-revisão das correções; PR por etapa; na VPS, um passo por vez, com snapshot antes de mudança
+destrutiva e aprovação do dono a cada comando que altere estado. O classificador do Claude Code barra por conta própria merge de PR e
+concessão de acesso (grupo/ACL): esses passos ficam com o dono.
+
+**Próximos passos, em ordem:**
+1. Dono: merge de #19 e #20; criar o snapshot no hPanel.
+2. VPS: `usermod -aG agente pmo` (dono), aperto 750/751 de `/srv/dev`, criar `/srv/dev/pareceres`, restart do `pmo.service`.
+3. VPS: remoções do runbook (cada bloco com aprovação; Coder só com decisão sobre backup).
+4. VPS: piloto de CI (Task 8): 38, 39, 40 com `bekaa-trusted-advisors`.
+5. VPS: spike do 9router (`requireApiKey` no painel, túnel embutido desligado, permissão de `~/.9router`), depois `41-9router.sh`.
+6. Dono: logins `claude`, `codex`, `agy` no `agente`; escolher o modelo padrão do OpenCode.
+7. Depois: timers dos jobs agendados parados (backup do `n.360-alternative` primeiro), `@ness/auth` (opcional), espelho no Linear (chaves).

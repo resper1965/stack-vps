@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""modelo: pergunta a um modelo do OpenRouter ou da Featherless pelo apelido do catalogo (docs/modelos.tsv).
+"""modelo: pergunta a um modelo do OpenRouter, da Featherless ou do 9router pelo apelido do catalogo (docs/modelos.tsv).
 
   modelo -l                          lista os apelidos
   modelo <apelido> "pergunta"        responde no terminal
   cat scan.txt | modelo <apelido> "resuma"   o que vier pelo pipe entra junto da pergunta
 
-Chave: variavel de ambiente (OPENROUTER_API_KEY, FEATHERLESS_API_KEY) ou, se faltar, o agente.env.
+Chave: variavel de ambiente (OPENROUTER_API_KEY, FEATHERLESS_API_KEY, NINE_ROUTER_API_KEY) ou, se faltar, o agente.env.
 Nunca imprime a chave.
 """
 import json
@@ -19,6 +19,7 @@ SEGREDOS = os.environ.get("MODELOS_ENV", "/srv/dev/secrets/agente.env")
 PROVEDORES = {
     "openrouter": ("OPENROUTER_API_KEY", os.environ.get("MODELO_BASE_OPENROUTER", "https://openrouter.ai/api/v1")),
     "featherless": ("FEATHERLESS_API_KEY", os.environ.get("MODELO_BASE_FEATHERLESS", "https://api.featherless.ai/v1")),
+    "9router": ("NINE_ROUTER_API_KEY", os.environ.get("MODELO_BASE_9ROUTER", "http://127.0.0.1:20128/v1")),
 }
 
 
@@ -44,7 +45,8 @@ def chave(nome):
 
 def config_continue(cat):
     """~/.continue/config.yaml: um modelo por apelido; a chave entra por referencia (secrets.*), nunca o valor."""
-    bases = {"openrouter": "https://openrouter.ai/api/v1", "featherless": "https://api.featherless.ai/v1"}
+    bases = {"openrouter": "https://openrouter.ai/api/v1", "featherless": "https://api.featherless.ai/v1",
+             "9router": "http://127.0.0.1:20128/v1"}
     linhas = ["# gerado por `modelo --continue` a partir de docs/modelos.tsv do stack-vps; nao editar a mao",
               "name: stack-vps", "version: 1.0.0", "schema: v1", "models:"]
     for a, m in cat.items():
