@@ -5,7 +5,7 @@ H=$RAIZ_REPO/bin/health.sh
 echo "health (acesso: emergencia, opencode, pmo)"
 # Outras secoes dependem da maquina (disco, memoria, backup): assertamos nas linhas, nao no rc global.
 prepara() {
-  export STACK_CF_DIR=$T/cf HEALTH_PMO_ENV=$T/servidor.env HEALTH_OPENCODE_URL=http://127.0.0.1:4096/ HEALTH_PMO_SOCKET=$T/pmo.sock HEALTH_9ROUTER_UNIT=$T/nao-existe.service HEALTH_9ROUTER_URL=http://127.0.0.1:20128/api/health
+  export STACK_CF_DIR=$T/cf HEALTH_PMO_ENV=$T/servidor.env HEALTH_OPENCODE_URL=http://127.0.0.1:4096/ HEALTH_PMO_SOCKET=$T/pmo.sock HEALTH_9ROUTER_UNIT=$T/nao-existe.service HEALTH_9ROUTER_URL=http://127.0.0.1:20128/api/health HEALTH_JOBS_UNITS=$T/units HEALTH_JOBS_STATE=$T/jstate
   mkdir -p "$STACK_CF_DIR"; printf 'ingress:\n  - service: http_status:404\n' > "$STACK_CF_DIR/config.yml"
   printf 'PMO_HOSTS=pmo.esper.ws,outro.esper.ws\n' > "$HEALTH_PMO_ENV"
   systemctl_com 1; stub tailscale 0 100.1.2.3; stub ip; stub docker; stub df 0 "Use%"
@@ -165,5 +165,55 @@ ci_prepara; head -c 200000 /dev/zero | tr '\0' 'A' > "$HEALTH_CI_STATUS"; roda
 tem "FALHA runners sem status"; afirma "$?" "ci: arquivo enorme: FALHA sem travar"
 ci_prepara; { printf '{"atualizado": %s, "runners": 3, "erro": null' "$(date +%s)"; head -c 70000 /dev/zero | tr '\0' ' '; printf '}'; } > "$HEALTH_CI_STATUS"; roda
 tem "FALHA runners sem status"; afirma "$?" "ci: JSON valido acima de 64 KiB: FALHA"
+# secao jobs: some sem timer; por job: rc, idade conforme a agenda, primeiro ciclo (conteudo do json e nao confiavel)
+jobs_prepara() { novo_tmp; prepara; mkdir -p "$T/units" "$T/jstate"; }
+# timer <nome> <agenda> <idade-do-timer-em-horas>
+jtimer() { printf '[Timer]\nOnCalendar=%s\n' "$2" > "$T/units/stack-job-$1.timer"; touch -d "$3 hours ago" "$T/units/stack-job-$1.timer"; }
+# jstatus <nome> <rc> <idade-em-horas>
+jstatus() { printf '{"inicio": 1, "fim": %s, "rc": %s, "resumo": "SEGREDO-no-resumo $(id)"}' "$(( $(date +%s) - $3 * 3600 ))" "$2" > "$T/jstate/$1.json"; }
+jobs_sec() { sed -n '/^jobs$/,/^disco$/p' <<<"$saida"; }
+
+jobs_prepara; roda
+! grep -qx jobs <<<"$saida"; afirma "$?" "jobs: sem timer, sem secao"
+jobs_prepara; jtimer a "*-*-* 03:00:00" 100; jstatus a 0 5; roda
+grep -qx jobs <<<"$saida"; afirma "$?" "jobs: com timer, ha secao"
+tem "ok    job a (rc 0 há 5h)"; afirma "$?" "jobs: rc 0 e fresco: ok"
+! jobs_sec | grep -q FALHA; afirma "$?" "jobs: saudavel sem FALHA"
+! tem "SEGREDO-no-resumo"; afirma "$?" "jobs: resumo do json nunca impresso"
+jobs_prepara; jtimer a "*-*-* 03:00:00" 100; jstatus a 7 1; roda
+tem "FALHA job a falhou (rc 7)"; afirma "$?" "jobs: rc != 0: FALHA"
+afirma_rc "$rc" 1 "jobs: rc != 0: rc 1"
+jobs_prepara; jtimer a "*-*-* 03:00:00" 100; jstatus a 0 40; roda
+tem "FALHA job a sem rodar há 40h (limite 36h)"; afirma "$?" "jobs: diario com 40h: FALHA"
+jobs_prepara; jtimer a "daily" 100; jstatus a 0 30; roda
+tem "ok    job a"; afirma "$?" "jobs: diario com 30h: ok"
+jobs_prepara; jtimer w "Mon *-*-* 03:00:00" 400; jstatus w 0 150; roda
+tem "ok    job w (rc 0 há 150h)"; afirma "$?" "jobs: semanal (Mon) com 150h: ok"
+jobs_prepara; jtimer w "weekly" 400; jstatus w 0 220; roda
+tem "FALHA job w sem rodar há 220h (limite 216h)"; afirma "$?" "jobs: semanal com 220h: FALHA"
+jobs_prepara; jtimer m "monthly" 4000; jstatus m 0 300; roda
+tem "ok    job m"; afirma "$?" "jobs: monthly nao e confundido com Mon: ok com 300h"
+jobs_prepara; jtimer a "daily" 100; roda
+tem "FALHA job a nunca rodou (timer instalado há 100h)"; afirma "$?" "jobs: sem status depois do primeiro ciclo: FALHA"
+jobs_prepara; jtimer a "daily" 2; roda
+tem "pend  job a aguardando o primeiro ciclo"; afirma "$?" "jobs: sem status e timer novo: pend"
+! jobs_sec | grep -q FALHA; afirma "$?" "jobs: primeiro ciclo nao e FALHA"
+jobs_prepara; jtimer a "daily" 100; printf 'isto nao e json' > "$T/jstate/a.json"; roda
+tem "FALHA job a com status inválido"; afirma "$?" "jobs: json invalido: FALHA"
+jobs_prepara; jtimer a "daily" 100; printf '{"inicio": 1, "fim": %s, "rc": "0"}' "$(date +%s)" > "$T/jstate/a.json"; roda
+tem "FALHA job a com status inválido"; afirma "$?" "jobs: rc como string: FALHA (tipos estritos)"
+jobs_prepara; jtimer a "daily" 100; printf '{"inicio": 1, "fim": %s, "rc": true}' "$(date +%s)" > "$T/jstate/a.json"; roda
+tem "FALHA job a com status inválido"; afirma "$?" "jobs: rc booleano: FALHA"
+jobs_prepara; jtimer a "daily" 100; printf '{"inicio": 1, "fim": %s, "rc": 0}' "$(( $(date +%s) + 7200 ))" > "$T/jstate/a.json"; roda
+tem "FALHA job a com status inválido"; afirma "$?" "jobs: fim no futuro: FALHA"
+jobs_prepara; jtimer a "daily" 100; { printf '{"inicio": 1, "fim": %s, "rc": 0, "resumo": "' "$(date +%s)"; head -c 70000 /dev/zero | tr '\0' 'A'; printf '"}'; } > "$T/jstate/a.json"; roda
+tem "FALHA job a com status inválido"; afirma "$?" "jobs: json acima de 64 KiB: FALHA"
+jobs_prepara; jtimer a "daily" 100; jstatus a 0 1; mv "$T/jstate/a.json" "$T/real.json"; ln -s "$T/real.json" "$T/jstate/a.json"; roda
+tem "FALHA job a com status inválido"; afirma "$?" "jobs: json e link: FALHA"
+jobs_prepara; jtimer a "daily" 100; jstatus a 0 1; jtimer b "daily" 100; jstatus b 2 1; roda
+tem "ok    job a" && tem "FALHA job b falhou (rc 2)"; afirma "$?" "jobs: um ok e um falho, ambos listados"
+jobs_prepara; jtimer 'Mal_Nome' "daily" 100; roda
+! jobs_sec | grep -q 'Mal_Nome'; afirma "$?" "jobs: timer com nome fora de [a-z0-9-] ignorado"
+
 unset STUB_CI_CAT STUB_CI_ACTIVE STUB_CI_ENABLED HEALTH_CI_STATUS HEALTH_CI_REDE
 fim

@@ -109,6 +109,60 @@ except Exception:
   else printf '  pend  %s\n' "runners instalados, mas não habilitados"; fi
 fi
 
+# jobs agendados (scripts/45-jobs.sh): so aparece se ha timer stack-job-* instalado. O JSON e do agente (nao
+# confiavel): so numeros e o nome do job (validado pelo nome do arquivo) sao impressos.
+jobs_units=/etc/systemd/system; jobs_state=/srv/dev/state/jobs
+[[ ${STACK_TESTE:-} == 1 ]] && { jobs_units=${HEALTH_JOBS_UNITS:-$jobs_units}; jobs_state=${HEALTH_JOBS_STATE:-$jobs_state}; }
+shopt -s nullglob; jobs_timers=("$jobs_units"/stack-job-*.timer); shopt -u nullglob
+if (( ${#jobs_timers[@]} > 0 )); then
+  echo "jobs"
+  for t in "${jobs_timers[@]}"; do
+    jn=${t##*/stack-job-}; jn=${jn%.timer}
+    [[ $jn =~ ^[a-z0-9-]+$ ]] || continue
+    ag=$(sed -n 's/^OnCalendar=//p' "$t" | head -1); ag=${ag,,}
+    # limite fixo por tipo de agenda (2x o intervalo, com folga): diario 36h, semanal 9d, mensal 33d, anual 400d
+    case $ag in
+      *quarterly*|*semiannually*|*yearly*|*annually*) lim=9600 ;;
+      *monthly*) lim=792 ;;
+      *weekly*|*mon*|*tue*|*wed*|*thu*|*fri*|*sat*|*sun*) lim=216 ;;
+      *) lim=36 ;;
+    esac
+    jf=$jobs_state/$jn.json; r=invalido
+    if [[ -f $jf && ! -L $jf ]]; then
+      r=$(timeout 10 python3 -I -c '
+import json, os, sys, time
+try:
+    fd = os.open(sys.argv[1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    bruto = os.read(fd, 65536 + 1)
+    if len(bruto) > 65536: raise ValueError
+    d = json.loads(bruto.decode("utf-8"))
+    if not isinstance(d, dict): raise ValueError
+    rc, fim = d["rc"], d["fim"]
+    if isinstance(rc, bool) or not isinstance(rc, int) or not 0 <= rc <= 100000: raise ValueError
+    if isinstance(fim, bool) or not isinstance(fim, (int, float)) or not 0 < fim < 4e9: raise ValueError
+    idade = time.time() - fim
+    if idade < -60: raise ValueError
+    h = int(idade // 3600)
+    print("rc %d" % rc if rc != 0 else "velho %d" % h if h > int(sys.argv[2]) else "ok %d" % h)
+except Exception:
+    print("invalido")
+' "$jf" "$lim" 2>/dev/null) || r=invalido
+    elif [[ ! -e $jf && ! -L $jf ]]; then
+      r=ausente
+    fi
+    case $r in
+      ok\ *) ok "job $jn (rc 0 há ${r#ok }h)" ;;
+      rc\ *) bad "job $jn falhou (rc ${r#rc })" ;;
+      velho\ *) bad "job $jn sem rodar há ${r#velho }h (limite ${lim}h)" ;;
+      ausente)
+        ti=$(( ($(date +%s) - $(stat -c %Y "$t")) / 3600 ))
+        if (( ti < lim )); then printf '  pend  %s\n' "job $jn aguardando o primeiro ciclo"
+        else bad "job $jn nunca rodou (timer instalado há ${ti}h)"; fi ;;
+      *) bad "job $jn com status inválido" ;;
+    esac
+  done
+fi
+
 echo "disco"
 use=$(df --output=pcent /srv | tail -1 | tr -dc '0-9')
 (( use < 85 )) && ok "/srv em ${use}%" || bad "/srv em ${use}%"
