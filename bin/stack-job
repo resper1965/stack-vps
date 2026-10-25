@@ -7,7 +7,7 @@
 # e chama o alertar.sh. O comando roda com ambiente fechado (PATH, HOME, LANG e os segredos do arquivo) e um
 # so processo por job (flock). Nao roda como root.
 # Uso: stack-job <nome>
-# Sobrescreviveis nos testes (so com STACK_TESTE=1): JOBS_DIR STATE_DIR WORK_DIR SECRETS_DIR ALERTAR CLONE_CMD
+# Sobrescreviveis nos testes (so com STACK_TESTE=1): JOBS_DIR STATE_DIR WORK_DIR SECRETS_DIR ALERTAR CLONE_CMD AVISO_ENV
 # CLONE_TIMEOUT (s) JOB_TIMEOUT_UNIT (m|s) JOB_SECRETS_DONO.
 set -uo pipefail
 set -f   # COMANDO aceita '*' (nao e glob aqui)
@@ -21,12 +21,12 @@ REPO_DIR=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 # >>> normaliza
 if [[ ${STACK_TESTE:-} != 1 ]]; then
   JOBS_DIR=$REPO_DIR/jobs; STATE_DIR=/srv/dev/state/jobs; WORK_DIR=/srv/dev/jobs/work; SECRETS_DIR=/srv/dev/secrets/jobs
-  ALERTAR=/usr/local/lib/stack-vps/alertar.sh; CLONE_CMD=; CLONE_TIMEOUT=300; JOB_TIMEOUT_UNIT=m; JOB_SECRETS_DONO=dev
+  ALERTAR=/usr/local/lib/stack-vps/alertar.sh; AVISO_ENV=/srv/dev/secrets/aviso.env; CLONE_CMD=; CLONE_TIMEOUT=300; JOB_TIMEOUT_UNIT=m; JOB_SECRETS_DONO=dev
 fi
 # <<< normaliza
 JOBS_DIR=${JOBS_DIR:-$REPO_DIR/jobs}; STATE_DIR=${STATE_DIR:-/srv/dev/state/jobs}; WORK_DIR=${WORK_DIR:-/srv/dev/jobs/work}
 SECRETS_DIR=${SECRETS_DIR:-/srv/dev/secrets/jobs}; ALERTAR=${ALERTAR:-/usr/local/lib/stack-vps/alertar.sh}
-CLONE_CMD=${CLONE_CMD:-}; CLONE_TIMEOUT=${CLONE_TIMEOUT:-300}; JOB_TIMEOUT_UNIT=${JOB_TIMEOUT_UNIT:-m}
+AVISO_ENV=${AVISO_ENV:-/srv/dev/secrets/aviso.env}; CLONE_CMD=${CLONE_CMD:-}; CLONE_TIMEOUT=${CLONE_TIMEOUT:-300}; JOB_TIMEOUT_UNIT=${JOB_TIMEOUT_UNIT:-m}
 JOB_SECRETS_DONO=${JOB_SECRETS_DONO:-dev}
 
 # shellcheck source=scripts/lib/job-parse.sh
@@ -134,5 +134,6 @@ os.replace(tmp, saida)
 ' "$LOG" "$JSON" "$inicio" "$fim" "$rc" || echo "stack-job: nao gravei $JSON" >&2
 
 echo "stack-job: $nome rc=$rc"
-if (( rc != 0 )); then "$ALERTAR" "job falhou" "$nome rc=$rc" >/dev/null 2>&1 || echo "stack-job: alerta nao entregue"; fi
+# o agente nao le o admin.env (dev 0600): o alerta dos jobs usa o aviso.env (root:agente 0640, so NTFY_TOPIC)
+if (( rc != 0 )); then ALERTA_ENV=$AVISO_ENV "$ALERTAR" "job falhou" "$nome rc=$rc" >/dev/null 2>&1 || echo "stack-job: alerta nao entregue"; fi
 exit $(( rc > 255 ? 1 : rc ))
