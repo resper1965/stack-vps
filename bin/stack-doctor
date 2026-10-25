@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# Verificador de instalação completa da VPS: só leitura, sem rede externa. Roda como dev; o que mora no home do
+# agente ou exige root usa "sudo -n" e, sem sudo, vira "pend" (nunca trava nem pergunta senha).
+# Saída por seção como o health.sh; exit 1 se houver FALTA. Nenhum valor de segredo é impresso nem vai para argv.
+# Uso: stack-doctor
+set -uo pipefail
+
+REPO=/opt/stack-vps; AGENTE=agente; AH=/home/agente; DEVH=/home/dev; SRV=/srv/dev
+SEGREDOS=/srv/dev/secrets/agente.env; BASE=http://127.0.0.1
+CI_DIR=/srv/ci; UNITDIR=/etc/systemd/system; CODER=/srv/coder; RUNNERS=/srv/runners
+if [[ ${STACK_TESTE:-} == 1 ]]; then   # overrides só nos testes
+  REPO=${DOCTOR_REPO:-$REPO}; AGENTE=${DOCTOR_AGENTE:-$AGENTE}; AH=${DOCTOR_AGENTE_HOME:-$AH}; DEVH=${DOCTOR_DEV_HOME:-$DEVH}
+  SRV=${DOCTOR_SRV:-$SRV}; SEGREDOS=${DOCTOR_SEGREDOS:-$SEGREDOS}; BASE=${DOCTOR_CURL_BASE:-$BASE}
+  CI_DIR=${DOCTOR_CI_DIR:-$CI_DIR}; UNITDIR=${DOCTOR_UNIT_DIR:-$UNITDIR}; CODER=${DOCTOR_CODER:-$CODER}; RUNNERS=${DOCTOR_RUNNERS:-$RUNNERS}
+fi
+VERSAO_9R=0.5.104
+n_ok=0; n_pend=0; n_falta=0
+ok(){ n_ok=$((n_ok+1)); printf '  ok    %s\n' "$*"; }
+pend(){ n_pend=$((n_pend+1)); printf '  pend  %s\n' "$*"; }
+falta(){ n_falta=$((n_falta+1)); printf '  FALTA %s\n' "$*"; }
+# check <rótulo> <falha-msg> <comando...>: ok se o comando passa, senão FALTA
+check(){ local r=$1 m=$2; shift 2; if "$@" >/dev/null 2>&1; then ok "$r"; else falta "$m"; fi; }
+
+# sudo sem senha: sonda uma vez; sem sudo as verificações viram pend. cd / antes do sudo -u (cwd do chamador pode ser ilegível ao alvo)
+AG_OK=; ROOT_OK=
+if (cd / && sudo -n -u "$AGENTE" true) >/dev/null 2>&1; then AG_OK=1; fi
+if [[ $EUID -eq 0 ]] || (cd / && sudo -n true) >/dev/null 2>&1; then ROOT_OK=1; fi
+ag(){ (cd / && sudo -n -u "$AGENTE" "$@"); }                                  # como agente
+root(){ if [[ $EUID -eq 0 ]]; then (cd / && "$@"); else (cd / && sudo -n "$@"); fi; }
+SEMAG="rode com sudo (sem acesso ao home do agente)"; SEMROOT="rode com sudo (precisa de root)"
+http(){ curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$@" 2>/dev/null; }
+# systemctl --user do agente
+ag_sd(){ ag env "XDG_RUNTIME_DIR=/run/user/$(id -u "$AGENTE" 2>/dev/null || echo 0)" systemctl --user "$@"; }
+# arquivo comum (não link) do agente com dono e modo certos: arq_priv <rótulo> <caminho> <modo>
+arq_priv(){
+  local r=$1 f=$2 mode=$3 s
+  [[ $AG_OK ]] || { pend "$r: $SEMAG"; return; }
+  s=$(ag stat -c '%U %a %F' -- "$f" 2>/dev/null) || { falta "$r: $f ausente"; return; }
+  if [[ $s == "$AGENTE $mode regular"* ]]; then ok "$r ($mode do $AGENTE)"; else falta "$r: esperado $mode de $AGENTE, veio '${s%% regular*}'"; fi
+}
+modo(){ stat -c %a -- "$1" 2>/dev/null; }
+
+echo "código"
+if [[ -d $REPO ]]; then
+  g=(git -c "safe.directory=$REPO" -C "$REPO")
+  br=$("${g[@]}" rev-parse --abbrev-ref HEAD 2>/dev/null)
+  if [[ $br == main ]]; then ok "$REPO na main"; else falta "$REPO na branch '${br:-?}' (volte para main)"; fi
+  if [[ -z $("${g[@]}" status --porcelain 2>/dev/null) ]]; then ok "$REPO sem alteração local"; else falta "$REPO com alteração local"; fi
+  for f in scripts/41-9router.sh scripts/42-novo-projeto.py opencode/command/novo-projeto.md; do
+    check "$f presente" "$f ausente em $REPO (branch antiga?)" test -f "$REPO/$f"; done
+else falta "$REPO ausente"; fi
+
+echo "acesso"
+if sv=$(tailscale serve status 2>/dev/null) || { [[ $ROOT_OK ]] && sv=$(root tailscale serve status 2>/dev/null); }; then
+  grep -Eq '^https://[^: ]+([[:space:]]|$)' <<<"$sv" && ok "serve 443 (OpenCode)" || falta "tailscale serve sem 443"
+  for p in 8443 20128; do grep -Eq "^https://[^ ]+:$p([[:space:]]|\$)" <<<"$sv" && ok "serve $p" || falta "tailscale serve sem $p"; done
+else pend "tailscale serve status: $SEMROOT"; fi
+nome=$(tailscale status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null) || nome=
+if [[ -n $nome ]] && getent hosts "$nome" >/dev/null 2>&1; then ok "MagicDNS resolve o nome da máquina"; else falta "MagicDNS não resolve o nome da máquina (${nome:-sem nome})"; fi
+
+echo "permissões"
+[[ $(modo "$SRV") == 751 ]] && ok "$SRV 751" || falta "$SRV deve ser 751 (veio '$(modo "$SRV")')"
+for d in projetos state; do [[ $(modo "$SRV/$d") == 750 ]] && ok "$SRV/$d 750" || falta "$SRV/$d deve ser 750 (veio '$(modo "$SRV/$d")')"; done
+if [[ $(modo "$SRV/pareceres") == 750 && $(stat -c %U "$SRV/pareceres" 2>/dev/null) == "$AGENTE" ]]; then ok "$SRV/pareceres 750 do $AGENTE"
+else falta "$SRV/pareceres deve ser 750 do $AGENTE"; fi
+if id -nG pmo 2>/dev/null | tr ' ' '\n' | grep -qx "$AGENTE"; then ok "pmo no grupo $AGENTE"; else falta "pmo fora do grupo $AGENTE"; fi
+if ! id ci >/dev/null 2>&1; then pend "conta ci ainda não existe (38)"
+elif id -nG ci | tr ' ' '\n' | grep -qx "$AGENTE" || [[ $(modo "$SRV/projetos") != *0 ]]; then falta "ci pode ler $SRV/projetos"
+else ok "ci sem leitura de $SRV/projetos"; fi
+
+echo "opencode"
+if [[ $AG_OK ]]; then
+  ag_sd is-active --quiet opencode-web.service && ok "unidade opencode-web ativa" || falta "unidade opencode-web inativa ou ausente"
+else pend "unidade opencode-web: $SEMAG"; fi
+case $(http "$BASE:4096/") in 200|302|401) ok "opencode responde (HTTP)" ;; *) falta "opencode não responde em 127.0.0.1:4096" ;; esac
+JQ=jq; [[ ${STACK_TESTE:-} == 1 ]] && JQ=${DOCTOR_JQ:-jq}
+if command -v "$JQ" >/dev/null 2>&1; then
+  ok "jq instalado"
+  if [[ $AG_OK ]]; then
+    ag cat -- "$AH/.config/opencode/opencode.json" 2>/dev/null | "$JQ" -e '.provider["9router"].options.baseURL' >/dev/null 2>&1 \
+      && ok "opencode.json com o provedor 9router" || falta "opencode.json sem o provedor 9router (rode o 36-opencode.sh)"
+  else pend "opencode.json: $SEMAG"; fi
+else falta "jq não instalado (apt install jq)"; pend "opencode.json não conferido sem jq"; fi
+if [[ $AG_OK ]]; then
+  ag head -n 6 -- "$AH/.config/opencode/command/novo-projeto.md" 2>/dev/null | grep -qF '<!-- stack-vps -->' \
+    && ok "comando /novo-projeto instalado" || falta "comando /novo-projeto ausente ou do dono (sem o marcador)"
+else pend "comando /novo-projeto: $SEMAG"; fi
+
+echo "9router"
+if [[ $AG_OK ]]; then
+  v=$(ag grep -m1 '"version"' -- "$AH/.local/lib/node_modules/9router/package.json" 2>/dev/null | cut -d'"' -f4)
+  [[ $v == "$VERSAO_9R" ]] && ok "pacote 9router $VERSAO_9R" || falta "pacote 9router ${v:-ausente} (esperado $VERSAO_9R)"
+  ag_sd is-active --quiet 9router.service && ok "unidade 9router ativa" || falta "unidade 9router inativa ou ausente"
+else pend "pacote e unidade do 9router: $SEMAG"; fi
+arq_priv "9router.env" "$AH/.config/9router/9router.env" 600
+arq_priv "client.env" "$AH/.config/9router/client.env" 600
+[[ $(http "$BASE:20128/api/health") == 200 ]] && ok "/api/health 200" || falta "9router não responde em 127.0.0.1:20128"
+case $(http "$BASE:20128/v1/models") in
+  401) ok "/v1/models sem chave dá 401" ;;
+  200) falta "/v1/models responde sem chave (requireApiKey desligado no painel)" ;;
+  *) falta "/v1/models sem chave: resposta inesperada" ;;
+esac
+if ss -Hltn 2>/dev/null | awk '{print $4}' | grep -Eq '^(0\.0\.0\.0|\*|\[::\]):20128$'; then falta "9router escutando fora do loopback (0.0.0.0:20128)"
+else ok "nada escutando em 0.0.0.0:20128"; fi
+
+echo "modelos"
+# a chave é lida do arquivo (sem source) e entregue ao curl por stdin (-K -): nunca em argv nem na saída
+chave=$(grep -E '^NINE_ROUTER_API_KEY=' "$SEGREDOS" 2>/dev/null | tail -n1 | cut -d= -f2-)
+if [[ -z $chave ]]; then falta "NINE_ROUTER_API_KEY ausente em $SEGREDOS"
+elif [[ $chave == *[\"\\]* || $chave == *$'\r'* ]]; then falta "NINE_ROUTER_API_KEY com caracteres inválidos em $SEGREDOS"
+else
+  ok "NINE_ROUTER_API_KEY presente"
+  corpo=$(printf 'header = "Authorization: Bearer %s"\n' "$chave" | curl -s --max-time 5 -K - "$BASE:20128/v1/models" 2>/dev/null)
+  if grep -q '"id"' <<<"$corpo"; then ok "/v1/models com a chave lista modelos"; else falta "/v1/models com a chave não lista modelos (cadastre provedores no painel)"; fi
+fi
+chave=; corpo=
+
+echo "clis"
+if [[ $AG_OK ]]; then
+  for c in "claude .claude" "codex .codex" "agy .antigravity"; do
+    set -- $c
+    if ag env "PATH=$AH/.local/bin:$AH/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin" bash -c 'command -v "$1"' _ "$1" >/dev/null 2>&1; then
+      ok "$1 no PATH do $AGENTE"
+      ag test -d "$AH/$2" && ok "$1: configuração presente (login não verificado)" || pend "$1: login pendente (sem $2)"
+    else falta "$1 fora do PATH do $AGENTE"; fi
+  done
+else pend "claude, codex e agy: $SEMAG"; fi
+
+echo "ci"
+if ! id ci >/dev/null 2>&1; then pend "CI ainda não instalado (38, 39, 40)"
+else
+  ok "conta ci"
+  if [[ $ROOT_OK ]]; then
+    root iptables -S OUTPUT 2>/dev/null | grep -q STACK-CI && ok "rede por UID (STACK-CI)" || falta "rede por UID ausente (39-ci-rede.sh)"
+  else pend "rede por UID: $SEMROOT"; fi
+  if [[ ! -f $UNITDIR/stack-ci-runners.service ]]; then pend "stack-ci-runners não instalado (40)"
+  else
+    systemctl is-active --quiet stack-ci-runners.service && ok "stack-ci-runners ativo" || falta "stack-ci-runners instalado e inativo"
+    if [[ $ROOT_OK ]]; then
+      m=$(root stat -c %Y -- "$CI_DIR/status.json" 2>/dev/null) || m=
+      if [[ -n $m ]] && (( $(date +%s) - m <= 180 )); then ok "status.json fresco"; else falta "status.json ausente ou velho (> 3 min)"; fi
+    else pend "status.json: $SEMROOT"; fi
+  fi
+fi
+
+echo "restos"
+dpkg -s sysbox-ce >/dev/null 2>&1 && falta "sysbox-ce ainda instalado" || ok "sysbox ausente"
+for h in "$AH" "$DEVH"; do
+  if [[ $h == "$AH" ]]; then
+    [[ $AG_OK ]] || { pend "$h/.continue: $SEMAG"; continue; }
+    ag test -e "$h/.continue" && falta "$h/.continue existe" || ok "$h/.continue ausente"
+  else [[ -e $h/.continue ]] && falta "$h/.continue existe" || ok "$h/.continue ausente"; fi
+done
+if [[ -e $SRV/state/openrig || -e $AH/.local/bin/rig-dupla ]]; then falta "OpenRig ainda presente"; else ok "OpenRig ausente"; fi
+if [[ $ROOT_OK ]]; then
+  root ufw status 2>/dev/null | grep -Eq '(^|[[:space:]])8080(/tcp)?([[:space:]]|$)' && falta "regra 8080 no UFW" || ok "UFW sem regra 8080"
+else pend "UFW 8080: $SEMROOT"; fi
+if im=$(docker images --format '{{.Repository}}' 2>/dev/null); then
+  grep -Exq 'stack/web|myoung34/github-runner' <<<"$im" && falta "imagem de runner/stack-web ainda no Docker" || ok "sem imagem de runner"
+else pend "imagens Docker: docker indisponível"; fi
+for d in "$CODER" "$RUNNERS"; do [[ -e $d ]] && falta "$d existe" || ok "$d ausente"; done
+
+echo
+echo "resumo: $n_ok ok, $n_pend pend, $n_falta FALTA"
+(( n_falta == 0 ))
