@@ -14,6 +14,12 @@ mundo() {
   export JOB_TIMEOUT_UNIT=s JOB_SECRETS_DONO CLONE_CMD=$STUBS/clona
   mkdir -p "$JOBS_DIR/bin" "$SECRETS_DIR"
   stub alertar
+  printf '#!/usr/bin/env bash
+echo "alertar $*" >> "$STUB_LOG"
+echo "alertar_env=${ALERTA_ENV:-}" >> "$STUB_LOG"
+exit 0
+' > "$STUBS/alertar"; chmod +x "$STUBS/alertar"
+  export AVISO_ENV=$T/aviso.env
   # clone falso: cria o destino com um arquivo marcador (a falha liga por CLONE_FALHA)
   printf '#!/usr/bin/env bash\necho "clona $*" >> "$STUB_LOG"\n[[ -n ${CLONE_FALHA:-} ]] && exit 1\nmkdir -p "$2" && echo x > "$2/marcador"\n' > "$STUBS/clona"
   # python3 que registra o argv (prova de que nenhum segredo passa por argumento) e delega ao real
@@ -97,6 +103,7 @@ mundo; job a 'echo quebrou; exit 3'; roda a
 afirma_rc "$rc" 3 "falha: rc propagado"
 if [[ $(campo a rc) == 3 ]]; then ok "falha: json com rc 3"; else falha "falha: json com rc 3"; fi
 afirma_log "alertar job falhou a rc=3" "falha: alertar chamado com titulo e mensagem"
+afirma_log "alertar_env=$AVISO_ENV" "falha: alerta usa o aviso.env (o agente nao le o admin.env)"
 
 # --- timeout ---
 mundo; job a 'exec sleep 30'; ini=$SECONDS; roda a
