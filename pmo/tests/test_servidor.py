@@ -1,4 +1,6 @@
-import http.client, json, os, tempfile, threading, unittest
+import http.client, io, json, os, shutil, socket, stat, tempfile, threading, time, unittest
+from unittest import mock
+from pmo import servidor
 from pmo.servidor import criar
 
 
@@ -101,6 +103,13 @@ class Servidor(unittest.TestCase):
         self.assertEqual(a["classe"], {"empresa": "bekaa", "area": "ORM", "cliente": "t4isb", "tipo": "site", "linear": "BEK", "estagio": "parado", "confirmada": True})
         self.assertEqual(a["estagio"], "parado")
 
+    def test_classificar_congelado_aceito(self):
+        st, _ = self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a", "classe": {"estagio": "congelado"}})
+        self.assertEqual(st, 200)
+        a = next(x for x in json.loads(self.req("GET", "/painel.json")[1])["projetos"] if x["id"] == "o/a")
+        self.assertEqual((a["estagio"], a["classe"]["estagio"]), ("congelado", "congelado"))
+        self.assertEqual(self.req("POST", "/acao", {"acao": "classificar", "alvo": "o/a", "classe": {"estagio": ""}})[0], 200)
+
     def test_classificar_recusa_valor_invalido(self):
         for classe in ({"empresa": "acme"}, {"tipo": "foguete"}, {"estagio": "voando"}, {"area": "a\nb"}, {"cliente": "x" * 61}, "lixo"):
             with self.subTest(classe=classe):
@@ -126,6 +135,236 @@ class Servidor(unittest.TestCase):
         pedidos = [json.load(open(os.path.join(self.fila, f))) for f in os.listdir(self.fila)]
         self.assertIn("ness", [p.get("pasta") for p in pedidos if p["acao"] == "clonar"])
         self.assertEqual(self.req("POST", "/acao", {"acao": "clonar", "alvo": "o/a", "pasta": "../x"})[0], 400)
+
+
+class ServidorSocket(unittest.TestCase):
+    HOST = "stack.tailnet.ts.net:8443"
+    LOGIN = "resper@bekaa.eu"
+    PROPRIO = "100.76.167.6"
+    CLIENTE = "100.99.1.2"
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        web = os.path.join(self.tmp, "web"); os.makedirs(web)
+        self.painel = os.path.join(self.tmp, "painel.json")
+        with open(self.painel, "w") as f:
+            json.dump({"projetos": [{"id": "o/a"}], "arquivados": [], "a_destinar": []}, f)
+        self.web = web
+        self.fila = os.path.join(self.tmp, "fila")
+        self.sock = os.path.join(self.tmp, "pmo.sock")
+        velho = socket.socket(socket.AF_UNIX); velho.bind(self.sock); velho.close()  # socket velho: criar() remove antes do bind
+        self.srv = self.sobe(self.sock)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.addCleanup(self.srv.server_close)
+        self.addCleanup(self.srv.shutdown)
+
+    def sobe(self, sock, **k):
+        k = {"hosts": (self.HOST, "localhost:8080"), "logins": (self.LOGIN,), "ips_proprios": (self.PROPRIO, "fd7a:115c::1"), **k}
+        return criar(None, None, self.web, self.painel, self.fila, os.path.join(self.tmp, "aj.json"),
+                     socket=sock, classes=os.path.join(self.tmp, "cl.json"), **k)
+
+    def test_sem_hosts_logins_ou_ips_proprios_falha_fechado(self):
+        for k in ({"hosts": ()}, {"logins": ()}, {"ips_proprios": ()}):
+            with self.assertRaises(ValueError):
+                self.sobe(os.path.join(self.tmp, "outro.sock"), **k)
+
+    def test_arquivo_comum_no_caminho_do_socket_nao_e_apagado(self):
+        f = os.path.join(self.tmp, "importante")
+        open(f, "w").close()
+        with self.assertRaises(ValueError):
+            self.sobe(f)
+        self.assertTrue(os.path.isfile(f))
+
+    def test_main_socket_sem_logins_hosts_ou_ips_proprios_sai_2(self):
+        ok = {"--hosts": "h", "--logins": "a@b.c", "--ips-proprios": "100.1.1.1"}
+        for falta in ok:
+            args = ["--socket", "x.sock"] + [x for k, v in ok.items() if k != falta for x in (k, v)]
+            with mock.patch("sys.argv", ["pmo"] + args), mock.patch("sys.stderr", io.StringIO()),                     mock.patch.object(servidor, "criar") as c:
+                with self.assertRaises(SystemExit) as e:
+                    servidor.main()
+            self.assertEqual(e.exception.code, 2)
+            c.assert_not_called()
+
+    def test_origin_propria_aceita_e_alheia_recusada(self):
+        h = dict(Tailscale_User_Login=self.LOGIN)
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        self.assertEqual(self.req("POST", "/acao", ped, Origin="https://" + self.HOST, **h), 202)
+        self.assertEqual(self.req("POST", "/acao", ped, Origin="https://evil.example", **h), 403)
+
+    def req(self, metodo, caminho, corpo=None, **cab):
+        s = socket.socket(socket.AF_UNIX); s.settimeout(5); s.connect(self.sock)
+        c = http.client.HTTPConnection("localhost", timeout=5); c.sock = s
+        h = {"Host": self.HOST, "Content-Type": "application/json", "X-PMO": "1", "X-Forwarded-For": self.CLIENTE}
+        h.update({k.replace("_", "-"): v for k, v in cab.items()})
+        h = {k: v for k, v in h.items() if v is not None}
+        self.addCleanup(c.close); self.addCleanup(s.close)
+        try:
+            c.request(metodo, caminho, body=json.dumps(corpo) if corpo is not None else None, headers=h)
+        except BrokenPipeError:
+            pass  # recusa antes de ler o corpo: o servidor fecha e a resposta ja esta no buffer
+        r = c.getresponse(); r.read(); return r.status
+
+    def bruto(self, cab_extra, corpo=b"", srv=None):
+        """Request cru, sem meia-fechada; devolve (primeira linha da resposta ou b'', segundos)."""
+        s = socket.socket(socket.AF_UNIX); s.settimeout(5); s.connect(srv.server_address if srv else self.sock)
+        self.addCleanup(s.close)
+        cab = ("POST /acao HTTP/1.1%(n)sHost: %(h)s%(n)sContent-Type: application/json%(n)sX-PMO: 1%(n)s%(c)s%(n)s%(n)s"
+               % {"n": chr(13) + chr(10), "h": self.HOST, "c": cab_extra}).encode()
+        t = time.time()
+        try:
+            s.sendall(cab + corpo)
+        except OSError:
+            pass
+        try:
+            r = s.recv(200)
+        except (ConnectionResetError, socket.timeout):
+            r = b""
+        return r.split(bytes([13, 10]))[0], time.time() - t
+
+    def test_content_length_negativo_nao_le_ate_eof(self):
+        linha, dt = self.bruto("Content-Length: -1", b"x" * 100_000)
+        self.assertIn(linha, (b"HTTP/1.0 403 Forbidden", b"HTTP/1.0 400 Bad Request", b""))
+        self.assertLess(dt, 3)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_corpo_prometido_e_nao_enviado_expira(self):
+        srv = self.sobe(os.path.join(self.tmp, "t.sock"), timeout=1)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.server_close); self.addCleanup(srv.shutdown)
+        linha, dt = self.bruto("Content-Length: 4096", srv=srv)
+        self.assertEqual(linha, b"")  # fechou sem responder, nao ficou pendurado
+        self.assertLess(dt, 4)
+
+    def pedidos(self):
+        return [f for f in os.listdir(self.fila) if not f.startswith(".")]
+
+    def test_socket_criado_0660(self):
+        self.assertEqual(stat.S_IMODE(os.stat(self.sock).st_mode), 0o660)
+
+    def test_get_host_da_lista_200(self):
+        self.assertEqual(self.req("GET", "/painel.json"), 200)
+        self.assertEqual(self.req("GET", "/painel.json", Host="localhost:8080"), 200)
+
+    def test_get_host_fora_da_lista_403(self):
+        self.assertEqual(self.req("GET", "/painel.json", Host="evil.example"), 403)
+
+    def test_post_com_login_permitido_202(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN), 202)
+        self.assertEqual(len(self.pedidos()), 1)
+
+    def test_post_sem_login_tailscale_recusado(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_post_login_fora_da_lista_recusado(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login="outro@x.com"), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_xff_do_ip_proprio_recusado(self):
+        # o agente chama a URL da tailnet de dentro da VPS: o serve injeta o login do dono, mas a origem e o proprio no
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        casos = ((self.PROPRIO, "ip proprio"), (None, "xff ausente"), ("1.2.3.4, " + self.PROPRIO, "proxy anexou o proprio"),
+                 ("fd7a:115c::1", "ipv6 proprio"), ("", "xff vazio"))
+        for xff, nome in casos:
+            with self.subTest(nome):
+                self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, X_Forwarded_For=xff), 403)
+                self.assertEqual(self.pedidos(), [])
+
+    def test_xff_do_cliente_tailnet_aceito(self):
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        # o primeiro elemento pode ser forjado: vale o ultimo, que o proxy anexou
+        for xff in (self.CLIENTE, self.PROPRIO + ", " + self.CLIENTE):
+            self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, X_Forwarded_For=xff), 202, xff)
+
+    def test_post_host_fora_da_lista_recusado(self):
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Host="evil.example", Tailscale_User_Login=self.LOGIN), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    # tailscale serve com alvo unix: o proxy reescreve Host para localhost e leva o original em X-Forwarded-Host
+    def test_serve_unix_host_localhost_com_forwarded_host_da_lista(self):
+        c = dict(Host="localhost", X_Forwarded_Host=self.HOST)
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        self.assertEqual(self.req("GET", "/painel.json", **c), 200)
+        self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, **c), 202)
+        self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, Origin="https://" + self.HOST, **c), 202)
+        self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, Origin="http://" + self.HOST, **c), 202)
+
+    def test_forwarded_host_fora_da_lista_vence_o_host(self):
+        c = dict(Host=self.HOST, X_Forwarded_Host="evil.example")
+        self.assertEqual(self.req("GET", "/painel.json", **c), 403)
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN, **c), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_sem_forwarded_host_so_leitura_pelo_host_da_lista(self):
+        # caminho do fallback SSH (LocalForward): GET passa; POST nao, por falta de X-Forwarded-For
+        c = dict(Host="localhost:8080", X_Forwarded_For=None)
+        self.assertEqual(self.req("GET", "/painel.json", **c), 200)
+        self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN, **c), 403)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_origin_alheia_com_forwarded_host_valido_recusada(self):
+        for o in ("https://evil.example", "https://localhost"):
+            self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN,
+                                      Host="localhost", X_Forwarded_Host=self.HOST, Origin=o), 403, o)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_forwarded_host_vazio_cai_no_host(self):
+        self.assertEqual(self.req("GET", "/painel.json", X_Forwarded_Host=""), 200)
+        self.assertEqual(self.req("GET", "/painel.json", Host="evil.example", X_Forwarded_Host=""), 403)
+
+    def test_forwarded_host_so_vale_com_host_localhost(self):
+        # sob DNS rebinding o navegador forja X-Forwarded-Host sem preflight; Host != "localhost" nao e o proxy.
+        # "localhost:8080" (fallback SSH, sem proxy) tambem nao: forwarded host ali e nao confiavel
+        ped = {"acao": "arquivar", "alvo": "o/a"}
+        for host in ("evil.example:8080", "localhost:8080"):
+            c = dict(Host=host, X_Forwarded_Host=self.HOST)
+            self.assertEqual(self.req("GET", "/painel.json", **c), 403, host)
+            self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, **c), 403, host)
+            self.assertEqual(self.req("POST", "/acao", ped, Tailscale_User_Login=self.LOGIN, Origin="https://" + self.HOST, **c), 403, host)
+        self.assertEqual(self.pedidos(), [])
+
+    def test_forwarded_host_com_caixa_ou_ponto_final_recusado(self):
+        for xfh in (self.HOST.upper(), "stack.tailnet.ts.net.:8443"):
+            self.assertEqual(self.req("GET", "/painel.json", Host="localhost", X_Forwarded_Host=xfh), 403, xfh)
+            self.assertEqual(self.req("POST", "/acao", {"acao": "arquivar", "alvo": "o/a"}, Tailscale_User_Login=self.LOGIN,
+                                      Host="localhost", X_Forwarded_Host=xfh), 403, xfh)
+        self.assertEqual(self.pedidos(), [])
+
+
+class ServidorSaude(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup); self.tmp = tmp.name
+        web = os.path.join(self.tmp, "web"); os.makedirs(web)
+        self.painel = os.path.join(self.tmp, "painel.json")
+        with open(self.painel, "w") as f:
+            json.dump({"projetos": [], "arquivados": [], "a_destinar": []}, f)
+        self.web, self.saude = web, os.path.join(self.tmp, "health.txt")
+        with open(self.saude, "w") as f:
+            f.write("acesso\n  FALHA cloudflared parado\n")
+
+    def pega(self, **k):
+        srv = criar("127.0.0.1", 0, self.web, self.painel, os.path.join(self.tmp, "fila"), os.path.join(self.tmp, "a.json"),
+                    bloquear_local=False, classes=os.path.join(self.tmp, "c.json"), **k)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.server_close); self.addCleanup(srv.shutdown)
+        c = http.client.HTTPConnection("127.0.0.1", srv.server_address[1], timeout=5)
+        c.request("GET", "/painel.json"); r = c.getresponse(); d = json.loads(r.read()); c.close()
+        return d
+
+    def test_painel_json_tem_saude(self):
+        d = self.pega(saude=self.saude)
+        self.assertEqual(d["saude"]["itens"], [{"secao": "acesso", "estado": "falha", "texto": "cloudflared parado"}])
+        self.assertFalse(d["saude"]["velho"])
+
+    def test_sem_saude_a_chave_some(self):
+        self.assertNotIn("saude", self.pega())
+        self.assertNotIn("atalhos", self.pega())
+
+    def test_atalho_so_https(self):
+        for url, esperado in (("https://stack.ts.net/", "https://stack.ts.net/"), ("http://x/", None),
+                              ("javascript:alert(1)", None), ("", None), (None, None)):
+            self.assertEqual(self.pega(atalhos={"opencode": url})["atalhos"], {"opencode": esperado}, url)
 
 
 if __name__ == "__main__":

@@ -20,11 +20,11 @@ PY
 python3 "$T/api.py" > "$T/porta" & API=$!
 for _ in $(seq 50); do [[ -s $T/porta ]] && break; sleep 0.1; done
 P=$(cat "$T/porta")
-printf 'apelido\tprovedor\tmodelo\tuso\nrapido\topenrouter\tdeepseek/deepseek-chat\tdia a dia\nrabbit\tfeatherless\tWhiteRabbitNeo/X-7B\tpentest\n' > "$T/modelos.tsv"
-printf 'OPENROUTER_API_KEY=chave-or\nFEATHERLESS_API_KEY=chave-fl\n' > "$T/agente.env"
+printf 'apelido\tprovedor\tmodelo\tuso\nrapido\topenrouter\tdeepseek/deepseek-chat\tdia a dia\nrabbit\tfeatherless\tWhiteRabbitNeo/X-7B\tpentest\nroteado\t9router\tgrupo/modelo-x\tvia 9router\n' > "$T/modelos.tsv"
+printf 'OPENROUTER_API_KEY=chave-or\nFEATHERLESS_API_KEY=chave-fl\nNINE_ROUTER_API_KEY=chave-9r\n' > "$T/agente.env"
 export MODELOS_TSV=$T/modelos.tsv MODELOS_ENV=$T/agente.env \
-  MODELO_BASE_OPENROUTER=http://127.0.0.1:$P/or MODELO_BASE_FEATHERLESS=http://127.0.0.1:$P/fl
-unset OPENROUTER_API_KEY FEATHERLESS_API_KEY
+  MODELO_BASE_OPENROUTER=http://127.0.0.1:$P/or MODELO_BASE_FEATHERLESS=http://127.0.0.1:$P/fl MODELO_BASE_9ROUTER=http://127.0.0.1:$P/nr
+unset OPENROUTER_API_KEY FEATHERLESS_API_KEY NINE_ROUTER_API_KEY
 
 r=$(python3 "$M" rapido "ola" </dev/null)
 [[ $r == "/or/chat/completions|deepseek/deepseek-chat|Bearer chave-or|ola" ]]; afirma $? "openrouter: modelo, chave do agente.env e pergunta"
@@ -32,11 +32,14 @@ r=$(echo "nmap 80/tcp open" | python3 "$M" rabbit "analise")
 [[ $r == *"/fl/chat/completions|WhiteRabbitNeo/X-7B|Bearer chave-fl|analise"* && $r == *"nmap 80/tcp open"* ]]; afirma $? "featherless: entrada do pipe vai junto da pergunta"
 r=$(FEATHERLESS_API_KEY=do-ambiente python3 "$M" rabbit "x" </dev/null)
 [[ $r == *"Bearer do-ambiente"* ]]; afirma $? "chave do ambiente vence a do arquivo"
+r=$(python3 "$M" roteado "oi" </dev/null)
+if [[ $r == "/nr/chat/completions|grupo/modelo-x|Bearer chave-9r|oi" ]]; then ok "9router: base propria, modelo e NINE_ROUTER_API_KEY"; else falha "9router: base propria, modelo e NINE_ROUTER_API_KEY"; fi
 python3 "$M" -l | grep -q "rabbit.*featherless.*pentest"; afirma $? "-l lista os apelidos"
 python3 "$M" inexistente "x" </dev/null >/dev/null 2>&1; afirma_rc $? 2 "apelido desconhecido sai com 2"
 c=$(python3 "$M" --continue)
 grep -q 'model: WhiteRabbitNeo/X-7B' <<< "$c" && grep -q 'apiBase: https://api.featherless.ai/v1' <<< "$c" \
   && grep -q 'apiKey: ${{ secrets.FEATHERLESS_API_KEY }}' <<< "$c"; afirma $? "config do Continue com provedor e chave por referencia"
+grep -q "apiBase: http://127.0.0.1:20128/v1" <<< "$c" && grep -q 'secrets.NINE_ROUTER_API_KEY' <<< "$c"; afirma $? "config do Continue com o 9router por referencia"
 nega=$(grep -c 'chave-' <<< "$c"); afirma_rc "$nega" 0 "config do Continue nao contem chave"
 kill "$API" 2>/dev/null
 fim

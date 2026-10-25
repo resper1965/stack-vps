@@ -2,7 +2,7 @@
 
 **Projetos existentes permanecem em suas stacks atuais.** Não há migração, adoção retroativa nem exigência de cadastrar seus provedores neste catálogo.
 
-Ao **criar um projeto novo**, escolher um ou mais destinos: `gcp`, `vercel`, `cloudflare`, `azure`, `local`. Essa seleção orienta os agentes e futuros templates, mas não implanta infraestrutura automaticamente.
+Ao **criar um projeto novo**, escolher um ou mais destinos: `gcp`, `vercel`, `cloudflare`, `fora-das-nuvens`. Essa seleção orienta os agentes e futuros templates, mas não implanta infraestrutura automaticamente.
 
 ```bash
 python3 scripts/35-projeto-standards.py /srv/dev/projetos/novo-projeto --provider gcp
@@ -16,5 +16,5 @@ O comando aceita somente pasta inexistente ou vazia; a prévia não escreve nada
 - Para projetos novos: escolher stack e provider no bootstrap; aplicar design e receitas aprovadas conforme necessidade.
 - `skills/ness-design` permanece fonte dos padrões de marca.
 - Nunca carregar segredos globais indiscriminadamente.
-- Sem GitHub Actions, novas assinaturas ou migração automática.
+- CI local (`ci: local-vps`); `runs-on: [self-hosted, stack]` só em repositório privado de organização com runner. Sem novas assinaturas ou migração automática.
 - O futuro PMO pode oferecer um assistente de **Novo Projeto** e apenas **exibir** a stack de projetos existentes, sem alterá-la.

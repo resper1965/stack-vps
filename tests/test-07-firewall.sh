@@ -18,5 +18,5 @@ afirma_log "ufw default deny incoming" "entrada negada por padrao"
 afirma_log "ufw allow in on tailscale0 to any port 22 proto tcp" "22 so na tailscale0"
 nega_log "ufw allow 22/tcp" "22 publica nao e liberada"
 afirma_log "ufw allow 41641/udp" "porta do Tailscale liberada (caminho direto estavel)"
-afirma_log "ufw allow in on tailscale0 to any port 8080 proto tcp" "painel do PMO so na tailnet"
+nega_log "port 8080" "8080 nao e aberta (o PMO escuta em socket, pelo tailscale serve)"
 fim

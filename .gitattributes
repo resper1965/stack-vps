@@ -2,3 +2,4 @@
 systemd/* text eol=lf
 bin/* text eol=lf
 pmo/** text eol=lf
+*.conf text eol=lf

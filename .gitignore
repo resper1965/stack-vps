@@ -5,3 +5,4 @@ secrets/
 *.pem
 repos.json
 .tmp/
+__pycache__/

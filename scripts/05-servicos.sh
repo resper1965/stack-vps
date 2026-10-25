@@ -37,6 +37,8 @@ install -d -m 755 /usr/local/lib/stack-vps/lib
 install -m 755 "$REPO"/scripts/14-backup.sh "$REPO"/scripts/15-restore.sh /usr/local/lib/stack-vps/
 install -m 644 "$REPO"/scripts/lib/restic-env.sh /usr/local/lib/stack-vps/lib/
 install -m 755 "$REPO"/scripts/alertar.sh "$REPO"/scripts/vigia-health.sh "$REPO"/bin/health.sh /usr/local/lib/stack-vps/
+install -m 755 -o root -g root "$REPO"/bin/stack-emergencia /usr/local/bin/
+install -m 755 -o root -g root "$REPO"/bin/hostinger.sh /usr/local/bin/hostinger.sh
 install -m 644 "$REPO"/systemd/stack-backup.service "$REPO"/systemd/stack-backup.timer \
   "$REPO"/systemd/stack-health.service "$REPO"/systemd/stack-health.timer /etc/systemd/system/
 systemctl daemon-reload
