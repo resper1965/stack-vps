@@ -137,3 +137,19 @@ concessão de acesso (grupo/ACL): esses passos ficam com o dono.
   instalado e fresco: foi feito fora desta sessão. Faltam o 9router (aguarda merge do #20 e as chaves pelo `43-segredos-guiado.sh`), o clone de
   `/opt/stack-vps` fora do `main` e o login do `agy`.
 - **PRs:** #19 mergeado; #20 e #21 abertos (#21 empilhado sobre #20); #16 e #17 abertos.
+
+## Atualização 2026-10-25 (9router no ar)
+
+- **9router 0.5.104 instalado e ativo** (`127.0.0.1:20128`; painel só na tailnet em `https://stack.tail985643.ts.net:20128`). `9router.env`
+  gerado com `43-segredos-guiado.sh 9router --gerar` (senha e `JWT_SECRET` nunca impressos). A unidade precisou de `Environment=PATH` com os
+  shims do mise (o shebang `env node` caía no `/usr/local/bin` do dev: "Permission denied").
+- **Fatos medidos:** `GET /v1/models` é público (catálogo embutido); a exigência de chave vale para `POST /v1/chat/completions` (sem chave: 401).
+  `requireApiKey` é `true` por padrão; `tunnelEnabled` é `false` e `tunnelDashboardAccess` foi posto em `false` pela API do painel.
+- **Chave de API `stack-vps`** criada pela API do painel e gravada em `~agente/.config/9router/client.env` e em `/srv/dev/secrets/agente.env`
+  (valor nunca impresso). `opencode-web` reiniciado para enxergá-la; `36-opencode.sh` reaplicado (provedor `9router` com `models: {}` e comando
+  `/novo-projeto`).
+- **Imagem `stack/web` removida:** era a imagem de workspace do Coder (usuário `coder`).
+- **`stack-doctor` na VPS:** 45 ok, 1 pend, 1 FALTA (`/opt/stack-vps` fixado na branch do go-live; volta ao `main` após o merge do #20 e do #21).
+- **Falta (dono):** cadastrar no painel os provedores (OpenRouter, DeepSeek, Featherless; nenhuma conexão cadastrada ainda), acrescentar os
+  modelos ao `opencode.json`, logins de `claude`, `codex` e `agy`, escolher o modelo padrão, merge do #20 e #21, autorizar a remoção do
+  `stack-rede-containers`.
