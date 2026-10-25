@@ -48,6 +48,9 @@ Notas:
 |---|---|---|
 | 34 | `34-pmo.sh` | painel do PMO em `https://stack.<tailnet>.ts.net:8443` (só tailnet; precisa do 37; nos computadores com o cliente Tailscale (MagicDNS ligado por padrão) abre pelo nome, ver `docs/ssh-config.md`): coleta diária, alarme de esquecidos, descartar/restaurar |
 | 37 | `37-tailscale-serve.sh` | publica na tailnet (`tailscale serve`, em segundo plano): OpenCode em `https://stack.<tailnet>.ts.net` e PMO em `:8443`; rode depois do 34 e do 36; exige "HTTPS Certificates" habilitado no admin da tailnet |
+| 38 | `38-ci-conta.sh` | conta comum `ci` (home `/srv/ci`, Docker rootless próprio, sem sudo) que será dona dos runners; ainda não instalado na VPS |
+| 39 | `39-ci-rede.sh` | isola a conta `ci` da tailnet e do metadata da nuvem (iptables por UID; `--instalar`, `--remover`, `--status`); ainda não instalado na VPS |
+| 40 | `40-ci-runners.sh` | supervisor de runners efêmeros do GitHub para organizações (`ci/runners.py`); só habilita com `--habilitar` e com o 39 ativo; ainda não instalado na VPS |
 
 
 ## Outros
