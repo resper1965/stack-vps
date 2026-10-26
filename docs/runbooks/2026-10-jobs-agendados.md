@@ -43,8 +43,8 @@ Se o repositório de uma varredura for público (decisão D1 do spec), basta rel
    `/opt/stack-vps/scripts/43-segredos-guiado.sh job <nome>`
    Pede cada chave com entrada oculta; grava `/srv/dev/secrets/jobs/<arquivo>.env` (0640 `dev:agente`). Recusa sobrescrever sem `--trocar`.
 5. **Teste à mão** (mesmo desligado): `sudo -u agente /opt/stack-vps/bin/stack-job <nome>`. Leia `/srv/dev/state/jobs/<nome>.json` (`rc`, `resumo`) e `<nome>.log`.
-   `rc 0` = ok; `rc 1` = achado (segredo, vulnerabilidade alta/crítica, divergência de DNS, falha de dump); `rc 2` = erro de execução ou pré-requisito ausente.
-   Falha chama o `alertar.sh`.
+   `rc 0` = ok; `rc 0` com `achados: 1` = varredura terminou com achados (script saiu `10`; não é falha); `rc 1` = divergência de DNS, falha de dump etc.; `rc 2` = erro de execução ou pré-requisito ausente.
+   Falha real chama o `alertar.sh` ("job falhou"); achados chamam o mesmo alerta com o título "job com achados".
 6. **Ligar:** num PR do stack-vps, troque `HABILITADO=nao` por `HABILITADO=sim` em `jobs/<nome>.job`. Depois do merge e da atualização do servidor:
    `sudo /opt/stack-vps/scripts/45-jobs.sh` (idempotente; gera `stack-job-<nome>.service` e `.timer`).
 7. **Conferir:** `systemctl list-timers 'stack-job-*'` e `/opt/stack-vps/bin/stack-doctor` (seção `jobs`).
@@ -54,6 +54,7 @@ Se o repositório de uma varredura for público (decisão D1 do spec), basta rel
 - `/opt/stack-vps/bin/stack-doctor`: seção `jobs` (definidos, habilitados, timer ativo; desligados aparecem como `pend`).
 - `/usr/local/lib/stack-vps/health.sh`: seção `jobs` (último `rc` 0 e fresco conforme a agenda, senão FALHA). O `vigia-health.sh` alerta.
 - `/srv/dev/state/jobs/<nome>.json` e `.log`: resultado da última execução (nunca contém o valor de segredo; o log troca os valores carregados por `***`).
+- **Como ler achados:** o health mostra `pend  job <nome>: achados na ultima varredura` (nunca FALHA; se o job parar de rodar, vira FALHA por frescor). A linha de resumo está em `/srv/dev/state/jobs/<nome>.log` (contagens por ferramenta e "ACHADOS (...)"); o detalhe fica nos relatórios abaixo. O `pend` some quando uma varredura seguinte sai limpa.
 - Relatórios das varreduras: `/srv/dev/state/jobs/<nome-curto>.varredura/` (`semgrep.sarif`, `semgrep.json`, `gitleaks.json` redigido, `osv.json`).
   Os relatórios do semgrep podem trazer trechos de código do projeto: a pasta é do `agente` (0750), não a copie para fora.
 - DNS: `/srv/dev/state/jobs/dns-repair-dnscheck.saida/dnscheck.txt` (e `wpaudit.txt`).

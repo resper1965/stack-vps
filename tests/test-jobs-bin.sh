@@ -45,20 +45,21 @@ afirma_log "--config p/default" "varredura: semgrep com p/default"
 ! grep -qF -- "$SEGREDO" "$T/saida"; afirma $? "varredura: nada do segredo na saida"
 
 vmundo; export GL_JSON='[{"RuleID":"x","Secret":"REDACTED","Match":"REDACTED"}]'; vroda
-afirma_rc $RC 1 "varredura: segredo achado => rc 1"; grep -q 'segredos=1' "$T/saida"; afirma $? "varredura: conta o segredo"
+afirma_rc $RC 10 "varredura: segredo achado => rc 10"; grep -q 'segredos=1' "$T/saida"; afirma $? "varredura: conta o segredo"
 ! grep -qF -- "$SEGREDO" "$T/saida" && ! grep -rqF -- "$SEGREDO" "$T/estado"; afirma $? "varredura: segredo achado nunca impresso nem gravado"
 
 vmundo; export SG_JSON='{"results":[{"extra":{"severity":"ERROR"}},{"extra":{"severity":"WARNING"}},{"extra":{"severity":"INFO"}}]}'; vroda
-afirma_rc $RC 1 "varredura: semgrep ERROR => rc 1"; grep -q 'ERROR=1 WARNING=1 INFO=1' "$T/saida"; afirma $? "varredura: conta por severidade (semgrep)"
+afirma_rc $RC 10 "varredura: semgrep ERROR => rc 10"; grep -q 'ERROR=1 WARNING=1 INFO=1' "$T/saida"; afirma $? "varredura: conta por severidade (semgrep)"
+grep -q 'ACHADOS (' "$T/saida" && ! grep -q REPROVADO "$T/saida"; afirma $? "varredura: resumo diz ACHADOS, nao REPROVADO"
 vmundo; export SG_JSON='{"results":[{"extra":{"severity":"WARNING"}},{"extra":{"severity":"INFO"}}]}'; vroda
 afirma_rc $RC 0 "varredura: so WARNING/INFO => rc 0"
 
 vmundo; OSV_JSON=$(osvj '{"id":"A"}' '{"ids":["A"],"max_severity":"8.1"}'); export OSV_JSON OSV_RC=1; vroda
-afirma_rc $RC 1 "varredura: osv HIGH (CVSS 8.1) => rc 1"; grep -q 'HIGH=1' "$T/saida"; afirma $? "varredura: conta HIGH"
+afirma_rc $RC 10 "varredura: osv HIGH (CVSS 8.1) => rc 10"; grep -q 'HIGH=1' "$T/saida"; afirma $? "varredura: conta HIGH"
 vmundo; OSV_JSON=$(osvj '{"id":"A"}' '{"ids":["A"],"max_severity":"9.8"}'); export OSV_JSON OSV_RC=1; vroda
-afirma_rc $RC 1 "varredura: osv CRITICAL => rc 1"; grep -q 'CRITICAL=1' "$T/saida"; afirma $? "varredura: conta CRITICAL"
+afirma_rc $RC 10 "varredura: osv CRITICAL => rc 10"; grep -q 'CRITICAL=1' "$T/saida"; afirma $? "varredura: conta CRITICAL"
 vmundo; OSV_JSON=$(osvj '{"id":"A","database_specific":{"severity":"CRITICAL"}}' '{"ids":["A"]}'); export OSV_JSON OSV_RC=1; vroda
-afirma_rc $RC 1 "varredura: osv CRITICAL so por rotulo => rc 1"
+afirma_rc $RC 10 "varredura: osv CRITICAL so por rotulo => rc 10"
 vmundo; OSV_JSON=$(osvj '{"id":"A"},{"id":"B","database_specific":{"severity":"MODERATE"}}' '{"ids":["A"],"max_severity":"5.0"},{"ids":["B"]}'); export OSV_JSON OSV_RC=1; vroda
 afirma_rc $RC 0 "varredura: osv so MEDIUM => rc 0"; grep -q 'MEDIUM=2' "$T/saida"; afirma $? "varredura: MODERATE conta como MEDIUM"
 vmundo; export OSV_RC=128; vroda; afirma_rc $RC 0 "varredura: osv sem dependencias (128) => rc 0"

@@ -105,6 +105,18 @@ if [[ $(campo a rc) == 3 ]]; then ok "falha: json com rc 3"; else falha "falha: 
 afirma_log "alertar job falhou a rc=3" "falha: alertar chamado com titulo e mensagem"
 afirma_log "alertar_env=$AVISO_ENV" "falha: alerta usa o aviso.env (o agente nao le o admin.env)"
 
+# --- rc 10: achados nao sao falha ---
+mundo; job a 'echo achou-coisa; exit 10'; roda a
+afirma_rc "$rc" 0 "achados: stack-job sai 0"
+if [[ $(campo a rc) == 0 && $(campo a achados) == 1 ]]; then ok "achados: json rc 0 e achados 1"; else falha "achados: json rc 0 e achados 1"; fi
+afirma_log "alertar job com achados a achados (ver /srv/dev/state/jobs/a.log)" "achados: alerta proprio"
+nega_log "falhou" "achados: sem alerta de falha"
+mundo; job a 'echo oi'; roda a
+if [[ $(campo a achados) == 0 ]]; then ok "limpo: achados 0"; else falha "limpo: achados 0"; fi
+mundo; job a 'exit 3'; roda a
+if [[ $(campo a achados) == 0 && $(campo a rc) == 3 ]]; then ok "rc 3: achados 0 e rc 3"; else falha "rc 3: achados 0 e rc 3"; fi
+nega_log "com achados" "rc 3: sem alerta de achados"
+
 # --- timeout ---
 mundo; job a 'exec sleep 30'; ini=$SECONDS; roda a
 if [[ $(campo a rc) == 124 ]]; then ok "timeout: rc 124"; else falha "timeout: rc 124"; fi
