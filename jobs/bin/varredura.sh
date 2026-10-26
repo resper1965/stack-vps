@@ -3,7 +3,7 @@
 # clone. So le o diretorio; resultado em <estado>/<nome>.varredura/ (semgrep.sarif/json, gitleaks.json, osv.json),
 # sempre redigido (gitleaks --redact; nenhum segredo achado e impresso). Imprime UMA linha de resumo.
 # Uso: varredura.sh <diretorio-clonado> <nome>
-# rc 0 limpo | 1 segredo (gitleaks), osv High/Critical ou semgrep ERROR | 2 ferramenta ausente/falhou/uso.
+# rc 0 limpo | 10 ACHADOS (segredo gitleaks, osv High/Critical ou semgrep ERROR; nao e falha) | 2 ferramenta ausente/falhou/uso.
 # Sobrescreviveis nos testes (so com STACK_TESTE=1): VARREDURA_ESTADO.
 set -uo pipefail
 umask 027
@@ -81,6 +81,6 @@ if osv["CRITICAL"] or osv["HIGH"]: bad.append("osv alto/critico")
 if sg["ERROR"]: bad.append("semgrep ERROR")
 print("varredura %s: semgrep ERROR=%d WARNING=%d INFO=%d | gitleaks segredos=%d | osv CRITICAL=%d HIGH=%d MEDIUM=%d LOW=%d sem-nivel=%d | %s"
       % (nome, sg["ERROR"], sg["WARNING"], sg["INFO"], n_gl, osv["CRITICAL"], osv["HIGH"], osv["MEDIUM"], osv["LOW"],
-         osv["UNKNOWN"], "REPROVADO (" + ", ".join(bad) + ")" if bad else "ok"))
-sys.exit(1 if bad else 0)
+         osv["UNKNOWN"], "ACHADOS (" + ", ".join(bad) + ")" if bad else "ok"))
+sys.exit(10 if bad else 0)
 PY

@@ -198,6 +198,16 @@ tem "FALHA job a nunca rodou (timer instalado há 100h)"; afirma "$?" "jobs: sem
 jobs_prepara; jtimer a "daily" 2; roda
 tem "pend  job a aguardando o primeiro ciclo"; afirma "$?" "jobs: sem status e timer novo: pend"
 ! jobs_sec | grep -q FALHA; afirma "$?" "jobs: primeiro ciclo nao e FALHA"
+jobs_prepara; jtimer a "daily" 100; printf '{"inicio": 1, "fim": %s, "rc": 0, "achados": 1}' "$(( $(date +%s) - 3600 ))" > "$T/jstate/a.json"; roda
+tem "pend  job a: achados na ultima varredura"; afirma "$?" "jobs: rc 0 com achados: pend"
+! jobs_sec | grep -q FALHA; afirma "$?" "jobs: achados nao e FALHA"
+! jobs_sec | grep -q FALHA; afirma "$?" "jobs: achados: secao sem FALHA"
+jobs_prepara; jtimer a "daily" 100; printf '{"inicio": 1, "fim": %s, "rc": 0, "achados": 1}' "$(( $(date +%s) - 40 * 3600 ))" > "$T/jstate/a.json"; roda
+tem "FALHA job a sem rodar há 40h (limite 36h)"; afirma "$?" "jobs: achados mas velho: FALHA"
+for ach in 1000001 -1 true '"1"' 1.5; do
+  jobs_prepara; jtimer a "daily" 100; printf '{"inicio": 1, "fim": %s, "rc": 0, "achados": %s}' "$(date +%s)" "$ach" > "$T/jstate/a.json"; roda
+  tem "FALHA job a com status inválido"; afirma "$?" "jobs: achados $ach: inválido"
+done
 jobs_prepara; jtimer a "daily" 100; printf 'isto nao e json' > "$T/jstate/a.json"; roda
 tem "FALHA job a com status inválido"; afirma "$?" "jobs: json invalido: FALHA"
 jobs_prepara; jtimer a "daily" 100; printf '{"inicio": 1, "fim": %s, "rc": "0"}' "$(date +%s)" > "$T/jstate/a.json"; roda

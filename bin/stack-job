@@ -4,7 +4,7 @@
 # resultado em /srv/dev/state/jobs/<nome>.json e .log. Valor de segredo nunca vai a saida, log, json nem argv:
 # a saida do comando vai para um arquivo temporario (0700) e so o texto filtrado, com cada valor de segredo
 # trocado por ***, chega ao log e ao resumo. rc != 0 (inclusive .job invalido, clone ou segredos) grava o json
-# e chama o alertar.sh. O comando roda com ambiente fechado (PATH, HOME, LANG e os segredos do arquivo) e um
+# e chama o alertar.sh ("job falhou"). rc 10 = achados (nao e falha): json rc 0 + achados 1 e alerta "job com achados". O comando roda com ambiente fechado (PATH, HOME, LANG e os segredos do arquivo) e um
 # so processo por job (flock). Nao roda como root.
 # Uso: stack-job <nome>
 # Sobrescreviveis nos testes (so com STACK_TESTE=1): JOBS_DIR STATE_DIR WORK_DIR SECRETS_DIR ALERTAR CLONE_CMD AVISO_ENV
@@ -122,18 +122,22 @@ fim=$(date +%s)
 python3 -I -c "$filtro" "$tmp/segredos" < "$tmp/raw" > "$LOG"
 rm -f "$tmp/raw"
 
+# rc 10 = terminou normalmente COM achados (varredura): nao e falha; json rc 0 + achados 1, alerta proprio
+achados=0; if (( rc == 10 )); then achados=1; rc=0; fi
+
 # o resumo sai do log ja filtrado (arquivo, nunca argv); o python grava o json de forma atomica
 python3 -I -c '
 import json, os, re, sys
-log, saida, ini, fim, rc = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5])
+log, saida, ini, fim, rc, ach = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6])
 linhas = [l for l in open(log, "rb").read().decode("utf-8", "replace").splitlines() if l.strip()][-3:]
 resumo = re.sub(r"[\x00-\x1f\x7f]", "", " | ".join(linhas))[:300]
 tmp = saida + ".novo"
-with open(tmp, "w") as f: json.dump({"inicio": ini, "fim": fim, "rc": rc, "resumo": resumo}, f)
+with open(tmp, "w") as f: json.dump({"inicio": ini, "fim": fim, "rc": rc, "achados": ach, "resumo": resumo}, f)
 os.replace(tmp, saida)
-' "$LOG" "$JSON" "$inicio" "$fim" "$rc" || echo "stack-job: nao gravei $JSON" >&2
+' "$LOG" "$JSON" "$inicio" "$fim" "$rc" "$achados" || echo "stack-job: nao gravei $JSON" >&2
 
 echo "stack-job: $nome rc=$rc"
 # o agente nao le o admin.env (dev 0600): o alerta dos jobs usa o aviso.env (root:agente 0640, so NTFY_TOPIC)
 if (( rc != 0 )); then ALERTA_ENV=$AVISO_ENV "$ALERTAR" "job falhou" "$nome rc=$rc" >/dev/null 2>&1 || echo "stack-job: alerta nao entregue"; fi
+if (( achados )); then ALERTA_ENV=$AVISO_ENV "$ALERTAR" "job com achados" "$nome achados (ver /srv/dev/state/jobs/$nome.log)" >/dev/null 2>&1 || echo "stack-job: alerta nao entregue"; fi
 exit $(( rc > 255 ? 1 : rc ))

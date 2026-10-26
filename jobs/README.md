@@ -30,6 +30,11 @@ HABILITADO=nao
 Instalar e ligar: `sudo scripts/45-jobs.sh` (`--listar` só mostra o estado). Resultado em `/srv/dev/state/jobs/<nome>.json` e `.log`;
 falha (`rc != 0`) chama o `alertar.sh`. `bin/stack-job <nome>` roda um job na hora, mesmo desligado.
 
+**Contrato de código de saída** de `jobs/bin/*.sh`: `0` = limpo; `10` = terminou normalmente **com achados** (varredura:
+segredo, vulnerabilidade alta/crítica, semgrep ERROR). `10` não é falha: o `stack-job` grava `rc: 0` e `achados: 1` no JSON, alerta
+"job com achados" (sem detalhes) e o `health.sh` mostra `pend`. Qualquer outro `rc != 0` é falha real (ferramenta ausente `2`,
+timeout `124`, clone falho etc.): alerta "job falhou" e FALHA no health.
+
 ## Jobs entregues (todos `HABILITADO=nao`)
 
 | Job | Script | Notas |

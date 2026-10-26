@@ -157,11 +157,13 @@ try:
     if not isinstance(d, dict): raise ValueError
     rc, fim = d["rc"], d["fim"]
     if isinstance(rc, bool) or not isinstance(rc, int) or not 0 <= rc <= 100000: raise ValueError
+    ach = d.get("achados", 0)
+    if isinstance(ach, bool) or not isinstance(ach, int) or not 0 <= ach <= 1000000: raise ValueError
     if isinstance(fim, bool) or not isinstance(fim, (int, float)) or not 0 < fim < 4e9: raise ValueError
     idade = time.time() - fim
     if idade < -60: raise ValueError
     h = int(idade // 3600)
-    print("rc %d" % rc if rc != 0 else "velho %d" % h if h > int(sys.argv[2]) else "ok %d" % h)
+    print("rc %d" % rc if rc != 0 else "velho %d" % h if h > int(sys.argv[2]) else "achados" if ach > 0 else "ok %d" % h)
 except Exception:
     print("invalido")
 ' "$jf" "$lim" 2>/dev/null) || r=invalido
@@ -170,6 +172,7 @@ except Exception:
     fi
     case $r in
       ok\ *) ok "job $jn (rc 0 há ${r#ok }h)" ;;
+      achados) printf '  pend  %s\n' "job $jn: achados na ultima varredura" ;;
       rc\ *) bad "job $jn falhou (rc ${r#rc })" ;;
       velho\ *) bad "job $jn sem rodar há ${r#velho }h (limite ${lim}h)" ;;
       ausente)
