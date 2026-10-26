@@ -1,0 +1,12 @@
+# Libera user namespaces para o bubblewrap (isolamento do Codex) no Ubuntu 24.04, onde
+# kernel.apparmor_restrict_unprivileged_userns=1. Mesmo molde do usr.bin.rootlesskit.
+# flags=(unconfined): o bwrap segue sem confinamento; o unico acrescimo e a regra userns.
+# Quem pode executar o binario e limitado pelo 47-apparmor-bwrap.sh (modo 0750 root:agente).
+abi <abi/4.0>,
+include <tunables/global>
+
+"/usr/bin/bwrap" flags=(unconfined) {
+  userns,
+
+  include if exists <local/usr.bin.bwrap>
+}
