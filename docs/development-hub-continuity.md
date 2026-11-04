@@ -171,5 +171,5 @@ concessão de acesso (grupo/ACL): esses passos ficam com o dono.
 - **CI:** `RUNNER_TOKEN` trocado pelo fine-grained (Self-hosted runners leitura e escrita, Administration só leitura). Repositórios de `resper1965`
   não usam a VPS (runner de organização não atende conta pessoal); transferir para a org fica para depois, decisão do dono. Pendente: revogar o PAT clássico antigo.
 - **Backup:** PR #32 incluiu projetos, pareceres, 9router, OpenCode e as contas `claude-ionic`/`claude-9router`; projetos e pareceres são obrigatórios
-  (o backup recusa sem eles). Snapshot `07d1ff09` (2026-11-04 12:05 UTC) com os caminhos novos. **Restore de teste comprovado** em pasta à parte (252 MB, 7 s, antes do #32).
+  (o backup recusa sem eles). Snapshot `07d1ff09` (2026-11-04 12:05 UTC) com os caminhos novos. **Restore de teste comprovado** em pasta à parte (252 MB, 7 s), mas **antes do #32**: falta repetir com o snapshot pós-#32 (projetos, pareceres e o reparo de dono do 16).
 - **Segredos:** token da API da Hostinger e chave do R2 rotacionados em 2026-11-04 (expostos numa sessão de chat). Conferir o `admin.env` com `grep -c`, nunca com `cat`.

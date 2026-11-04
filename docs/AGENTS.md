@@ -63,7 +63,7 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 - Você roda como `agente`: sem sudo, Docker rootless. Faltou ferramenta ou permissão: peça, não contorne.
 - CI: antes de commit e de PR, rode o comando de CI local do projeto (o comando único dele). O padrão é
   `ci: local-vps`. `runs-on: [self-hosted, stack]` só em repositório privado de organização com runner instalado
-  (hoje nenhum; há um piloto previsto). Nunca `ubuntu-latest` em repositório privado.
+  (hoje: runners da VPS ativos na `bekaa-trusted-advisors`; repositório da conta pessoal não usa). Nunca `ubuntu-latest` em repositório privado.
 - Projetos em `/srv/dev/projetos`; material do laptop em `/srv/dev/laptop` até o Ricardo destinar.
   `/srv/dev/data` e `/srv/forense` estão fora do seu alcance.
 - Segredo vem do ambiente (`agente.env`, `projetos.env`, `.envrc` via direnv). Use a variável; nunca
@@ -74,13 +74,14 @@ Regra do projeto (`AGENTS.md`/`CLAUDE.md` do repositório) prevalece sobre esta.
 - API da Hostinger e gateway Composio: leitura livre; chamada que altera estado pede confirmação
   dizendo endpoint e efeito.
 - Desenvolvimento do dia a dia é com Claude e Codex. O comando `modelo` (catálogo em `docs/modelos.tsv`) existe
-  para **teste de segurança** e passará a apontar para o 9router (ainda não instalado na VPS): `glm`/`glm-flash`
+  para **teste de segurança** e passará a apontar para o 9router: `glm`/`glm-flash`
   planejam e analisam, `primus` analisa, `livre` cobre passo que um modelo comum recusaria — sempre contra
   alvo autorizado por escrito.
 - Modelos pelo 9router, faixa 1: OpenRouter, DeepSeek e Featherless, só por chave de API. Assinaturas
-  (Claude Code x2, Codex/ChatGPT, Antigravity) ficam nos CLIs oficiais, com login próprio, fora do 9router:
-  os termos de uso da Anthropic são restritivos e o 9router roteia conta automaticamente.
-- Projeto novo: `/novo-projeto` no OpenCode (templates `sistema`, `agente` e `parecer`); ainda não instalado na VPS.
+  (Claude Code x2, Codex/ChatGPT, Antigravity) ficam nos CLIs oficiais, com login próprio. `claude-9r` e
+  `codex-9r` (assinatura pelo 9router) existem como opt-in do Ricardo: use só quando ele pedir; os termos de
+  uso da Anthropic são restritivos e o 9router roteia conta automaticamente.
+- Projeto novo: `/novo-projeto` no OpenCode (templates `sistema`, `agente` e `parecer`).
 
 ## Git e projetos
 
