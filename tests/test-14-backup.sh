@@ -6,7 +6,7 @@ echo "14-backup"
 
 prepara() { # raiz falsa com o que o backup espera
   export STACK_ROOT=$T/raiz; unset STACK_ENV
-  mkdir -p "$STACK_ROOT"/srv/dev/{state,data,secrets} "$STACK_ROOT"/home/dev/.claude "$STACK_ROOT"/etc/cloudflared "$STACK_ROOT"/var/lib/pmo/fila
+  mkdir -p "$STACK_ROOT"/srv/dev/{state,data,secrets,projetos} "$STACK_ROOT"/home/dev/.claude "$STACK_ROOT"/etc/cloudflared "$STACK_ROOT"/var/lib/pmo/fila
   echo '{}' > "$STACK_ROOT/etc/cloudflared/credentials.json"
   echo "X=1" > "$STACK_ROOT/srv/dev/secrets/admin.env"
   export CLOUDFLARE_ACCOUNT_ID=acc R2_ACCESS_KEY_ID=k R2_SECRET_ACCESS_KEY=s RESTIC_PASSWORD=p
@@ -28,6 +28,8 @@ afirma_log "repo=s3:https://acc.r2.cloudflarestorage.com/stack-vps-backup" "repo
 afirma_log "restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune" "retencao do spec"
 afirma_log "/home/dev/.claude/.credentials.json" "credencial do Claude excluida"
 afirma_log "/srv/dev/state" "state no backup"
+afirma_log "/srv/dev/projetos" "projetos no backup"
+afirma_log "/home/agente/.claude-ionic/.credentials.json" "credencial da conta ionic excluida"
 afirma_log "/var/lib/pmo/fila" "fila transitoria do painel fora do backup (exclude)"
 
 novo_tmp; prepara; restic_stub backup
