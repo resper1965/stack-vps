@@ -162,3 +162,14 @@ concessão de acesso (grupo/ACL): esses passos ficam com o dono.
 ## Atualização 2026-10-25 (@ness/auth)
 
 - **`@ness/auth` v0.1.0** pronto em repositório próprio (`ness-auth`, tag local, sem push): login, sessão, RBAC, chave de API, SSO por tenant, emergência, stores D1 e Postgres, README de uso e dois exemplos testados. O template `sistema` ganhou `docs/AUTH.md` (opcional) explicando como ligá-lo por destino (D1 no Cloudflare, Postgres nos demais, `ipDe` por destino); o `package.json` do template não ganhou a dependência. Estado, riscos aceitos e comparação com o niso: seção "Estado da implementação" em `docs/superpowers/specs/2026-10-25-ness-auth-design.md`. Falta (dono): criar o repositório privado no GitHub, fazer o push e a tag, e escolher o primeiro sistema consumidor.
+
+## Atualização 2026-11-04 (go-live conferido)
+
+- **`stack-doctor` como root: 0 FALTA.** `pend` só nos 7 jobs desligados de propósito. Login do `agy` feito como `agente` (Google OAuth).
+- **Instalados:** 9router 0.5.109 (loopback, chave exigida), OpenCode com o provedor 9router e `/novo-projeto`, `tailscale serve` (443, 8443, 20128),
+  `claude`/`codex`/`agy`, `claude-9r`/`codex-9r`, CI isolado (`38`, `39`, `40`) com 1 runner ativo na `bekaa-trusted-advisors`.
+- **CI:** `RUNNER_TOKEN` trocado pelo fine-grained (Self-hosted runners leitura e escrita, Administration só leitura). Repositórios de `resper1965`
+  não usam a VPS (runner de organização não atende conta pessoal); transferir para a org fica para depois, decisão do dono. Pendente: revogar o PAT clássico antigo.
+- **Backup:** PR #32 incluiu projetos, pareceres, 9router, OpenCode e as contas `claude-ionic`/`claude-9router`; projetos e pareceres são obrigatórios
+  (o backup recusa sem eles). Snapshot `07d1ff09` (2026-11-04 12:05 UTC) com os caminhos novos. **Restore de teste comprovado** em pasta à parte (252 MB, 7 s), mas **antes do #32**: falta repetir com o snapshot pós-#32 (projetos, pareceres e o reparo de dono do 16).
+- **Segredos:** token da API da Hostinger e chave do R2 rotacionados em 2026-11-04 (expostos numa sessão de chat). Conferir o `admin.env` com `grep -c`, nunca com `cat`.
