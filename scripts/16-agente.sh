@@ -28,6 +28,10 @@ fi
 # repos e state sao do agente; data e forense so do dev
 install -d -o agente -g agente /srv/dev/verticais   # atalhos por empresa/area, refeitos pelo painel do PMO
 chown -R agente:agente /srv/dev/repos /srv/dev/state /srv/dev/verticais
+# restaurados do backup vem com o UID antigo; o 15 roda antes de o agente existir
+for d in /srv/dev/projetos /srv/dev/pareceres; do
+  if [[ -e $d ]]; then chown -R agente:agente "$d"; chmod 750 "$d"; fi
+done
 chmod 750 /srv/dev/data; install -d -m 750 -o dev -g dev /srv/forense
 
 # desfaz o modelo anterior (grupo compartilhado), se existir

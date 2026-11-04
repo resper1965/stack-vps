@@ -6,7 +6,7 @@ echo "14-backup"
 
 prepara() { # raiz falsa com o que o backup espera
   export STACK_ROOT=$T/raiz; unset STACK_ENV
-  mkdir -p "$STACK_ROOT"/srv/dev/{state,data,secrets,projetos} "$STACK_ROOT"/home/dev/.claude "$STACK_ROOT"/etc/cloudflared "$STACK_ROOT"/var/lib/pmo/fila
+  mkdir -p "$STACK_ROOT"/srv/dev/{state,data,secrets,projetos,pareceres} "$STACK_ROOT"/home/dev/.claude "$STACK_ROOT"/etc/cloudflared "$STACK_ROOT"/var/lib/pmo/fila
   echo '{}' > "$STACK_ROOT/etc/cloudflared/credentials.json"
   echo "X=1" > "$STACK_ROOT/srv/dev/secrets/admin.env"
   export CLOUDFLARE_ACCOUNT_ID=acc R2_ACCESS_KEY_ID=k R2_SECRET_ACCESS_KEY=s RESTIC_PASSWORD=p
@@ -40,6 +40,9 @@ nega_log "restic forget" "falha no backup: nao poda"
 novo_tmp; prepara; restic_stub nenhum; unset RESTIC_PASSWORD
 bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "sem RESTIC_PASSWORD: recusa"
 nega_log "restic" "sem senha: restic nao roda"
+novo_tmp; prepara; restic_stub nenhum; rmdir "$STACK_ROOT/srv/dev/projetos"
+bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "projetos sumidos: recusa"
+nega_log "restic forget" "projetos sumidos: nao poda"
 novo_tmp; prepara; restic_stub nenhum; rm "$STACK_ROOT/etc/cloudflared/credentials.json"
 bash "$S" >/dev/null 2>&1; afirma_rc $? 1 "falta essencial: recusa"
 nega_log "restic backup" "falta essencial: nao faz backup parcial"

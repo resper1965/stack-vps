@@ -22,12 +22,14 @@ export AWS_DEFAULT_REGION=auto RESTIC_PASSWORD
 # Projetos e pareceres entram: trabalho ainda sem push so existe aqui. Identidade do Tailscale fica de fora: o no novo
 # entra antes do restore. Plugins dos agentes sao reinstalados pelo 04.
 # REQUIRED: sem eles nao ha recuperacao; o backup recusa rodar se faltar algum.
-BACKUP_REQUIRED=("$R/srv/dev/state" "$R/srv/dev/secrets/admin.env" "$R/etc/cloudflared/credentials.json")
+# projetos e pareceres tambem: sumidos (mount, rename), o backup "ok" seguido de prune apagaria a unica copia
+BACKUP_REQUIRED=("$R/srv/dev/state" "$R/srv/dev/secrets/admin.env" "$R/etc/cloudflared/credentials.json"
+                 "$R/srv/dev/projetos" "$R/srv/dev/pareceres")
 # /var/lib/pmo guarda o que o painel NAO regenera do GitHub: classificacao, ajustes, verticais, log de acoes.
 # painel.json (regeneravel) ja vem pelo state. A fila (abaixo) fica de fora: acao enfileirada e transitoria.
 BACKUP_OPTIONAL=("$R/srv/dev/data" "$R/srv/forense" "$R/srv/dev/secrets/agente.env" "$R/srv/dev/secrets/projetos"
                  "$R/home/dev/.claude" "$R/home/dev/.codex" "$R/home/agente/.claude" "$R/home/agente/.codex"
-                 "$R/var/lib/pmo" "$R/srv/dev/projetos" "$R/srv/dev/pareceres"
+                 "$R/var/lib/pmo"
                  "$R/home/agente/.9router" "$R/home/agente/.config/9router" "$R/home/agente/.config/opencode"
                  "$R/home/agente/.claude-ionic" "$R/home/agente/.claude-9router")
 # shortcut: o banco do 9router (sqlite) e copiado vivo, pode sair inconsistente; se o restore falhar, recadastre no painel
